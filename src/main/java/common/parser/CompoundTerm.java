@@ -1,10 +1,6 @@
 package common.parser;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class CompoundTerm implements Parseable {
 
@@ -19,6 +15,11 @@ public class CompoundTerm implements Parseable {
 
   public CompoundTerm(String name) {
     this.name = name;
+  }
+
+  public CompoundTerm(String name, Term... args) {
+    this.name = name;
+    this.args = args;
   }
 
   public static CompoundTerm read(ParserReader pr, Map<String, Variable> varMap) {
@@ -45,6 +46,17 @@ public class CompoundTerm implements Parseable {
     }
     a.args = args.toArray(new Term[] {});
     return a;
+  }
+
+
+  @Override
+  public boolean equals(Object obj) {
+    return obj instanceof CompoundTerm && name.equals(((CompoundTerm) obj).name) && Arrays.equals(args, ((CompoundTerm) obj).args);
+  }
+
+  @Override
+  public int hashCode() {
+    return name.hashCode() ^ Arrays.hashCode(args);
   }
 
   public String signature() {

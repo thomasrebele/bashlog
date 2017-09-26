@@ -1,15 +1,15 @@
 package common.parser;
 
+import javatools.administrative.CallStack;
+
 import java.util.Arrays;
 import java.util.function.BiFunction;
 
-import javatools.administrative.CallStack;
-
 public class ParserReader {
 
-  String input;
+  private String input;
 
-  int pos;
+  private int pos;
 
   public ParserReader(String input) {
     this.input = input;
@@ -17,8 +17,6 @@ public class ParserReader {
 
   /**
    * Skips comments and tries to find the expected string
-   * @param expect
-   * @param printError
    * @return the expected string if found, null otherwise
    */
 
@@ -67,7 +65,6 @@ public class ParserReader {
     debug();
     while (pos < input.length() && Character.isWhitespace(input.charAt(pos))) {
       pos++;
-      continue;
     }
   }
 
@@ -76,7 +73,7 @@ public class ParserReader {
     return input.charAt(pos);
   }
 
-  public String peekLine() {
+  String peekLine() {
     if (pos >= input.length()) return null;
     int idx = input.indexOf("\n", pos);
     if (idx < 0) idx = input.length();
@@ -88,14 +85,14 @@ public class ParserReader {
     return input.charAt(pos++);
   }
 
-  public String readLine() {
+  String readLine() {
     return readWhile((c, s) -> c != '\n');
   }
 
   /** Read characters while fn returns true. The StringBuilder contains the accepted characters. */
-  public String readWhile(BiFunction<Character, StringBuilder, Boolean> fn) {
+  private String readWhile(BiFunction<Character, StringBuilder, Boolean> fn) {
     StringBuilder sb = new StringBuilder();
-    Character c = null;
+    Character c;
     while ((c = peek()) != null) {
       // TODO: don't start with numbers
       if (fn.apply(c, sb)) {

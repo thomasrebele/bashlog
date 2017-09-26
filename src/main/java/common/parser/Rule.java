@@ -41,9 +41,8 @@ public class Rule implements Parseable {
         break;
       case ":~":
         CompoundTerm ct = new CompoundTerm("bash_command");
-        Constant c = new Constant();
         pr.skipComments();
-        c.value = pr.readLine();
+          Constant<String> c = new Constant<>(pr.readLine());
         List<Term> args = new ArrayList<>();
         args.add(c);
         for (Term arg : r.head.args) {

@@ -1,19 +1,8 @@
 package common.plan;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import common.parser.*;
 
-import common.parser.CompoundTerm;
-import common.parser.Program;
-import common.parser.Rule;
-import common.parser.Term;
-import common.parser.Variable;
+import java.util.*;
 
 public class LogicalPlanBuilder {
 
@@ -38,7 +27,7 @@ public class LogicalPlanBuilder {
 
   private PlanNode getPlanForRelation(String relation) {
     return planForRelation.computeIfAbsent(relation, (rel) -> rulesByHeadRelation.getOrDefault(rel, Collections.emptyList()).stream()
-        .map(this::getPlanForRule).reduce(UnionNode::new).map(node -> node.union(new TableNode(relation))).orElse(new TableNode(relation)));
+            .map(this::getPlanForRule).reduce(UnionNode::new).map(node -> node.union(new TableNode(relation))).orElse(new TableNode(relation)));
   }
 
   private PlanNode getPlanForRule(Rule rule) throws Error {
@@ -90,7 +79,7 @@ public class LogicalPlanBuilder {
 
     int[] resultProjection = new int[rule.head.args.length];
     Arrays.fill(resultProjection, -1);
-    Object[] resultConstants = new Object[rule.head.args.length];
+    Comparable[] resultConstants = new Comparable[rule.head.args.length];
     for (int i = 0; i < rule.head.args.length; i++) {
       Term arg = rule.head.args[i];
       if (arg instanceof Variable) {

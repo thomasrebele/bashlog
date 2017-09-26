@@ -35,4 +35,8 @@ public class TermList extends Term {
     System.out.println(tl);
   }
 
+    @Override
+    public int compareTo(Object o) {
+        return toString().compareTo(o.toString()); //TODO: inefficient
+    }
 }

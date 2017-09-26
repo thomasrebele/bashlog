@@ -2,7 +2,7 @@ package common.parser;
 
 import java.util.Map;
 
-public class Term implements Parseable {
+public abstract class Term implements Parseable, Comparable {
 
   public static Term read(ParserReader pr, Map<String, Variable> varMap) {
     pr.debug();
@@ -15,7 +15,7 @@ public class Term implements Parseable {
       return a;
     }
 
-    if (pr.peek() == '_' | Character.isUpperCase(pr.peek())) {
+      if (pr.peek() == '_' || Character.isUpperCase(pr.peek())) {
       return Variable.read(pr, varMap);
     }
 
@@ -24,18 +24,13 @@ public class Term implements Parseable {
     }
 
     if (pr.peek() == '"' || pr.peek() == '\'') {
-      Constant c = new Constant();
-      c.value = pr.readString();
-      return c;
+        return new Constant(pr.readString());
     }
 
     if (Character.isDigit(pr.peek())) {
-      Constant c = new Constant();
-      c.value = pr.readNumber();
-      return c;
+        return new Constant(pr.readNumber());
     }
 
     return null;
   }
-
 }
