@@ -51,7 +51,7 @@ public class Rule implements Parseable {
             args.add(arg);
           }
         }
-        ct.args = args.toArray(ct.args);
+        ct.args = args.toArray(new Term[] {});
         r.body.add(ct);
         break;
     }
