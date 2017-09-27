@@ -2,9 +2,12 @@ package flinklog;
 
 import common.parser.*;
 import common.plan.*;
+import org.apache.flink.api.common.functions.MapFunction;
 import org.apache.flink.api.java.DataSet;
 import org.apache.flink.api.java.ExecutionEnvironment;
 import org.apache.flink.api.java.functions.KeySelector;
+import org.apache.flink.api.java.operators.DeltaIteration;
+import org.apache.flink.api.java.tuple.Tuple1;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -19,6 +22,8 @@ import java.util.stream.Stream;
  */
 public class FlinkEvaluator {
   private static final Logger LOGGER = LoggerFactory.getLogger(FlinkEvaluator.class);
+  private static final int MAX_ITERATION = Integer.MAX_VALUE;
+
   private ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
   private FactsSet factsSet;
   private Map<PlanNode, Optional<DataSet<FlinkRow>>> cache = new HashMap<>();
@@ -73,6 +78,8 @@ public class FlinkEvaluator {
         return mapJoinNode((JoinNode) node);
       } else if (node instanceof ProjectNode) {
         return mapProjectNode((ProjectNode) node);
+      } else if (node instanceof RecursionNode) {
+        return mapRecursionNode((RecursionNode) node);
       } else if (node instanceof TableNode) {
         return mapTableNode((TableNode) node);
       } else if (node instanceof UnionNode) {
@@ -145,6 +152,35 @@ public class FlinkEvaluator {
         }
         return result;
       });
+    });
+  }
+
+  private Optional<DataSet<FlinkRow>> mapRecursionNode(RecursionNode node) {
+    return mapPlanNode(node.getExitPlan()).map(initialSet -> {
+      DataSet<Tuple1<FlinkRow>> initialSetTuple = toTuple(initialSet);
+      DeltaIteration<Tuple1<FlinkRow>, FlinkRow> iteration = initialSetTuple.iterateDelta(initialSet, MAX_ITERATION, 0);
+      cache.put(node.getDelta(), Optional.of(iteration.getWorkset()));
+      return mapPlanNode(node.getRecursivePlan())
+              .map(recursivePlan -> fromTuple(iteration.closeWith(toTuple(recursivePlan), recursivePlan)))
+              .orElse(initialSet);
+    });
+  }
+
+  private DataSet<Tuple1<FlinkRow>> toTuple(DataSet<FlinkRow> dataSet) {
+    return dataSet.map(new MapFunction<FlinkRow, Tuple1<FlinkRow>>() {
+      @Override
+      public Tuple1<FlinkRow> map(FlinkRow value) throws Exception {
+        return new Tuple1<>(value);
+      }
+    });
+  }
+
+  private DataSet<FlinkRow> fromTuple(DataSet<Tuple1<FlinkRow>> dataSet) {
+    return dataSet.map(new MapFunction<Tuple1<FlinkRow>, FlinkRow>() {
+      @Override
+      public FlinkRow map(Tuple1<FlinkRow> value) throws Exception {
+        return value.f0;
+      }
     });
   }
 
