@@ -27,9 +27,10 @@ public class Rule implements Parseable {
       return r;
     }
 
-    String found = pr.expect(":-", ":~");
+    String found = pr.expect(":-", ":~", "<-", "<~");
     switch (found) {
       case ":-":
+      case "<-":
         do {
           CompoundTerm b = CompoundTerm.read(pr, r.variables);
           if (b == null) return null;
@@ -40,6 +41,7 @@ public class Rule implements Parseable {
         } while (pr.expect(",") != null);
         break;
       case ":~":
+      case "<~":
         CompoundTerm ct = new CompoundTerm("bash_command");
         pr.skipComments();
           Constant<String> c = new Constant<>(pr.readLine());
