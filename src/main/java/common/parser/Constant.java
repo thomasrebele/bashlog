@@ -2,7 +2,7 @@ package common.parser;
 
 public class Constant extends Term implements Parseable {
 
-  Object value;
+  public Object value;
 
   @Override
   public String toString() {
