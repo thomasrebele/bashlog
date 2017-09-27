@@ -31,7 +31,9 @@ public class LogicalPlanBuilder {
     });
 
     Map<String, PlanNode> planNodes = new HashMap<>();
-    relations.forEach(relation -> planNodes.put(relation, getPlanForRelation(relation, Collections.emptyMap())));
+    relations.forEach(relation ->
+            planNodes.put(relation, getPlanForRelation(relation, Collections.emptyMap()).simplify())
+    );
     return planNodes;
   }
 

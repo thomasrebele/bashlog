@@ -11,7 +11,10 @@ import org.apache.flink.api.java.tuple.Tuple1;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -202,7 +205,7 @@ public class FlinkEvaluator {
   }
 
   private Optional<DataSet<FlinkRow>> mapUnionNode(UnionNode node) {
-    return Arrays.stream(node.getChildren())
+    return node.getChildren().stream()
             .flatMap(child -> stream(this.mapPlanNode(child)))
             .reduce(DataSet::union);
   }
