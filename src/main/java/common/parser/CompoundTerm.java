@@ -5,6 +5,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 
 public class CompoundTerm implements Parseable {
 
@@ -49,6 +50,10 @@ public class CompoundTerm implements Parseable {
 
   public String signature() {
     return name + "/" + args.length;
+  }
+
+  public Stream<Variable> getVariables() {
+    return Arrays.stream(args).flatMap(t -> t.getVariables());
   }
 
   public static void main(String[] args) {

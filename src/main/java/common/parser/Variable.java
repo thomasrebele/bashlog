@@ -1,6 +1,7 @@
 package common.parser;
 
 import java.util.Map;
+import java.util.stream.Stream;
 
 public class Variable extends Term implements Parseable {
 
@@ -36,4 +37,8 @@ public class Variable extends Term implements Parseable {
     return null;
   }
 
+  @Override
+  public Stream<Variable> getVariables() {
+    return Stream.of(this);
+  }
 }

@@ -44,14 +44,13 @@ public class Rule implements Parseable {
         Constant c = new Constant();
         pr.skipComments();
         c.value = pr.readLine();
-        List<Term> args = new ArrayList<>();
-        args.add(c);
+        TermList tl = new TermList();
         for (Term arg : r.head.args) {
           if (arg instanceof Variable) {
-            args.add(arg);
+            tl.terms.add(arg);
           }
         }
-        ct.args = args.toArray(new Term[] {});
+        ct.args = new Term[] { c, tl };
         r.body.add(ct);
         break;
     }

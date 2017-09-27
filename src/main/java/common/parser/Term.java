@@ -1,8 +1,9 @@
 package common.parser;
 
 import java.util.Map;
+import java.util.stream.Stream;
 
-public class Term implements Parseable {
+public abstract class Term implements Parseable {
 
   public static Term read(ParserReader pr, Map<String, Variable> varMap) {
     pr.debug();
@@ -36,6 +37,10 @@ public class Term implements Parseable {
     }
 
     return null;
+  }
+
+  public Stream<Variable> getVariables() {
+    return Stream.empty();
   }
 
 }

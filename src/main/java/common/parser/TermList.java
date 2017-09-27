@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 
 public class TermList extends Term {
 
@@ -35,4 +36,8 @@ public class TermList extends Term {
     System.out.println(tl);
   }
 
+  @Override
+  public Stream<Variable> getVariables() {
+    return terms.stream().flatMap(t -> t.getVariables());
+  }
 }

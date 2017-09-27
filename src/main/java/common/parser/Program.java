@@ -4,10 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
-import common.plan.LogicalPlanBuilder;
-import common.plan.PlanNode;
 import javatools.filehandlers.FileUtils;
 
 /**
@@ -59,9 +56,6 @@ public class Program implements Parseable {
 
   public static void main(String[] args) throws IOException {
     Program p = loadFile("data/rules.y4");
-
-    Map<String, PlanNode> map = new LogicalPlanBuilder().getPlanForProgram(p);
     System.out.println(p.toString());
-    System.out.println(map);
   }
 }
