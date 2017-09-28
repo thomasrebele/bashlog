@@ -103,40 +103,26 @@ public class FlinkEvaluator {
     });
   }
 
+  private KeySelector<FlinkRow, FlinkRow> selectorForColumns(int columns[]) {
+    return new KeySelector<FlinkRow, FlinkRow>() {
+
+      @Override
+      public FlinkRow getKey(FlinkRow full) throws Exception {
+        FlinkRow filtered = new FlinkRow(full.getArity());
+        for (int i = 0; i < columns.length; i++) {
+          filtered.setField(i, full.getField(columns[i]));
+        }
+        return filtered;
+      }
+    };
+  }
+
   private Optional<DataSet<FlinkRow>> mapJoinNode(JoinNode node) {
-    boolean[] mask = node.getMask();
-    return mapPlanNode(node.getLeft()).flatMap(left ->
-            mapPlanNode(node.getRight()).map(right -> {
-              KeySelector<FlinkRow, FlinkRow> keySelector = new KeySelector<FlinkRow, FlinkRow>() {
-                @Override
-                public FlinkRow getKey(FlinkRow full) throws Exception {
-                  FlinkRow filtered = new FlinkRow(full.getArity());
-                  for (int i = 0; i < mask.length; i++) {
-                    if (mask[i]) {
-                      filtered.setField(i, full.getField(i));
-                    }
-                  }
-                  return filtered;
-                }
-              };
-              return left.join(right)
-                      .where(keySelector)
-                      .equalTo(keySelector)
-                      .with((leftRow, rightRow) -> {
-                        int arity = leftRow.getArity();
-                        FlinkRow union = new FlinkRow(arity);
-                        for (int i = 0; i < arity; i++) {
-                          Comparable leftValue = leftRow.getField(i);
-                          if (leftValue != null) {
-                            union.setField(i, leftValue);
-                          } else {
-                            union.setField(i, rightRow.getField(i));
-                          }
-                        }
-                        return union;
-                      });
-            })
-    );
+    return mapPlanNode(node.getLeft()).flatMap(left -> mapPlanNode(node.getRight()).map(right -> {
+      return left.join(right).where(selectorForColumns(node.colLeft)).equalTo(selectorForColumns(node.colRight)).with((leftRow, rightRow) -> {
+        return FlinkRow.concat(leftRow, rightRow);
+      });
+    }));
   }
 
   private Optional<DataSet<FlinkRow>> mapProjectNode(ProjectNode node) {

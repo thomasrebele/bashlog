@@ -22,6 +22,11 @@ public class CompoundTerm extends Term implements Parseable {
     this.name = name;
   }
 
+  public CompoundTerm(String name, Term... args) {
+    this.name = name;
+    this.args = args;
+  }
+
   public static CompoundTerm read(ParserReader pr, Map<String, Variable> varMap) {
     pr.debug();
     pr.skipComments();

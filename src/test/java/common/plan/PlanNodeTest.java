@@ -8,12 +8,11 @@ public class PlanNodeTest {
   @Test
   public void testSimplify() {
     Assert.assertEquals(
-            new UnionNode(new TableNode("foo"), new TableNode("bar")),
-            new UnionNode(new TableNode("foo"), new UnionNode(new TableNode("bar"), new UnionNode())).simplify()
+        new UnionNode(new TableNode("foo", 2), new TableNode("bar", 2)),
+        new UnionNode(new TableNode("foo", 2), new UnionNode(new TableNode("bar", 2), new UnionNode())).simplify()
     );
     Assert.assertEquals(
-            new TableNode("foo"),
-            new UnionNode(new TableNode("foo"), new UnionNode(new TableNode("foo"), new UnionNode())).simplify()
+        new TableNode("foo", 2), new UnionNode(new TableNode("foo", 2), new UnionNode(new TableNode("foo", 2), new UnionNode())).simplify()
     );
   }
 }
