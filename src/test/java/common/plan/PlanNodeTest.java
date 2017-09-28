@@ -7,12 +7,19 @@ public class PlanNodeTest {
 
   @Test
   public void testSimplify() {
+    TableNode foo = new TableNode("foo", 2);
+    TableNode bar = new TableNode("bar", 2);
     Assert.assertEquals(
-        new UnionNode(new TableNode("foo", 2), new TableNode("bar", 2)),
-        new UnionNode(new TableNode("foo", 2), new UnionNode(new TableNode("bar", 2), new UnionNode())).simplify()
+            new UnionNode(foo, bar),
+            new UnionNode(foo, new UnionNode(bar, new UnionNode())).simplify()
     );
     Assert.assertEquals(
-        new TableNode("foo", 2), new UnionNode(new TableNode("foo", 2), new UnionNode(new TableNode("foo", 2), new UnionNode())).simplify()
+            foo,
+            new UnionNode(foo, new UnionNode(foo, new UnionNode())).simplify()
+    );
+    Assert.assertEquals(
+            foo,
+            new ProjectNode(foo, new int[]{0, 1}).simplify()
     );
   }
 }

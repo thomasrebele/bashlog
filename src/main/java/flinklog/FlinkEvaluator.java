@@ -104,25 +104,22 @@ public class FlinkEvaluator {
   }
 
   private KeySelector<FlinkRow, FlinkRow> selectorForColumns(int columns[]) {
-    return new KeySelector<FlinkRow, FlinkRow>() {
-
-      @Override
-      public FlinkRow getKey(FlinkRow full) throws Exception {
-        FlinkRow filtered = new FlinkRow(full.getArity());
-        for (int i = 0; i < columns.length; i++) {
-          filtered.setField(i, full.getField(columns[i]));
-        }
-        return filtered;
+    return (KeySelector<FlinkRow, FlinkRow>) full -> {
+      FlinkRow filtered = new FlinkRow(columns.length);
+      for (int i = 0; i < columns.length; i++) {
+        filtered.setField(i, full.getField(columns[i]));
       }
+      return filtered;
     };
   }
 
   private Optional<DataSet<FlinkRow>> mapJoinNode(JoinNode node) {
-    return mapPlanNode(node.getLeft()).flatMap(left -> mapPlanNode(node.getRight()).map(right -> {
-      return left.join(right).where(selectorForColumns(node.colLeft)).equalTo(selectorForColumns(node.colRight)).with((leftRow, rightRow) -> {
-        return FlinkRow.concat(leftRow, rightRow);
-      });
-    }));
+    return mapPlanNode(node.getLeft()).flatMap(left ->
+            mapPlanNode(node.getRight()).map(right ->
+                    left.join(right)
+                            .where(selectorForColumns(node.getLeftJoinProjection()))
+                            .equalTo(selectorForColumns(node.getRightJoinProjection()))
+                            .with(FlinkRow::concat)));
   }
 
   private Optional<DataSet<FlinkRow>> mapProjectNode(ProjectNode node) {

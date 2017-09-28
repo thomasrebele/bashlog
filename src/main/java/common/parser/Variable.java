@@ -20,8 +20,7 @@ public class Variable extends Term implements Parseable {
     pr.debug();
     pr.skipComments();
     if (pr.peek() == null) return null;
-    String name = null;
-    name = pr.readName();
+    String name = pr.readName();
     if ("_".equals(name)) {
       name = "var_" + varMap.size();
     }
@@ -36,6 +35,7 @@ public class Variable extends Term implements Parseable {
     return Stream.of(this);
   }
 
+  @Override
   public boolean equals(Object obj) {
     return obj instanceof Variable && name.equals(((Variable) obj).name);
   }

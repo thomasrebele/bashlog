@@ -1,29 +1,18 @@
 package common.plan;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import common.parser.*;
+
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
-import common.parser.CompoundTerm;
-import common.parser.Constant;
-import common.parser.Program;
-import common.parser.Rule;
-import common.parser.Term;
-import common.parser.Variable;
 
 /**
  * TODO: support recursion f(x,z) <- f(x,y), f(y,z). (join with full)
  */
 public class LogicalPlanBuilder {
 
-  Set<String> builtin = new HashSet<>(), tables = new HashSet<>();
+  private Set<String> builtin = new HashSet<>();
+  private Set<String> tables = new HashSet<>();
 
   private Map<RelationWithDeltaNodes, PlanNode> planForRelation = new HashMap<>();
 
@@ -44,7 +33,7 @@ public class LogicalPlanBuilder {
     return clone;
   }
 
-  public static int[] concat(int[] first, int[] second) {
+  private static int[] concat(int[] first, int[] second) {
     int[] result = Arrays.copyOf(first, first.length + second.length);
     System.arraycopy(second, 0, result, first.length, second.length);
     return result;
@@ -130,34 +119,30 @@ public class LogicalPlanBuilder {
 
     //Variables integer encoding
     Map<Term, Integer> variablesEncoding = new HashMap<>();
-    Map<Term, Integer> variablesCount = new HashMap<>();
-    Stream.concat(rule.head.getVariables(), rule.body.stream().flatMap(tuple -> Arrays.stream(tuple.args)).flatMap(t -> t.getVariables())) //
-        .forEach(arg -> {
-          if (arg instanceof Variable) {
-            variablesEncoding.computeIfAbsent(arg, (key) -> variablesEncoding.size());
-            variablesCount.merge(arg, 1, (a, b) -> a + b);
-          }
-        });
+    Stream.concat(
+            rule.head.getVariables(),
+            rule.body.stream().flatMap(tuple -> Arrays.stream(tuple.args)).flatMap(Term::getVariables)
+    ).forEach(arg ->
+            variablesEncoding.computeIfAbsent(arg, (key) -> variablesEncoding.size())
+    );
 
     NodeWithMask body = rule.body.stream().map(term -> {
-
-      CompoundTerm ct = ((CompoundTerm) term);
       int[] colToVar = new int[term.args.length];
       int[] varToCol = new int[variablesEncoding.size()];
       Arrays.fill(colToVar, -1);
       Arrays.fill(varToCol, -1);
 
       PlanNode termNode;
-      if (builtin.contains(ct.name)) {
-        termNode = new BuiltinNode(ct);
-        List<Variable> v = ct.getVariables().collect(Collectors.toList());
+      if (builtin.contains(term.name)) {
+        termNode = new BuiltinNode(term);
+        List<Variable> v = term.getVariables().collect(Collectors.toList());
         colToVar = new int[v.size()];
         for (int i = 0; i < v.size(); i++) {
           colToVar[i] = variablesEncoding.get(v.get(i));
           varToCol[colToVar[i]] = i;
         }
       } else {
-        termNode = getPlanForRelation(ct.signature(), deltaNodes);
+        termNode = getPlanForRelation(term.signature(), deltaNodes);
         for (int i = 0; i < term.args.length; i++) {
           Term arg = term.args[i];
           if (arg instanceof Variable) {
@@ -180,7 +165,7 @@ public class LogicalPlanBuilder {
 
       return new NodeWithMask(termNode, colToVar, varToCol);
     }).reduce((nm1, nm2) -> {
-      int size = Math.max(nm1.node.arity(), nm2.node.arity());
+      int size = Math.max(nm1.node.getArity(), nm2.node.getArity());
       int[] colLeft = new int[size];
       int[] colRight = new int[size];
 
@@ -209,7 +194,7 @@ public class LogicalPlanBuilder {
 
       colLeft = Arrays.copyOfRange(colLeft, 0, count);
       colRight = Arrays.copyOfRange(colRight, 0, count);
-      JoinNode jn = new JoinNode(nm1.node, nm2.node, colLeft, colRight);
+      PlanNode jn = nm1.node.join(nm2.node, colLeft, colRight);
       return new NodeWithMask(jn, concat(nm1.colToVar, nm2.colToVar), nm1.varToCol);
     }).orElseThrow(() -> new UnsupportedOperationException("rule without body"));
 

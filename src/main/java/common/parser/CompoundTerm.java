@@ -1,10 +1,6 @@
 package common.parser;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Stream;
 
 public class CompoundTerm extends Term implements Parseable {
@@ -34,7 +30,7 @@ public class CompoundTerm extends Term implements Parseable {
     if (name == null) return null;
     CompoundTerm a = new CompoundTerm(name);
     pr.debug();
-    Term v = null;
+    Term v;
     pr.skipComments();
     List<Term> args = new ArrayList<>();
     if (pr.expect("(") != null) {
@@ -67,8 +63,9 @@ public class CompoundTerm extends Term implements Parseable {
     return name + "/" + args.length;
   }
 
+  @Override
   public Stream<Variable> getVariables() {
-    return Arrays.stream(args).flatMap(t -> t.getVariables());
+    return Arrays.stream(args).flatMap(Term::getVariables);
   }
 
   public static void main(String[] args) {
