@@ -8,7 +8,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -19,44 +18,30 @@ import common.parser.Rule;
 import common.parser.Term;
 import common.parser.Variable;
 
+/**
+ * TODO: support recursion f(x,z) <- f(x,y), f(y,z). (join with full)
+ */
 public class LogicalPlanBuilder {
 
-  private Map<String, PlanNode> planForRelation = new HashMap<>();
+  Set<String> builtin = new HashSet<>(), tables = new HashSet<>();
+
+  private Map<RelationWithDeltaNodes, PlanNode> planForRelation = new HashMap<>();
 
   private Map<String, List<Rule>> rulesByHeadRelation = new HashMap<>();
 
-  public Map<String, PlanNode> getPlanForProgram(Program program, Set<String> builtin, Set<String> tables) {
-    Set<String> relations = new HashSet<>();
-    program.rules.forEach(rule -> {
-      rulesByHeadRelation.computeIfAbsent(rule.head.signature(), (k) -> new ArrayList<>()).add(rule);
-      relations.add(rule.head.signature());
-      for (CompoundTerm ct : rule.body) {
-        relations.add(ct.signature());
-      }
-    });
-
-    Map<String, PlanNode> planNodes = new HashMap<>();
-    relations.forEach(relation -> planNodes.put(relation, getPlanForRelation(relation, builtin, tables)));
-    return planNodes;
+  public LogicalPlanBuilder() {
   }
 
-  static final Pattern REMOVE_ARITY = Pattern.compile("\\/.*");
-
-  private PlanNode createTableNode(PlanNode prev, String relation, Set<String> tables) {
-    int pos = relation.lastIndexOf('/');
-    PlanNode r = new TableNode(relation, Integer.parseInt(relation.substring(pos + 1)));
-    if (tables.contains(relation)) {
-      return prev == null ? r : prev.union(r);
-    } else {
-      return prev == null ? r : prev;
-    }
+  public LogicalPlanBuilder(Set<String> builtin, Set<String> tables) {
+    this.builtin = builtin;
+    this.tables = tables;
   }
 
-  private PlanNode getPlanForRelation(String relation, Set<String> builtin, Set<String> tables) {
-    return planForRelation.computeIfAbsent(relation,
-        (rel) -> rulesByHeadRelation.getOrDefault(rel, Collections.emptyList()).stream() //
-            .map(r -> getPlanForRule(r, builtin, tables)).reduce(UnionNode::new) //
-            .map(node -> createTableNode(node, relation, tables)).orElse(createTableNode(null, relation, tables)));
+  private static <T, U> Map<T, U> withEntry(Map<T, U> map, T key, U value) {
+    Map<T, U> clone = new HashMap<>();
+    clone.putAll(map);
+    clone.put(key, value);
+    return clone;
   }
 
   public static int[] concat(int[] first, int[] second) {
@@ -65,7 +50,80 @@ public class LogicalPlanBuilder {
     return result;
   }
 
-  private PlanNode getPlanForRule(Rule rule, Set<String> builtin, Set<String> tables) throws Error {
+  public Map<String, PlanNode> getPlanForProgram(Program program) {
+    Set<String> relations = new HashSet<>();
+    program.rules.forEach(rule -> {
+      rulesByHeadRelation.computeIfAbsent(rule.head.signature(), (k) -> new ArrayList<>()).add(rule);
+      relations.add(rule.head.signature());
+      for (CompoundTerm ct : rule.body) {
+        if (!builtin.contains(ct.name)) {
+          relations.add(ct.signature());
+        }
+      }
+    });
+
+    Map<String, PlanNode> planNodes = new HashMap<>();
+    relations.forEach(relation -> planNodes.put(relation, getPlanForRelation(relation, Collections.emptyMap()).simplify()));
+    return planNodes;
+  }
+
+  private PlanNode createTableNode(String relation, PlanNode prev) {
+    int pos = relation.lastIndexOf('/');
+    PlanNode r = new TableNode(relation, Integer.parseInt(relation.substring(pos + 1)));
+    if (tables.contains(relation)) {
+      return prev == null ? r : prev.union(r);
+    } else {
+      // TODO: deal with case prev == null
+      return prev == null ? r : prev;
+    }
+  }
+
+  private PlanNode getPlanForRelation(String relation, Map<String, PlanNode> deltaNodes) {
+    //If we should use a delta node
+    if (deltaNodes.containsKey(relation)) {
+      return deltaNodes.get(relation);
+    }
+
+    //We filter the delta node map to remove not useful deltas
+    Map<String, PlanNode> filteredDeltaNode = new HashMap<>();
+    deltaNodes.forEach((key, value) -> {
+      if (hasAncestor(relation, key)) {
+        filteredDeltaNode.put(key, value);
+      }
+    });
+
+    RelationWithDeltaNodes relationWithDeltaNodes = new RelationWithDeltaNodes(relation, filteredDeltaNode);
+    return planForRelation.computeIfAbsent(relationWithDeltaNodes, (rel) -> {
+      //We split rules between exit ones and recursive ones
+      List<Rule> exitRules = new ArrayList<>();
+      List<Rule> recursiveRules = new ArrayList<>();
+      rulesByHeadRelation.getOrDefault(relation, Collections.emptyList()).forEach(rule -> {
+        if (this.isRecursive(rule)) {
+          recursiveRules.add(rule);
+        } else {
+          exitRules.add(rule);
+        }
+      });
+
+      //We map exit rules
+      PlanNode exitPlan = exitRules.stream().map(rule -> getPlanForRule(rule, filteredDeltaNode)).reduce(UnionNode::new)
+          .map(node -> createTableNode(relation, node)).orElse(createTableNode(relation, null));
+
+      if (recursiveRules.isEmpty()) {
+        return exitPlan; //No recursion
+      }
+
+      //We build recursion
+      RecursionNode recursionPlan = exitPlan.recursion();
+      Map<String, PlanNode> newDeltaNodes = withEntry(filteredDeltaNode, relation, recursionPlan.getDelta());
+      recursiveRules.forEach(rule -> {
+        recursionPlan.addRecursivePlan(getPlanForRule(rule, newDeltaNodes)); //TODO: update
+      });
+      return recursionPlan;
+    });
+  }
+
+  private PlanNode getPlanForRule(Rule rule, Map<String, PlanNode> deltaNodes) {
     //TODO: check if the rule is sane
     //a(X,Y,c) <- b(X,d), c(X,Y)
     //b.filter(1, d).map([0, -1]).join(c.map([0, 1])).project([0, 1], [null, null, c])
@@ -80,8 +138,6 @@ public class LogicalPlanBuilder {
             variablesCount.merge(arg, 1, (a, b) -> a + b);
           }
         });
-
-    Stream<Variable> vx;
 
     NodeWithMask body = rule.body.stream().map(term -> {
 
@@ -101,16 +157,16 @@ public class LogicalPlanBuilder {
           varToCol[colToVar[i]] = i;
         }
       } else {
-        termNode = getPlanForRelation(ct.signature(), builtin, tables);
+        termNode = getPlanForRelation(ct.signature(), deltaNodes);
         for (int i = 0; i < term.args.length; i++) {
           Term arg = term.args[i];
           if (arg instanceof Variable) {
             colToVar[i] = variablesEncoding.get(arg);
             varToCol[colToVar[i]] = i;
           } else if (arg instanceof Constant) {
-            termNode = termNode.equalityFilter(i, ((Constant) arg).value);
+            termNode = termNode.equalityFilter(i, (Comparable) ((Constant) arg).getValue());
           } else {
-
+            throw new UnsupportedOperationException("cannot handle " + termNode);
           }
         }
       }
@@ -163,67 +219,31 @@ public class LogicalPlanBuilder {
 
     int[] projection = new int[rule.head.args.length];
     Arrays.fill(projection, -1);
+    Comparable[] resultConstants = new Comparable[rule.head.args.length];
     for (int i = 0; i < rule.head.args.length; i++) {
-      // TODO selection
       Term t = rule.head.args[i];
       if (t instanceof Variable) {
-
         projection[i] = body.varToCol[variablesEncoding.get(t)];
-      }
-    }
-    return body.node.project(projection);
-
-    //Body tuples filter and map
-    /*PlanNode body = rule.body.stream().map(tuple -> {
-      PlanNode tupleNode = getPlanForTerm(tuple, builtin, tables);
-    
-      int[] projection = new int[variablesEncoding.size()];
-      Arrays.fill(projection, -1);
-      boolean[] mask = new boolean[variablesEncoding.size()];
-    
-      if (builtin.contains(tuple.name)) {
-        Arrays.fill(mask, true);
-        return new NodeWithMask(tupleNode, mask);
-      }
-    
-      Map<Term, Integer> seenVariables = new HashMap<>();
-      for (int i = 0; i < tuple.args.length; i++) {
-        Term arg = tuple.args[i];
-        if (arg instanceof Variable) {
-          if (!builtin.contains(tuple.name) && seenVariables.containsKey(arg)) { //Already in a tuple, we are in a tuple(X,X) case
-            tupleNode = tupleNode.equalityFilter(seenVariables.get(arg).intValue(), i);
-          }
-          projection[variablesEncoding.get(arg)] = i;
-          mask[variablesEncoding.get(arg)] = true;
-          seenVariables.put(arg, i);
-        } else {
-          if (!builtin.contains(tuple.name)) tupleNode = tupleNode.equalityFilter(i, arg);
-        }
-      }
-    
-      return new NodeWithMask(tupleNode.project(projection), mask);
-    }).reduce((nm1, nm2) -> {
-      boolean[] intersectionMask = new boolean[nm1.mask.length];
-      boolean[] unionMask = new boolean[nm1.mask.length];
-      for (int i = 0; i < nm2.mask.length; i++) {
-        intersectionMask[i] = nm1.mask[i] && nm2.mask[i];
-        unionMask[i] = nm1.mask[i] || nm2.mask[i];
-      }
-      return new NodeWithMask(new JoinNode(nm1.node, nm2.node, intersectionMask), unionMask);
-    }).map(nm -> nm.node).orElseThrow(() -> new UnsupportedOperationException("Rule without body"));
-    
-    int[] resultProjection = new int[rule.head.args.length];
-    Arrays.fill(resultProjection, -1);
-    Object[] resultConstants = new Object[rule.head.args.length];
-    for (int i = 0; i < rule.head.args.length; i++) {
-      Term arg = rule.head.args[i];
-      if (arg instanceof Variable) {
-        resultProjection[i] = variablesEncoding.get(arg);
+      } else if (t instanceof Constant) {
+        // TODO: this is an unchecked constraint!
+        resultConstants[i] = (Comparable) ((Constant) t).getValue();
       } else {
-        resultConstants[i] = arg;
+        throw new UnsupportedOperationException();
       }
     }
-    return body.project(resultProjection, resultConstants);*/
+    return body.node.project(projection, resultConstants);
+  }
+
+  private boolean isRecursive(Rule rule) {
+    return hasAncestor(rule, rule.head.signature());
+  }
+
+  private boolean hasAncestor(String relation, String ancestor) {
+    return rulesByHeadRelation.getOrDefault(relation, Collections.emptyList()).stream().anyMatch(rule -> this.hasAncestor(rule, ancestor));
+  }
+
+  private boolean hasAncestor(Rule rule, String ancestor) {
+    return rule.body.stream().anyMatch(tuple -> tuple.signature().equals(ancestor) || hasAncestor(tuple.signature(), ancestor));
   }
 
   private static class NodeWithMask {
@@ -236,6 +256,29 @@ public class LogicalPlanBuilder {
       this.node = node;
       this.colToVar = colToVar;
       this.varToCol = varToCol;
+    }
+  }
+
+  private static class RelationWithDeltaNodes {
+
+    private String relation;
+
+    private Map<String, PlanNode> deltaNodes;
+
+    RelationWithDeltaNodes(String relation, Map<String, PlanNode> deltaNodes) {
+      this.relation = relation;
+      this.deltaNodes = deltaNodes;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+      return obj instanceof RelationWithDeltaNodes && relation.equals(((RelationWithDeltaNodes) obj).relation)
+          && deltaNodes.equals(((RelationWithDeltaNodes) obj).deltaNodes);
+    }
+
+    @Override
+    public int hashCode() {
+      return relation.hashCode();
     }
   }
 }

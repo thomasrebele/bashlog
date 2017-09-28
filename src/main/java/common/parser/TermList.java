@@ -40,4 +40,9 @@ public class TermList extends Term {
   public Stream<Variable> getVariables() {
     return terms.stream().flatMap(t -> t.getVariables());
   }
+
+  @Override
+  public int compareTo(Object o) {
+    return toString().compareTo(o.toString()); //TODO: inefficient
+  }
 }

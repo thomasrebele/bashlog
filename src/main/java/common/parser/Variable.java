@@ -7,11 +7,8 @@ public class Variable extends Term implements Parseable {
 
   public final String name;
 
-  public final int index;
-
-  public Variable(String name, int index) {
+  public Variable(String name) {
     this.name = name;
-    this.index = index;
   }
 
   @Override
@@ -29,10 +26,7 @@ public class Variable extends Term implements Parseable {
       name = "var_" + varMap.size();
     }
     if (name != null) {
-      Variable v = varMap.computeIfAbsent(name, k -> {
-        return new Variable(k, varMap.size());
-      });
-      return v;
+      return varMap.computeIfAbsent(name, Variable::new);
     }
     return null;
   }
@@ -40,5 +34,23 @@ public class Variable extends Term implements Parseable {
   @Override
   public Stream<Variable> getVariables() {
     return Stream.of(this);
+  }
+
+  public boolean equals(Object obj) {
+    return obj instanceof Variable && name.equals(((Variable) obj).name);
+  }
+
+  @Override
+  public int hashCode() {
+    return name.hashCode();
+  }
+
+  @Override
+  public int compareTo(Object o) {
+    if (o instanceof Variable) {
+      return name.compareTo(((Variable) o).name);
+    } else {
+      return toString().compareTo(o.toString()); //TODO: inefficient
+    }
   }
 }

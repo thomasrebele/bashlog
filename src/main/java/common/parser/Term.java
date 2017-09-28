@@ -3,7 +3,7 @@ package common.parser;
 import java.util.Map;
 import java.util.stream.Stream;
 
-public abstract class Term implements Parseable {
+public abstract class Term implements Parseable, Comparable {
 
   public static Term read(ParserReader pr, Map<String, Variable> varMap) {
     pr.debug();
@@ -16,7 +16,7 @@ public abstract class Term implements Parseable {
       return a;
     }
 
-    if (pr.peek() == '_' | Character.isUpperCase(pr.peek())) {
+    if (pr.peek() == '_' || Character.isUpperCase(pr.peek())) {
       return Variable.read(pr, varMap);
     }
 
@@ -25,15 +25,11 @@ public abstract class Term implements Parseable {
     }
 
     if (pr.peek() == '"' || pr.peek() == '\'') {
-      Constant c = new Constant();
-      c.value = pr.readString();
-      return c;
+      return new Constant(pr.readString());
     }
 
     if (Character.isDigit(pr.peek())) {
-      Constant c = new Constant();
-      c.value = pr.readNumber();
-      return c;
+      return new Constant(pr.readNumber());
     }
 
     return null;

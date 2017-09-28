@@ -48,6 +48,16 @@ public class CompoundTerm extends Term implements Parseable {
     return a;
   }
 
+  @Override
+  public boolean equals(Object obj) {
+    return obj instanceof CompoundTerm && name.equals(((CompoundTerm) obj).name) && Arrays.equals(args, ((CompoundTerm) obj).args);
+  }
+
+  @Override
+  public int hashCode() {
+    return name.hashCode() ^ Arrays.hashCode(args);
+  }
+
   public String signature() {
     return name + "/" + args.length;
   }
@@ -68,6 +78,11 @@ public class CompoundTerm extends Term implements Parseable {
     System.out.println(a);
     System.out.println("remaining: " + pr.peekLine());
     //System.out.println(YCompoundTerm.read("abc(\"a\", b)", new int[] { 0 }, new HashMap<>(), null));
+  }
+
+  @Override
+  public int compareTo(Object o) {
+    throw new UnsupportedOperationException();
   }
 
 }
