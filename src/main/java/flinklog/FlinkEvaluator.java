@@ -74,25 +74,30 @@ public class FlinkEvaluator {
   }
 
   private Optional<DataSet<FlinkRow>> mapPlanNode(PlanNode planNode) {
-    return cache.computeIfAbsent(planNode, (node) -> {
-      if (node instanceof ConstantEqualityFilterNode) {
-        return mapConstantEqualityFilterNode((ConstantEqualityFilterNode) node);
-      } else if (node instanceof JoinNode) {
-        return mapJoinNode((JoinNode) node);
-      } else if (node instanceof ProjectNode) {
-        return mapProjectNode((ProjectNode) node);
-      } else if (node instanceof RecursionNode) {
-        return mapRecursionNode((RecursionNode) node);
-      } else if (node instanceof TableNode) {
-        return mapTableNode((TableNode) node);
-      } else if (node instanceof UnionNode) {
-        return mapUnionNode((UnionNode) node);
-      } else if (node instanceof VariableEqualityFilterNode) {
-        return mapVariableEqualityFilterNode((VariableEqualityFilterNode) node);
-      } else {
-        throw new IllegalArgumentException("Unknown node type: " + node.toString());
-      }
-    });
+    if (!cache.containsKey(planNode)) {
+      cache.put(planNode, buildForPlanNode(planNode));
+    }
+    return cache.get(planNode);
+  }
+
+  private Optional<DataSet<FlinkRow>> buildForPlanNode(PlanNode node) {
+    if (node instanceof ConstantEqualityFilterNode) {
+      return mapConstantEqualityFilterNode((ConstantEqualityFilterNode) node);
+    } else if (node instanceof JoinNode) {
+      return mapJoinNode((JoinNode) node);
+    } else if (node instanceof ProjectNode) {
+      return mapProjectNode((ProjectNode) node);
+    } else if (node instanceof RecursionNode) {
+      return mapRecursionNode((RecursionNode) node);
+    } else if (node instanceof TableNode) {
+      return mapTableNode((TableNode) node);
+    } else if (node instanceof UnionNode) {
+      return mapUnionNode((UnionNode) node);
+    } else if (node instanceof VariableEqualityFilterNode) {
+      return mapVariableEqualityFilterNode((VariableEqualityFilterNode) node);
+    } else {
+      throw new IllegalArgumentException("Unknown node type: " + node.toString());
+    }
   }
 
   private Optional<DataSet<FlinkRow>> mapConstantEqualityFilterNode(ConstantEqualityFilterNode node) {
