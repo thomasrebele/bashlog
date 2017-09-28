@@ -2,6 +2,7 @@ package flinklog;
 
 import common.parser.*;
 import common.plan.*;
+import org.apache.commons.compress.utils.Sets;
 import org.apache.flink.api.common.functions.MapFunction;
 import org.apache.flink.api.java.DataSet;
 import org.apache.flink.api.java.ExecutionEnvironment;
@@ -11,10 +12,9 @@ import org.apache.flink.api.java.tuple.Tuple1;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.*;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -26,6 +26,7 @@ import java.util.stream.Stream;
 public class FlinkEvaluator {
   private static final Logger LOGGER = LoggerFactory.getLogger(FlinkEvaluator.class);
   private static final int MAX_ITERATION = Integer.MAX_VALUE;
+  private static final Set<String> BUILDS_IN = Sets.newHashSet("bash_command");
 
   private ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
   private FactsSet factsSet;
@@ -49,7 +50,7 @@ public class FlinkEvaluator {
     Pattern stripRelation = Pattern.compile("/\\d+$");
 
     SimpleFactsSet result = new SimpleFactsSet();
-    (new LogicalPlanBuilder()).getPlanForProgram(program).entrySet().stream()
+    (new LogicalPlanBuilder(BUILDS_IN, new HashSet<>())).getPlanForProgram(program).entrySet().stream()
             .flatMap(relationPlan -> {
               String relation = relationPlan.getKey();
               return stream(this.mapPlanNode(relationPlan.getValue()).map(dataSet ->
@@ -81,7 +82,9 @@ public class FlinkEvaluator {
   }
 
   private Optional<DataSet<FlinkRow>> buildForPlanNode(PlanNode node) {
-    if (node instanceof ConstantEqualityFilterNode) {
+    if (node instanceof BuiltinNode) {
+      return mapBuiltinNode((BuiltinNode) node);
+    } else if (node instanceof ConstantEqualityFilterNode) {
       return mapConstantEqualityFilterNode((ConstantEqualityFilterNode) node);
     } else if (node instanceof JoinNode) {
       return mapJoinNode((JoinNode) node);
@@ -97,6 +100,23 @@ public class FlinkEvaluator {
       return mapVariableEqualityFilterNode((VariableEqualityFilterNode) node);
     } else {
       throw new IllegalArgumentException("Unknown node type: " + node.toString());
+    }
+  }
+
+  private Optional<DataSet<FlinkRow>> mapBuiltinNode(BuiltinNode node) {
+    if (node.compoundTerm.name.equals("bash_command")) {
+      String command = ((String) ((Constant) node.compoundTerm.args[0]).getValue()).trim();
+      if (command.startsWith("cat")) {
+        Path file = Paths.get(command.substring(4).trim()).toAbsolutePath();
+        Pattern pattern = Pattern.compile("[ \t\r\n]");
+        return Optional.of(env.readTextFile("file://" + file.toString()).map(line ->
+                new FlinkRow(Arrays.stream(pattern.split(line)).map(Constant::new))
+        ));
+      } else {
+        throw new IllegalArgumentException("Unsupported bash command: " + node.toString());
+      }
+    } else {
+      throw new IllegalArgumentException("Unsupported build-in: " + node.toString());
     }
   }
 
