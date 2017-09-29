@@ -17,6 +17,7 @@ import java.nio.file.Paths;
 import java.util.*;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 /**
@@ -26,7 +27,7 @@ import java.util.stream.Stream;
 public class FlinkEvaluator {
   private static final Logger LOGGER = LoggerFactory.getLogger(FlinkEvaluator.class);
   private static final int MAX_ITERATION = Integer.MAX_VALUE;
-  private static final Set<String> BUILDS_IN = Sets.newHashSet("bash_command");
+  private static final Set<String> BUILDS_IN = Sets.newHashSet("flink_entry_values", "bash_command");
 
   private ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
   private FactsSet factsSet;
@@ -44,13 +45,16 @@ public class FlinkEvaluator {
     return optional.map(Stream::of).orElse(Stream.empty());
   }
 
-  public FactsSet evaluate(Program program, FactsSet facts) {
+  public FactsSet evaluate(Program program, FactsSet facts, Set<String> relationsToOutput) {
     //Initialize globals
     factsSet = facts;
     Pattern stripRelation = Pattern.compile("/\\d+$");
 
+    //We to program the loading from the factset
+    facts.getRelations().forEach(relation -> program.rules.add(buildLoadRuleForRelation(relation)));
+
     SimpleFactsSet result = new SimpleFactsSet();
-    (new LogicalPlanBuilder(BUILDS_IN, new HashSet<>())).getPlanForProgram(program).entrySet().stream()
+    (new LogicalPlanBuilder(BUILDS_IN, relationsToOutput)).getPlanForProgram(program).entrySet().stream()
             .flatMap(relationPlan -> {
               String relation = relationPlan.getKey();
               return stream(this.mapPlanNode(relationPlan.getValue()).map(dataSet ->
@@ -74,6 +78,16 @@ public class FlinkEvaluator {
     return result;
   }
 
+  private Rule buildLoadRuleForRelation(String relation) {
+    String rel = relation.split("/")[0];
+    int arity = Integer.parseInt(relation.split("/")[1]);
+    Variable[] variables = IntStream.range(0, arity).mapToObj(i -> new Variable(Integer.toString(i))).toArray(Variable[]::new);
+    return new Rule(
+            new CompoundTerm(rel, variables),
+            new CompoundTerm("flink_entry_values", new Constant<>(relation), new TermList(variables))
+    );
+  }
+
   private Optional<DataSet<FlinkRow>> mapPlanNode(PlanNode planNode) {
     if (!cache.containsKey(planNode)) {
       cache.put(planNode, buildForPlanNode(planNode));
@@ -92,8 +106,6 @@ public class FlinkEvaluator {
       return mapProjectNode((ProjectNode) node);
     } else if (node instanceof RecursionNode) {
       return mapRecursionNode((RecursionNode) node);
-    } else if (node instanceof TableNode) {
-      return mapTableNode((TableNode) node);
     } else if (node instanceof UnionNode) {
       return mapUnionNode((UnionNode) node);
     } else if (node instanceof VariableEqualityFilterNode) {
@@ -104,19 +116,37 @@ public class FlinkEvaluator {
   }
 
   private Optional<DataSet<FlinkRow>> mapBuiltinNode(BuiltinNode node) {
-    if (node.compoundTerm.name.equals("bash_command")) {
-      String command = ((String) ((Constant) node.compoundTerm.args[0]).getValue()).trim();
-      if (command.startsWith("cat")) {
-        Path file = Paths.get(command.substring(4).trim()).toAbsolutePath();
-        Pattern pattern = Pattern.compile("[ \t\r\n]");
-        return Optional.of(env.readTextFile("file://" + file.toString()).map(line ->
-                new FlinkRow(Arrays.stream(pattern.split(line)).map(Constant::new))
-        ));
-      } else {
-        throw new IllegalArgumentException("Unsupported bash command: " + node.toString());
-      }
-    } else {
-      throw new IllegalArgumentException("Unsupported build-in: " + node.toString());
+    String name = node.compoundTerm.name;
+    switch (name) {
+      case "flink_entry_values":
+        String relation = ((String) ((Constant) node.compoundTerm.args[0]).getValue()).trim();
+        //TODO: do not materialize here
+        List<FlinkRow> tuples = factsSet.getByRelation(relation).map(tuple -> {
+          FlinkRow row = new FlinkRow(tuple.length);
+          for (int i = 0; i < tuple.length; i++) {
+            row.setField(i, tuple[i]);
+          }
+          return row;
+        }).collect(Collectors.toList());
+        if (tuples.isEmpty()) {
+          LOGGER.info("Empty relation: " + relation);
+          return Optional.empty();
+        } else {
+          return Optional.of(env.fromCollection(tuples));
+        }
+      case "bash_command":
+        String command = ((String) ((Constant) node.compoundTerm.args[0]).getValue()).trim();
+        if (command.startsWith("cat")) {
+          Path file = Paths.get(command.substring(4).trim()).toAbsolutePath();
+          Pattern pattern = Pattern.compile("[ \t\r\n]");
+          return Optional.of(env.readTextFile("file://" + file.toString()).map(line ->
+                  new FlinkRow(Arrays.stream(pattern.split(line)).map(Constant::new))
+          ));
+        } else {
+          throw new IllegalArgumentException("Unsupported bash command: " + node.toString());
+        }
+      default:
+        throw new IllegalArgumentException("Unsupported build-in: " + node.toString());
     }
   }
 
@@ -193,23 +223,6 @@ public class FlinkEvaluator {
         return value.f0;
       }
     });
-  }
-
-  private Optional<DataSet<FlinkRow>> mapTableNode(TableNode node) {
-    //TODO: do not materialize here
-    List<FlinkRow> tuples = factsSet.getByRelation(node.getName()).map(tuple -> {
-      FlinkRow row = new FlinkRow(tuple.length);
-      for (int i = 0; i < tuple.length; i++) {
-        row.setField(i, tuple[i]);
-      }
-      return row;
-    }).collect(Collectors.toList());
-    if (tuples.isEmpty()) {
-      LOGGER.info("Empty relation: " + node.getName());
-      return Optional.empty();
-    } else {
-      return Optional.of(env.fromCollection(tuples));
-    }
   }
 
   private Optional<DataSet<FlinkRow>> mapUnionNode(UnionNode node) {

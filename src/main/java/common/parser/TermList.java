@@ -1,14 +1,15 @@
 package common.parser;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Stream;
 
 public class TermList extends Term {
 
-  List<Term> terms = new ArrayList<>();
+  private List<Term> terms = new ArrayList<>();
+
+  public TermList(Term... terms) {
+    this.terms = Arrays.asList(terms);
+  }
 
   public static TermList read(ParserReader pr, Map<String, Variable> varMap) {
     if (pr.consume("[") != null) {
@@ -38,7 +39,7 @@ public class TermList extends Term {
 
   @Override
   public Stream<Variable> getVariables() {
-    return terms.stream().flatMap(t -> t.getVariables());
+    return terms.stream().flatMap(Term::getVariables);
   }
 
   @Override

@@ -1,9 +1,6 @@
 package common.parser;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class Rule implements Parseable {
 
@@ -11,20 +8,28 @@ public class Rule implements Parseable {
 
   public List<CompoundTerm> body;
 
-  protected Map<String, Variable> variables = new HashMap<>();
+  public Rule(CompoundTerm head, List<CompoundTerm> body) {
+    this.head = head;
+    this.body = body;
+  }
+
+  public Rule(CompoundTerm head, CompoundTerm... body) {
+    this(head, Arrays.asList(body));
+  }
 
   protected static Rule read(ParserReader pr) {
-    Rule r = new Rule();
+    Map<String, Variable> variables = new HashMap<>();
+
     pr.skipComments();
     if (pr.peek() == null) return null;
     // parse head
-    r.head = CompoundTerm.read(pr, r.variables);
-    if (r.head == null) return null;
+    CompoundTerm head = CompoundTerm.read(pr, variables);
+    if (head == null) return null;
     // parse body
-    r.body = new ArrayList<>();
+    List<CompoundTerm> body = new ArrayList<>();
 
     if (pr.consume(".") != null) {
-      return r;
+      return new Rule(head);
     }
 
     String found = pr.expect(":-", ":~", "<-", "<~");
@@ -32,9 +37,9 @@ public class Rule implements Parseable {
       case ":-":
       case "<-":
         do {
-          CompoundTerm b = CompoundTerm.read(pr, r.variables);
+          CompoundTerm b = CompoundTerm.read(pr, variables);
           if (b == null) return null;
-          r.body.add(b);
+          body.add(b);
           if (pr.consume(".") != null) {
             break;
           }
@@ -45,17 +50,12 @@ public class Rule implements Parseable {
         CompoundTerm ct = new CompoundTerm("bash_command");
         pr.skipComments();
         Constant<String> c = new Constant<>(pr.readLine());
-        TermList tl = new TermList();
-        for (Term arg : r.head.args) {
-          if (arg instanceof Variable) {
-            tl.terms.add(arg);
-          }
-        }
+        TermList tl = new TermList(Arrays.stream(head.args).filter(t -> t instanceof Variable).toArray(Term[]::new));
         ct.args = new Term[] { c, tl };
-        r.body.add(ct);
+        body.add(ct);
         break;
     }
-    return r;
+    return new Rule(head, body);
   }
 
   @Override
@@ -67,10 +67,6 @@ public class Rule implements Parseable {
     }
     if (!body.isEmpty()) b.setLength(b.length() - 2);
     return (b.toString());
-  }
-
-  public int variableCount() {
-    return variables.size();
   }
 
   public static void main(String[] args) {

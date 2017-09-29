@@ -40,26 +40,19 @@ public class LogicalPlanBuilder {
   }
 
   public Map<String, PlanNode> getPlanForProgram(Program program) {
+    //We fill rulesByHeadRelation
+    program.rules.forEach(rule ->
+            rulesByHeadRelation.computeIfAbsent(rule.head.signature(), (k) -> new ArrayList<>()).add(rule)
+    );
+
+    //We fill relationsToOutput if needed
     if (relationsToOutput.isEmpty()) {
-      program.rules.forEach(rule -> {
-        rulesByHeadRelation.computeIfAbsent(rule.head.signature(), (k) -> new ArrayList<>()).add(rule);
-        relationsToOutput.add(rule.head.signature());
-        for (CompoundTerm ct : rule.body) {
-          if (!builtin.contains(ct.name)) {
-            relationsToOutput.add(ct.signature());
-          }
-        }
-      });
+      program.rules.forEach(rule -> relationsToOutput.add(rule.head.signature()));
     }
 
     Map<String, PlanNode> planNodes = new HashMap<>();
     relationsToOutput.forEach(relation -> planNodes.put(relation, getPlanForRelation(relation, Collections.emptyMap()).simplify()));
     return planNodes;
-  }
-
-  private PlanNode createTableNode(String relation) {
-    int pos = relation.lastIndexOf('/');
-    return new TableNode(relation, Integer.parseInt(relation.substring(pos + 1)));
   }
 
   private PlanNode getPlanForRelation(String relation, Map<String, PlanNode> deltaNodes) {
@@ -82,7 +75,7 @@ public class LogicalPlanBuilder {
       List<Rule> exitRules = new ArrayList<>();
       List<Rule> recursiveRules = new ArrayList<>();
       rulesByHeadRelation.getOrDefault(relation, Collections.emptyList()).forEach(rule -> {
-        if (this.isRecursive(rule)) {
+        if (isRecursive(rule)) {
           recursiveRules.add(rule);
         } else {
           exitRules.add(rule);
@@ -92,7 +85,8 @@ public class LogicalPlanBuilder {
       //We map exit rules
       PlanNode exitPlan = exitRules.stream()
               .map(rule -> getPlanForRule(rule, filteredDeltaNode))
-              .reduce(createTableNode(relation), UnionNode::new);
+              .reduce(UnionNode::new)
+              .orElseGet(() -> new UnionNode(Integer.parseInt(relation.split("/")[1])));
 
       if (recursiveRules.isEmpty()) {
         return exitPlan; //No recursion
