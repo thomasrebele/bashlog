@@ -1,7 +1,6 @@
 package bashlog;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 import common.parser.CompoundTerm;
 import common.parser.Constant;
@@ -10,22 +9,28 @@ import common.plan.RecursionNode.DeltaNode;
 
 public class BashlogCompiler {
 
-  Map<DeltaNode, String> deltaNodeToFilename = new HashMap<>();
+  Map<RecursionNode, String> recursionNodeToFilename = new HashMap<>();
 
   HashMap<PlanNode, Info> planToInfo = new HashMap<>();
 
-  public String compile(PlanNode planNode) {
-    return compile(planNode, "");
+  PlanNode root;
+
+  public BashlogCompiler(PlanNode root) {
+    this.root = root;
+  }
+
+  public String compile() {
+    return compile(root, "");
   }
 
   public String compile(PlanNode planNode, String indent) {
     analyzeUsage(planNode);
-    analyzeReuse(planNode, 1);
+    analyzeReuse(planNode, 1, new ArrayList<>(), new HashSet<>());
 
     StringBuilder sb = new StringBuilder();
     sb.append("# reuse common plans\n");
     planToInfo.forEach((p, info) -> {
-      if (info.reuse) {
+      if (info.reuse()) {
         if (info.materialize) {
           throw new UnsupportedOperationException("TODO: materialize");
         } else {
@@ -54,22 +59,48 @@ public class BashlogCompiler {
 
   /** Counts how often each subplan occurs in the tree */
   public void analyzeUsage(PlanNode p) {
-    Info i = planToInfo.computeIfAbsent(p, k -> new Info());
+    Info i = planToInfo.computeIfAbsent(p, k -> new Info(k));
     if (i.filename == null) i.filename = "tmp_relation" + planToInfo.size();
     i.planUseCount++;
     p.args().forEach(c -> analyzeUsage(c));
   }
 
-  /** Check whether subtree is used more often than their parent */
-  public void analyzeReuse(PlanNode p, int useCount) {
-    Info i = planToInfo.computeIfAbsent(p, k -> new Info());
+  /**
+   * Check whether subtree is used more often than their parent.
+   * Plans containing delta nodes cannot be reused.
+   * @param p
+   * @param useCount
+   * @param deltaPlans subplans of these nodes are blocked for reuse (deals with delta nodes)
+   */
+  public void analyzeReuse(PlanNode p, int useCount, List<PlanNode> recursions, Set<PlanNode> deltaPlans) {
+    Info info = planToInfo.computeIfAbsent(p, k -> new Info(k));
+    info.recursions.addAll(recursions);
 
-    if (i.planUseCount > useCount) {
-      i.reuse = true;
-      useCount = i.planUseCount;
+    if (p instanceof DeltaNode) {
+      deltaPlans.add(((DeltaNode) p).getRecursionNode());
+      return;
     }
-    for (PlanNode c : p.args()) {
-      analyzeReuse(c, useCount);
+
+    if (info.planUseCount > useCount) {
+      info.reuse = true;
+      if (recursions.size() > 0) {
+        info.reuse &= !deltaPlans.contains(recursions.get(recursions.size() - 1));
+      }
+      useCount = info.planUseCount;
+    }
+    List<PlanNode> children = p.args();
+    for (int i = 0; i < children.size(); i++) {
+      PlanNode c = children.get(i);
+      if (p instanceof RecursionNode && i == 1) {
+        recursions.add(p);
+      }
+      HashSet<PlanNode> dr = new HashSet<>();
+      analyzeReuse(c, useCount, recursions, dr);
+      deltaPlans.addAll(dr);
+    }
+    if (p instanceof RecursionNode) {
+      recursions.remove(recursions.size() - 1);
+      deltaPlans.remove(p);
     }
   }
 
@@ -180,11 +211,44 @@ public class BashlogCompiler {
   /** Compile, reusing common subplans (including planNode) */
   private void compile(PlanNode planNode, StringBuilder sb, String indent) {
     Info info = planToInfo.get(planNode);
-    if (info.reuse) {
+    if (info.reuse()) {
       sb.append("cat " + planToInfo.get(planNode).filename + "_" + info.bashUseCount++);
     } else {
       compileRaw(planNode, sb, indent);
     }
+  }
+
+  /** Remove all lines from pipe that occur in filename */
+  private void setMinusInMemory(String filename, StringBuilder sb) {
+    sb.append("| grep -v -F -f ");
+    sb.append(filename);
+  }
+
+  private void setMinusSorted(String filename, StringBuilder sb) {
+    sb.append("| comm --nocheck-order -23 - ");
+    sb.append(filename);
+  }
+
+  private void recursionSorted(RecursionNode rn, StringBuilder sb, String indent, String fullFile, String deltaFile, String newDeltaFile) {
+    compile(rn.getRecursivePlan(), sb, indent + INDENT);
+    sb.append(" \\\n" + indent + INDENT);
+    //setMinusInMemory(fullFile, sb);
+    sb.append("| sort ");
+    setMinusSorted(fullFile, sb);
+    sb.append(" > " + newDeltaFile + "\n");
+
+    sb.append(indent + INDENT + "mv " + newDeltaFile + " " + deltaFile + "; \n");
+    sb.append(indent + INDENT + "sort -u --merge -o " + fullFile + " " + fullFile + " <(sort " + deltaFile + ")\n");
+  }
+
+  private void recursionInMemory(RecursionNode rn, StringBuilder sb, String indent, String fullFile, String deltaFile, String newDeltaFile) {
+    compile(rn.getRecursivePlan(), sb, indent + INDENT);
+    sb.append(" \\\n" + indent);
+    sb.append(INDENT);
+    setMinusInMemory(fullFile, sb);
+    sb.append(" | tee -a " + fullFile);
+    sb.append(" > " + newDeltaFile + "\n");
+    sb.append(indent + INDENT + "mv " + newDeltaFile + " " + deltaFile + "; \n");
   }
 
   /** Compile planNode as is, reuse its decendants */
@@ -238,29 +302,24 @@ public class BashlogCompiler {
       }
     } else if (planNode instanceof RecursionNode) {
       RecursionNode rn = (RecursionNode) planNode;
-      String deltaFile = "tmp_delta" + deltaNodeToFilename.size();
-      String newDeltaFile = "tmp_new" + deltaNodeToFilename.size();
-      String fullFile = "tmp_full" + deltaNodeToFilename.size();
-      deltaNodeToFilename.put(rn.getDelta(), deltaFile);
-      sb.append(indent + "echo -n '' > " + deltaFile + "\n" + indent);
-      sb.append(indent + "echo -n '' > " + fullFile + "\n" + indent);
+      String deltaFile = "tmp_delta" + recursionNodeToFilename.size();
+      String newDeltaFile = "tmp_new" + recursionNodeToFilename.size();
+      String fullFile = "tmp_full" + recursionNodeToFilename.size();
+      recursionNodeToFilename.put(rn, deltaFile);
       compile(rn.getExitPlan(), sb, indent + INDENT);
       sb.append(" | tee " + fullFile + " > " + deltaFile + "\n");
+      // "do while" loop in bash
       sb.append(indent + "while \n");
-      compile(rn.getRecursivePlan(), sb, indent + INDENT);
-      sb.append(" \\\n" + indent);
-      sb.append(INDENT + "| grep -v -F -f " + fullFile);
-      sb.append(" | tee -a " + fullFile);
-      sb.append(" > " + newDeltaFile + "\n");
 
-      sb.append(indent + INDENT + "mv " + newDeltaFile + " " + deltaFile + "; \n");
+      recursionSorted(rn, sb, indent, fullFile, deltaFile, newDeltaFile);
+      //recursionInMemory(rn, sb, indent, fullFile, deltaFile, newDeltaFile);
+
       sb.append(indent + INDENT + "[ -s " + deltaFile + " ]; \n");
       sb.append(indent + "do continue; done\n");
       sb.append(indent + "rm " + deltaFile + "\n");
       sb.append("cat " + fullFile);
     } else if (planNode instanceof DeltaNode) {
-      sb.append("cat " + deltaNodeToFilename.get(planNode));
-
+      sb.append("cat " + recursionNodeToFilename.get(((DeltaNode) planNode).getRecursionNode()));
     } else {
       System.err.println("compilation of " + planNode.getClass() + " not yet supported");
     }
@@ -269,24 +328,37 @@ public class BashlogCompiler {
   /** Statistics for reusing subplans */
   private class Info {
 
+    PlanNode plan;
+
     /** Materialized table / prefix for named pipes (filename_0, filename_1, ...) */
     String filename;
 
     /** Count how often plan node appears in tree */
     int planUseCount = 0;
 
-    /** Count how often a named pipe for this plan node was used */
+    /** Recursion ancestor nodes, which iterate over plan node */
+    Set<PlanNode> recursions = new HashSet<>();
+
+    /** Count how often a named pipe for plan node was used */
     int bashUseCount = 0;
 
     /** If reuse, either materialize output to file, or create named pipes and fill them with tee */
-    boolean reuse = false;
+    private boolean reuse = false;
 
     /** Save output to file; works only if reuse == true */
     boolean materialize = false;
 
+    public Info(PlanNode plan) {
+      this.plan = plan;
+    }
+
+    boolean reuse() {
+      return reuse && !(plan instanceof BuiltinNode);
+    }
+
     @Override
     public String toString() {
-      return filename + " " + planUseCount + " reuse " + reuse + " mat " + materialize;
+      return filename + " uc:" + planUseCount + " rc:" + recursions.size() + " reuse " + reuse + " mat " + materialize;
     }
   }
 
