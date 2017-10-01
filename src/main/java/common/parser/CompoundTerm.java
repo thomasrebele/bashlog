@@ -16,6 +16,7 @@ public class CompoundTerm extends Term implements Parseable {
 
   public CompoundTerm(String name) {
     this.name = name;
+    this.args = new Term[]{};
   }
 
   public CompoundTerm(String name, Term... args) {

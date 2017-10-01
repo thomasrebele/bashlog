@@ -12,7 +12,7 @@ import java.util.stream.Stream;
 public class LogicalPlanBuilder {
 
   private Set<String> builtin = new HashSet<>();
-  private Set<String> tables = new HashSet<>();
+  private Set<String> relationsToOutput = new HashSet<>();
 
   private Map<RelationWithDeltaNodes, PlanNode> planForRelation = new HashMap<>();
 
@@ -21,9 +21,9 @@ public class LogicalPlanBuilder {
   public LogicalPlanBuilder() {
   }
 
-  public LogicalPlanBuilder(Set<String> builtin, Set<String> tables) {
+  public LogicalPlanBuilder(Set<String> builtin, Set<String> relationsToOutput) {
     this.builtin = builtin;
-    this.tables = tables;
+    this.relationsToOutput = relationsToOutput;
   }
 
   private static <T, U> Map<T, U> withEntry(Map<T, U> map, T key, U value) {
@@ -40,31 +40,19 @@ public class LogicalPlanBuilder {
   }
 
   public Map<String, PlanNode> getPlanForProgram(Program program) {
-    Set<String> relations = new HashSet<>();
-    program.rules.forEach(rule -> {
-      rulesByHeadRelation.computeIfAbsent(rule.head.signature(), (k) -> new ArrayList<>()).add(rule);
-      relations.add(rule.head.signature());
-      for (CompoundTerm ct : rule.body) {
-        if (!builtin.contains(ct.name)) {
-          relations.add(ct.signature());
-        }
-      }
-    });
+    //We fill rulesByHeadRelation
+    program.rules.forEach(rule ->
+            rulesByHeadRelation.computeIfAbsent(rule.head.signature(), (k) -> new ArrayList<>()).add(rule)
+    );
+
+    //We fill relationsToOutput if needed
+    if (relationsToOutput.isEmpty()) {
+      program.rules.forEach(rule -> relationsToOutput.add(rule.head.signature()));
+    }
 
     Map<String, PlanNode> planNodes = new HashMap<>();
-    relations.forEach(relation -> planNodes.put(relation, getPlanForRelation(relation, Collections.emptyMap()).simplify()));
+    relationsToOutput.forEach(relation -> planNodes.put(relation, getPlanForRelation(relation, Collections.emptyMap()).simplify()));
     return planNodes;
-  }
-
-  private PlanNode createTableNode(String relation, PlanNode prev) {
-    int pos = relation.lastIndexOf('/');
-    PlanNode r = new TableNode(relation, Integer.parseInt(relation.substring(pos + 1)));
-    if (tables.contains(relation)) {
-      return prev == null ? r : prev.union(r);
-    } else {
-      // TODO: deal with case prev == null
-      return prev == null ? r : prev;
-    }
   }
 
   private PlanNode getPlanForRelation(String relation, Map<String, PlanNode> deltaNodes) {
@@ -87,7 +75,7 @@ public class LogicalPlanBuilder {
       List<Rule> exitRules = new ArrayList<>();
       List<Rule> recursiveRules = new ArrayList<>();
       rulesByHeadRelation.getOrDefault(relation, Collections.emptyList()).forEach(rule -> {
-        if (this.isRecursive(rule)) {
+        if (isRecursive(rule)) {
           recursiveRules.add(rule);
         } else {
           exitRules.add(rule);
@@ -98,8 +86,7 @@ public class LogicalPlanBuilder {
       PlanNode exitPlan = exitRules.stream()
               .map(rule -> getPlanForRule(rule, filteredDeltaNode))
               .reduce(UnionNode::new)
-              .map(node -> createTableNode(relation, node))
-              .orElse(createTableNode(relation, null));
+              .orElseGet(() -> new UnionNode(Integer.parseInt(relation.split("/")[1])));
 
       if (recursiveRules.isEmpty()) {
         return exitPlan; //No recursion
