@@ -2,8 +2,7 @@ package common.parser;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 import javatools.filehandlers.FileUtils;
 
@@ -23,7 +22,9 @@ import javatools.filehandlers.FileUtils;
  */
 public class Program implements Parseable {
 
-  public List<Rule> rules = new ArrayList<Rule>();
+  private List<Rule> rules = new ArrayList<Rule>();
+
+  private Map<String, List<Rule>> relationToRules = new HashMap<>();
 
   public static Program loadFile(String path) throws IOException {
     File f = new File(path);
@@ -39,6 +40,7 @@ public class Program implements Parseable {
       r = Rule.read(pr);
       if (r != null) {
         p.rules.add(r);
+        p.relationToRules.computeIfAbsent(r.head.getRelation(), k -> new ArrayList<>()).add(r);
       }
     } while (r != null);
     return p;
@@ -54,8 +56,45 @@ public class Program implements Parseable {
     return sb.toString();
   }
 
+  public List<Rule> rules() {
+    return rules;
+  }
+
+  public List<Rule> rulesForRelation(String relation) {
+    return relationToRules.getOrDefault(relation, Collections.emptyList());
+  }
+
+  public Set<String> getDependencies(String relation) {
+    Set<String> result = new HashSet<>();
+    getDependencies(relation, result, new HashSet<>());
+    return result;
+  }
+
+  private void getDependencies(String relation, Set<String> result, Set<Rule> doneRules) {
+    if (result.contains(relation) || !relationToRules.containsKey(relation)) return;
+    for (Rule rule : relationToRules.get(relation)) {
+      getDependencies(rule, result, doneRules);
+    }
+  }
+
+  public Set<String> getDependencies(Rule rule) {
+    Set<String> result = new HashSet<>();
+    getDependencies(rule, result, new HashSet<>());
+    return result;
+  }
+
+  public void getDependencies(Rule rule, Set<String> result, Set<Rule> doneRules) {
+    if (doneRules.contains(rule)) return;
+    doneRules.add(rule);
+    for (String relation : rule.getDependencies()) {
+      getDependencies(relation, result, doneRules);
+      result.add(relation);
+    }
+  }
+
   public static void main(String[] args) throws IOException {
     Program p = loadFile("data/rules.y4");
     System.out.println(p.toString());
   }
+
 }

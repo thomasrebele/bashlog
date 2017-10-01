@@ -1,6 +1,7 @@
 package common.parser;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class Rule implements Parseable {
 
@@ -67,6 +68,11 @@ public class Rule implements Parseable {
     }
     if (!body.isEmpty()) b.setLength(b.length() - 2);
     return (b.toString());
+  }
+
+  public Set<String> getDependencies() {
+    // TODO: nested terms
+    return body.stream().map(ct -> ct.getRelation()).collect(Collectors.toSet());
   }
 
   public static void main(String[] args) {

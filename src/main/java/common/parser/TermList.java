@@ -7,6 +7,10 @@ public class TermList extends Term {
 
   private List<Term> terms = new ArrayList<>();
 
+  public TermList() {
+
+  }
+
   public TermList(Term... terms) {
     this.terms = Arrays.asList(terms);
   }

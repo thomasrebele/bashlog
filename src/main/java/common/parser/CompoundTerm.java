@@ -88,4 +88,8 @@ public class CompoundTerm extends Term implements Parseable {
     throw new UnsupportedOperationException();
   }
 
+  public String getRelation() {
+    return name + "/" + args.length;
+  }
+
 }

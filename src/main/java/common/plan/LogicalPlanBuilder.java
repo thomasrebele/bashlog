@@ -1,10 +1,10 @@
 package common.plan;
 
-import common.parser.*;
-
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
+import common.parser.*;
 
 /**
  * TODO: support recursion f(x,z) <- f(x,y), f(y,z). (join with full)
@@ -16,7 +16,7 @@ public class LogicalPlanBuilder {
 
   private Map<RelationWithDeltaNodes, PlanNode> planForRelation = new HashMap<>();
 
-  private Map<String, List<Rule>> rulesByHeadRelation = new HashMap<>();
+  Program program;
 
   public LogicalPlanBuilder() {
   }
@@ -40,14 +40,10 @@ public class LogicalPlanBuilder {
   }
 
   public Map<String, PlanNode> getPlanForProgram(Program program) {
-    //We fill rulesByHeadRelation
-    program.rules.forEach(rule ->
-            rulesByHeadRelation.computeIfAbsent(rule.head.signature(), (k) -> new ArrayList<>()).add(rule)
-    );
-
+    this.program = program;
     //We fill relationsToOutput if needed
     if (relationsToOutput.isEmpty()) {
-      program.rules.forEach(rule -> relationsToOutput.add(rule.head.signature()));
+      program.rules().forEach(rule -> relationsToOutput.add(rule.head.signature()));
     }
 
     Map<String, PlanNode> planNodes = new HashMap<>();
@@ -74,7 +70,7 @@ public class LogicalPlanBuilder {
       //We split rules between exit ones and recursive ones
       List<Rule> exitRules = new ArrayList<>();
       List<Rule> recursiveRules = new ArrayList<>();
-      rulesByHeadRelation.getOrDefault(relation, Collections.emptyList()).forEach(rule -> {
+      program.rulesForRelation(relation).forEach(rule -> {
         if (isRecursive(rule)) {
           recursiveRules.add(rule);
         } else {
@@ -163,7 +159,9 @@ public class LogicalPlanBuilder {
       int count = 0;
       boolean[] done = new boolean[nm2.colToVar.length];
       for (int i = 0; i < nm1.colToVar.length; i++) {
-        int col2 = nm2.varToCol[nm1.colToVar[i]];
+        int var = nm1.colToVar[i];
+        if (var < 0) continue;
+        int col2 = nm2.varToCol[var];
         if (col2 >= 0) {
           colLeft[count] = i;
           colRight[count++] = col2;
@@ -173,6 +171,7 @@ public class LogicalPlanBuilder {
       for (int i = 0; i < nm2.colToVar.length; i++) {
         if (done[i]) continue;
         int var = nm2.colToVar[i];
+        if (var < 0) continue;
         int col1 = nm1.varToCol[var];
         if (col1 < 0) {
           nm1.varToCol[var] = nm1.colToVar.length + i;
@@ -215,11 +214,13 @@ public class LogicalPlanBuilder {
   }
 
   private boolean hasAncestor(String relation, String ancestor) {
-    return rulesByHeadRelation.getOrDefault(relation, Collections.emptyList()).stream().anyMatch(rule -> this.hasAncestor(rule, ancestor));
+    return program.getDependencies(relation).contains(ancestor);
+    //return program.rulesForRelation(relation).stream().anyMatch(rule -> this.hasAncestor(rule, ancestor));
   }
 
   private boolean hasAncestor(Rule rule, String ancestor) {
-    return rule.body.stream().anyMatch(tuple -> tuple.signature().equals(ancestor) || hasAncestor(tuple.signature(), ancestor));
+    return program.getDependencies(rule).contains(ancestor);
+    //return rule.body.stream().anyMatch(tuple -> tuple.signature().equals(ancestor) || hasAncestor(tuple.signature(), ancestor));
   }
 
   private static class NodeWithMask {
