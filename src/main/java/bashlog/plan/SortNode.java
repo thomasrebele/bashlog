@@ -14,14 +14,7 @@ public class SortNode implements PlanNode {
 
   public SortNode(PlanNode child, int[] sortColumns) {
     this.child = child;
-    if (sortColumns == null) {
-      this.sortColumns = new int[child.getArity()];
-      for (int i = 0; i < this.sortColumns.length; i++) {
-        this.sortColumns[i] = i;
-      }
-    } else {
     this.sortColumns = sortColumns;
-    }
   }
 
   @Override

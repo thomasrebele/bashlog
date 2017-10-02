@@ -50,4 +50,14 @@ public class TermList extends Term {
   public int compareTo(Object o) {
     return toString().compareTo(o.toString()); //TODO: inefficient
   }
+
+  @Override
+  public int hashCode() {
+    return terms.hashCode();
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    return obj instanceof TermList && Objects.equals(terms, ((TermList) obj).terms);
+  }
 }

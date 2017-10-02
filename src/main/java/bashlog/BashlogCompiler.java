@@ -34,6 +34,7 @@ public class BashlogCompiler {
 
     StringBuilder sb = new StringBuilder();
     sb.append("# reuse common plans\n");
+    sb.append("mkdir -p tmp\n");
     planToInfo.forEach((p, info) -> {
       if (info.reuse()) {
         if (!info.materialize()) {
@@ -57,7 +58,7 @@ public class BashlogCompiler {
           sb.append(" & ");
         }
       }
-      System.out.println(info + " <- " + ("" + System.identityHashCode(p)).substring(0, 3) + "  " + p);
+      System.out.println(info + " <- " + ("" + p.hashCode()).substring(0, 3) + "  " + p);
     });
     System.out.println();
 
@@ -86,7 +87,7 @@ public class BashlogCompiler {
   /** Counts how often each subplan occurs in the tree */
   private void analyzeUsage(PlanNode p) {
     Info i = planToInfo.computeIfAbsent(p, k -> new Info(k));
-    if (i.filename == null) i.filename = "tmp_relation" + planToInfo.size();
+    if (i.filename == null) i.filename = "tmp/relation" + planToInfo.size();
     i.planUseCount++;
     p.args().forEach(c -> analyzeUsage(c));
   }
@@ -187,7 +188,7 @@ public class BashlogCompiler {
   private void sort(PlanNode n, int[] cols, StringBuilder sb, String indent) {
     compile(n, sb, indent + INDENT);
     sb.append(" \\\n" + indent);
-    if (cols.length > 1) {
+    if (cols != null && cols.length > 1) {
       sb.append(" | " + AWK + "{ print $0 FS ");
       for (int i = 0; i < cols.length; i++) {
         if (i > 0) {
@@ -198,9 +199,11 @@ public class BashlogCompiler {
       }
       sb.append("}'");
     }
-    sb.append(" | sort -t $'\\t' ");
-    sb.append("-k ");
-    sb.append(sortCol(n, cols));
+    sb.append(" | LC_ALL=C sort -t $'\\t' ");
+    if (cols != null) {
+      sb.append("-k ");
+      sb.append(sortCol(n, cols));
+    }
   }
 
   private int sortCol(PlanNode n, int[] cols) {
@@ -216,7 +219,7 @@ public class BashlogCompiler {
     colLeft = sortCol(j.getLeft(), j.getLeftJoinProjection());
     colRight = sortCol(j.getRight(), j.getRightJoinProjection());
 
-    sb.append("join -t $'\\t' -1 ");
+    sb.append("LC_ALL=C join -t $'\\t' -1 ");
     sb.append(colLeft);
     sb.append(" -2 ");
     sb.append(colRight);
@@ -266,12 +269,11 @@ public class BashlogCompiler {
     compile(rn.getRecursivePlan(), sb, indent + INDENT);
     sb.append(" \\\n" + indent + INDENT);
     //setMinusInMemory(fullFile, sb);
-    sb.append("| sort ");
     setMinusSorted(fullFile, sb);
     sb.append(" > " + newDeltaFile + "\n");
 
     sb.append(indent + INDENT + "mv " + newDeltaFile + " " + deltaFile + "; \n");
-    sb.append(indent + INDENT + "sort -u --merge -o " + fullFile + " " + fullFile + " <(sort " + deltaFile + ")\n");
+    sb.append(indent + INDENT + "LC_ALL=C sort -u --merge -o " + fullFile + " " + fullFile + " <(LC_ALL=C sort " + deltaFile + ")\n");
   }
 
   private void recursionInMemory(RecursionNode rn, StringBuilder sb, String indent, String fullFile, String deltaFile, String newDeltaFile) {
@@ -337,9 +339,9 @@ public class BashlogCompiler {
       }
     } else if (planNode instanceof RecursionNode) {
       RecursionNode rn = (RecursionNode) planNode;
-      String deltaFile = "tmp_delta" + recursionNodeToFilename.size();
-      String newDeltaFile = "tmp_new" + recursionNodeToFilename.size();
-      String fullFile = "tmp_full" + recursionNodeToFilename.size();
+      String deltaFile = "tmp/delta" + recursionNodeToFilename.size();
+      String newDeltaFile = "tmp/new" + recursionNodeToFilename.size();
+      String fullFile = "tmp/full" + recursionNodeToFilename.size();
       recursionNodeToFilename.put(rn, deltaFile);
       compile(rn.getExitPlan(), sb, indent + INDENT);
       sb.append(" | tee " + fullFile + " > " + deltaFile + "\n");
@@ -351,7 +353,7 @@ public class BashlogCompiler {
 
       sb.append(indent + INDENT + "[ -s " + deltaFile + " ]; \n");
       sb.append(indent + "do continue; done\n");
-      sb.append(indent + "rm " + deltaFile + "\n");
+      //sb.append(indent + "rm " + deltaFile + "\n");
       sb.append("cat " + fullFile);
     } else if (planNode instanceof DeltaNode) {
       sb.append("cat " + recursionNodeToFilename.get(((DeltaNode) planNode).getRecursionNode()));

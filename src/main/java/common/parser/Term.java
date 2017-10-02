@@ -39,4 +39,9 @@ public abstract class Term implements Parseable, Comparable {
     return Stream.empty();
   }
 
+  @Override
+  public abstract int hashCode();
+
+  @Override
+  public abstract boolean equals(Object obj);
 }
