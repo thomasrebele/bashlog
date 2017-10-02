@@ -2,6 +2,8 @@ package bashlog;
 
 import java.util.*;
 
+import bashlog.plan.SortJoinNode;
+import bashlog.plan.SortNode;
 import common.parser.CompoundTerm;
 import common.parser.Constant;
 import common.plan.*;
@@ -16,31 +18,38 @@ public class BashlogCompiler {
   PlanNode root;
 
   public BashlogCompiler(PlanNode root) {
-    this.root = root;
+    this.root = root.simplify();
+    this.root = root.transform(this::transform);
+
+    System.out.println(this.root.toPrettyString());
   }
 
   public String compile() {
-    return compile(root, "");
+    return compile("");
   }
 
-  public String compile(PlanNode planNode, String indent) {
-    analyzeUsage(planNode);
-    analyzeReuse(planNode, 1, new ArrayList<>(), new HashSet<>());
+  public String compile(String indent) {
+    analyzeUsage(root);
+    analyzeReuse(root, 1, new ArrayList<>(), new HashSet<>());
 
     StringBuilder sb = new StringBuilder();
     sb.append("# reuse common plans\n");
     planToInfo.forEach((p, info) -> {
       if (info.reuse()) {
-        if (info.materialize) {
-          throw new UnsupportedOperationException("TODO: materialize");
-        } else {
+        if (!info.materialize()) {
+
           sb.append("mkfifo");
           for (int i = 0; i < info.planUseCount; i++) {
             sb.append(" " + info.filename + "_" + i);
           }
           sb.append("\n");
+        }
           compileRaw(p, sb, indent);
-          sb.append("\\\n");
+        sb.append(" \\\n");
+        if (info.materialize()) {
+          sb.append(" > ");
+          sb.append(info.filename);
+        } else {
           for (int i = 0; i < info.planUseCount; i++) {
             sb.append(i < info.planUseCount - 1 ? " | tee " : " > ");
             sb.append(info.filename + "_" + i);
@@ -48,17 +57,34 @@ public class BashlogCompiler {
           sb.append(" & ");
         }
       }
-      System.out.println(info + " <- " + p);
+      System.out.println(info + " <- " + ("" + System.identityHashCode(p)).substring(0, 3) + "  " + p);
     });
     System.out.println();
 
     sb.append("\n\n# main plan\n");
-    compile(planNode, sb, indent);
+    compile(root, sb, indent);
     return sb.toString();
   }
 
+  private PlanNode transform(PlanNode p, PlanNode[] args) {
+    if (p instanceof JoinNode) {
+      // sort join
+      PlanNode left = new SortNode(args[0], ((JoinNode) p).getLeftJoinProjection());
+      PlanNode right = new SortNode(args[1], ((JoinNode) p).getRightJoinProjection());
+      return new SortJoinNode(left, right, ((JoinNode) p).getLeftJoinProjection(),
+          ((JoinNode) p).getRightJoinProjection());
+    } else if (p instanceof RecursionNode) {
+      PlanNode child = new SortNode(args[0], null);
+      PlanNode child2 = new SortNode(args[1], null);
+
+      return new RecursionNode(child, child2, (DeltaNode) args[2]);
+    }
+
+    return null;
+  }
+
   /** Counts how often each subplan occurs in the tree */
-  public void analyzeUsage(PlanNode p) {
+  private void analyzeUsage(PlanNode p) {
     Info i = planToInfo.computeIfAbsent(p, k -> new Info(k));
     if (i.filename == null) i.filename = "tmp_relation" + planToInfo.size();
     i.planUseCount++;
@@ -72,7 +98,7 @@ public class BashlogCompiler {
    * @param useCount
    * @param deltaPlans subplans of these nodes are blocked for reuse (deals with delta nodes)
    */
-  public void analyzeReuse(PlanNode p, int useCount, List<PlanNode> recursions, Set<PlanNode> deltaPlans) {
+  private void analyzeReuse(PlanNode p, int useCount, List<PlanNode> recursions, Set<PlanNode> deltaPlans) {
     Info info = planToInfo.computeIfAbsent(p, k -> new Info(k));
     info.recursions.addAll(recursions);
 
@@ -158,10 +184,9 @@ public class BashlogCompiler {
    * @param indent
    * @return column which is sorted (1-based index)
    */
-  private int sort(PlanNode n, int[] cols, StringBuilder sb, String indent) {
+  private void sort(PlanNode n, int[] cols, StringBuilder sb, String indent) {
     compile(n, sb, indent + INDENT);
     sb.append(" \\\n" + indent);
-    int sortCol = cols[0];
     if (cols.length > 1) {
       sb.append(" | " + AWK + "{ print $0 FS ");
       for (int i = 0; i < cols.length; i++) {
@@ -172,19 +197,24 @@ public class BashlogCompiler {
         sb.append(cols[i] + 1);
       }
       sb.append("}'");
-      sortCol = n.getArity();
     }
-    sb.append(" | sort -t $'\\t' -k ");
-    sb.append(sortCol + 1);
-    return sortCol + 1;
+    sb.append(" | sort -t $'\\t' ");
+    sb.append("-k ");
+    sb.append(sortCol(n, cols));
+  }
+
+  private int sortCol(PlanNode n, int[] cols) {
+    if (cols.length > 1) {
+      return n.getArity() + 1;
+    }
+    return cols[0] + 1;
   }
 
   /** Sort left and right tree, and join with 'join' command */
-  private void sortJoin(JoinNode j, StringBuilder sb, String indent) {
+  private void sortJoin(SortJoinNode j, StringBuilder sb, String indent) {
     int colLeft, colRight;
-    StringBuilder sbLeft = new StringBuilder(), sbRight = new StringBuilder();
-    colLeft = sort(j.getLeft(), j.getLeftJoinProjection(), sbLeft, indent);
-    colRight = sort(j.getRight(), j.getRightJoinProjection(), sbRight, indent);
+    colLeft = sortCol(j.getLeft(), j.getLeftJoinProjection());
+    colRight = sortCol(j.getRight(), j.getRightJoinProjection());
 
     sb.append("join -t $'\\t' -1 ");
     sb.append(colLeft);
@@ -202,9 +232,9 @@ public class BashlogCompiler {
     }
 
     sb.append(" <( \\\n");
-    sb.append(sbLeft.toString());
+    compile(j.getLeft(), sb, indent);
     sb.append(") <( \\\n");
-    sb.append(sbRight.toString());
+    compile(j.getRight(), sb, indent);
     sb.append(")");
   }
 
@@ -212,7 +242,10 @@ public class BashlogCompiler {
   private void compile(PlanNode planNode, StringBuilder sb, String indent) {
     Info info = planToInfo.get(planNode);
     if (info.reuse()) {
-      sb.append("cat " + planToInfo.get(planNode).filename + "_" + info.bashUseCount++);
+        sb.append("cat " + planToInfo.get(planNode).filename);
+      if (!info.materialize()) {
+        sb.append("_" + info.bashUseCount++);
+      }
     } else {
       compileRaw(planNode, sb, indent);
     }
@@ -253,8 +286,10 @@ public class BashlogCompiler {
 
   /** Compile planNode as is, reuse its decendants */
   private void compileRaw(PlanNode planNode, StringBuilder sb, String indent) {
-    if (planNode instanceof JoinNode) {
-      JoinNode j = (JoinNode) planNode;
+    if (planNode instanceof SortNode) {
+      sort(planNode.args().get(0), ((SortNode) planNode).sortColumns(), sb, indent);
+    } else if (planNode instanceof SortJoinNode) {
+      SortJoinNode j = (SortJoinNode) planNode;
       //leftHashJoin(j, sb, indent);
       sortJoin(j, sb, indent);
     } else if (planNode instanceof ProjectNode) {
@@ -346,7 +381,7 @@ public class BashlogCompiler {
     private boolean reuse = false;
 
     /** Save output to file; works only if reuse == true */
-    boolean materialize = false;
+    //boolean materialize = false;
 
     public Info(PlanNode plan) {
       this.plan = plan;
@@ -356,9 +391,13 @@ public class BashlogCompiler {
       return reuse && !(plan instanceof BuiltinNode);
     }
 
+    boolean materialize() {
+      return reuse && recursions.size() > 0;
+    }
+
     @Override
     public String toString() {
-      return filename + " uc:" + planUseCount + " rc:" + recursions.size() + " reuse " + reuse + " mat " + materialize;
+      return filename + " uc:" + planUseCount + " rc:" + recursions.size() + " reuse " + reuse + " mat " + materialize();
     }
   }
 
