@@ -1,10 +1,10 @@
 package common.parser;
 
+import javatools.filehandlers.FileUtils;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
-
-import javatools.filehandlers.FileUtils;
 
 /**
  * Parses datalog
@@ -39,11 +39,15 @@ public class Program implements Parseable {
       pr.skipComments();
       r = Rule.read(pr);
       if (r != null) {
-        p.rules.add(r);
-        p.relationToRules.computeIfAbsent(r.head.getRelation(), k -> new ArrayList<>()).add(r);
+        p.addRule(r);
       }
     } while (r != null);
     return p;
+  }
+
+  public void addRule(Rule rule) {
+    rules.add(rule);
+    relationToRules.computeIfAbsent(rule.head.getRelation(), k -> new ArrayList<>()).add(rule);
   }
 
   @Override

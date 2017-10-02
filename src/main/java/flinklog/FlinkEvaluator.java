@@ -51,7 +51,7 @@ public class FlinkEvaluator {
     Pattern stripRelation = Pattern.compile("/\\d+$");
 
     //We to program the loading from the factset
-    facts.getRelations().forEach(relation -> program.rules().add(buildLoadRuleForRelation(relation)));
+    facts.getRelations().forEach(relation -> program.addRule(buildLoadRuleForRelation(relation)));
 
     SimpleFactsSet result = new SimpleFactsSet();
     (new LogicalPlanBuilder(BUILDS_IN, relationsToOutput)).getPlanForProgram(program).entrySet().stream()

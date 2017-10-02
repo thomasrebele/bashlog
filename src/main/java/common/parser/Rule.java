@@ -72,7 +72,7 @@ public class Rule implements Parseable {
 
   public Set<String> getDependencies() {
     // TODO: nested terms
-    return body.stream().map(ct -> ct.getRelation()).collect(Collectors.toSet());
+    return body.stream().map(CompoundTerm::getRelation).collect(Collectors.toSet());
   }
 
   public static void main(String[] args) {
