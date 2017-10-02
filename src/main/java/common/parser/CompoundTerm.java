@@ -60,7 +60,7 @@ public class CompoundTerm extends Term implements Parseable {
     return name.hashCode() ^ Arrays.hashCode(args);
   }
 
-  public String signature() {
+  public String getRelation() {
     return name + "/" + args.length;
   }
 
@@ -87,9 +87,4 @@ public class CompoundTerm extends Term implements Parseable {
   public int compareTo(Object o) {
     throw new UnsupportedOperationException();
   }
-
-  public String getRelation() {
-    return name + "/" + args.length;
-  }
-
 }

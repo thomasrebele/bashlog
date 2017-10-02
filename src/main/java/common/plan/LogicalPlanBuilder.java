@@ -1,10 +1,10 @@
 package common.plan;
 
+import common.parser.*;
+
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
-import common.parser.*;
 
 /**
  * TODO: support recursion f(x,z) <- f(x,y), f(y,z). (join with full)
@@ -16,7 +16,7 @@ public class LogicalPlanBuilder {
 
   private Map<RelationWithDeltaNodes, PlanNode> planForRelation = new HashMap<>();
 
-  Program program;
+  private Program program;
 
   public LogicalPlanBuilder() {
   }
@@ -43,7 +43,7 @@ public class LogicalPlanBuilder {
     this.program = program;
     //We fill relationsToOutput if needed
     if (relationsToOutput.isEmpty()) {
-      program.rules().forEach(rule -> relationsToOutput.add(rule.head.signature()));
+      program.rules().forEach(rule -> relationsToOutput.add(rule.head.getRelation()));
     }
 
     Map<String, PlanNode> planNodes = new HashMap<>();
@@ -129,7 +129,7 @@ public class LogicalPlanBuilder {
           varToCol[colToVar[i]] = i;
         }
       } else {
-        termNode = getPlanForRelation(term.signature(), deltaNodes);
+        termNode = getPlanForRelation(term.getRelation(), deltaNodes);
         for (int i = 0; i < term.args.length; i++) {
           Term arg = term.args[i];
           if (arg instanceof Variable) {
@@ -210,17 +210,11 @@ public class LogicalPlanBuilder {
   }
 
   private boolean isRecursive(Rule rule) {
-    return hasAncestor(rule, rule.head.signature());
+    return program.getDependencies(rule).contains(rule.head.getRelation());
   }
 
   private boolean hasAncestor(String relation, String ancestor) {
     return program.getDependencies(relation).contains(ancestor);
-    //return program.rulesForRelation(relation).stream().anyMatch(rule -> this.hasAncestor(rule, ancestor));
-  }
-
-  private boolean hasAncestor(Rule rule, String ancestor) {
-    return program.getDependencies(rule).contains(ancestor);
-    //return rule.body.stream().anyMatch(tuple -> tuple.signature().equals(ancestor) || hasAncestor(tuple.signature(), ancestor));
   }
 
   private static class NodeWithMask {
