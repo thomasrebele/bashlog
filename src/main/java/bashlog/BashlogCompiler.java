@@ -55,8 +55,9 @@ public class BashlogCompiler {
             sb.append(i < info.planUseCount - 1 ? " | tee " : " > ");
             sb.append(info.filename + "_" + i);
           }
-          sb.append(" & ");
+          sb.append(" &");
         }
+        sb.append("\n");
       }
       System.out.println(info + " <- " + ("" + p.hashCode()).substring(0, 3) + "  " + p);
     });
