@@ -15,7 +15,7 @@ public class SortNode implements PlanNode {
 
   public SortNode(PlanNode child, int[] sortColumns) {
     this.child = child;
-    this.sortColumns = sortColumns;
+    this.sortColumns = sortColumns == null ? defaultSort(child.getArity()) : sortColumns;
   }
 
   @Override
@@ -59,6 +59,14 @@ public class SortNode implements PlanNode {
   @Override
   public PlanNode transform(Function<PlanNode, PlanNode> fn) {
     return fn.apply(new SortNode(child.transform(fn), sortColumns));
+  }
+
+  public static int[] defaultSort(int arity) {
+    int[] result = new int[arity];
+    for (int i = 0; i < result.length; i++) {
+      result[i] = i;
+    }
+    return result;
   }
 
 }
