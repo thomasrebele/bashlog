@@ -96,6 +96,13 @@ public class Program implements Parseable {
     }
   }
 
+  public static Program merge(Program p1, Program p2) {
+    Program result = new Program();
+    p1.rules().forEach(result::addRule);
+    p2.rules().forEach(result::addRule);
+    return result;
+  }
+
   public static void main(String[] args) throws IOException {
     Program p = loadFile("data/rules.y4");
     System.out.println(p.toString());

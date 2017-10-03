@@ -9,6 +9,7 @@ import org.apache.flink.api.java.ExecutionEnvironment;
 import org.apache.flink.api.java.functions.KeySelector;
 import org.apache.flink.api.java.operators.DeltaIteration;
 import org.apache.flink.api.java.tuple.Tuple1;
+import org.apache.flink.api.java.tuple.Tuple2;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,9 +35,6 @@ public class FlinkEvaluator {
   private Map<PlanNode, Optional<DataSet<FlinkRow>>> cache = new HashMap<>();
 
   public FlinkEvaluator() {
-    env.registerType(Atom.class);
-    env.registerType(Constant.class);
-    env.registerType(Variable.class);
     env.getConfig().enableObjectReuse();
   }
 
@@ -48,7 +46,6 @@ public class FlinkEvaluator {
   public FactsSet evaluate(Program program, FactsSet facts, Set<String> relationsToOutput) {
     //Initialize globals
     factsSet = facts;
-    Pattern stripRelation = Pattern.compile("/\\d+$");
 
     //We to program the loading from the factset
     facts.getRelations().forEach(relation -> program.addRule(buildLoadRuleForRelation(relation)));
@@ -57,20 +54,24 @@ public class FlinkEvaluator {
     (new LogicalPlanBuilder(BUILDS_IN, relationsToOutput)).getPlanForProgram(program).entrySet().stream()
             .flatMap(relationPlan -> {
               String relation = relationPlan.getKey();
+              LOGGER.info("Evaluating relation " + relation + " with plan:\n" + relationPlan.getValue().toPrettyString());
               return stream(this.mapPlanNode(relationPlan.getValue()).map(dataSet ->
-                      (DataSet<CompoundTerm>) dataSet.map(row -> {
-                        Term[] args = new Term[row.getArity()];
-                        for (int i = 0; i < args.length; i++) {
-                          args[i] = (Term) row.getField(i);
+                      (DataSet<Tuple2<String, Comparable[]>>) dataSet.map(new MapFunction<FlinkRow, Tuple2<String, Comparable[]>>() {
+                        @Override
+                        public Tuple2<String, Comparable[]> map(FlinkRow row) throws Exception {
+                          Comparable[] args = new Comparable[row.getArity()];
+                          for (int i = 0; i < args.length; i++) {
+                            args[i] = row.getField(i);
+                          }
+                          return new Tuple2<>(relation, args);
                         }
-                        return new CompoundTerm(stripRelation.matcher(relation).replaceAll(""), args);
                       })
               ));
             })
             .reduce(DataSet::union)
             .ifPresent(dataSet -> {
               try {
-                dataSet.collect().forEach(result::add);
+                dataSet.collect().forEach(tuple -> result.add(tuple.f0, tuple.f1));
               } catch (Exception e) {
                 LOGGER.error(e.getMessage(), e);
               }
@@ -121,13 +122,7 @@ public class FlinkEvaluator {
       case "flink_entry_values":
         String relation = ((String) ((Constant) node.compoundTerm.args[0]).getValue()).trim();
         //TODO: do not materialize here
-        List<FlinkRow> tuples = factsSet.getByRelation(relation).map(tuple -> {
-          FlinkRow row = new FlinkRow(tuple.length);
-          for (int i = 0; i < tuple.length; i++) {
-            row.setField(i, tuple[i]);
-          }
-          return row;
-        }).collect(Collectors.toList());
+        List<FlinkRow> tuples = factsSet.getByRelation(relation).map(FlinkRow::new).collect(Collectors.toList());
         if (tuples.isEmpty()) {
           LOGGER.info("Empty relation: " + relation);
           return Optional.empty();
@@ -140,7 +135,7 @@ public class FlinkEvaluator {
           Path file = Paths.get(command.substring(4).trim()).toAbsolutePath();
           Pattern pattern = Pattern.compile("[ \t\r\n]");
           return Optional.of(env.readTextFile("file://" + file.toString()).map(line ->
-                  new FlinkRow(Arrays.stream(pattern.split(line)).map(Constant::new))
+                  new FlinkRow(Arrays.stream(pattern.split(line)))
           ));
         } else {
           throw new IllegalArgumentException("Unsupported bash command: " + node.toString());
@@ -154,7 +149,9 @@ public class FlinkEvaluator {
     return mapPlanNode(node.getTable()).map(dataSet -> {
       int field = node.getField();
       Comparable value = node.getValue();
-      return dataSet.filter(row -> value.equals(row.getField(field)));
+      return dataSet.filter(row -> {
+        return value.equals(row.getField(field));
+      });
     });
   }
 
