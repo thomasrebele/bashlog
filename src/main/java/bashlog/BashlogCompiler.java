@@ -18,17 +18,14 @@ public class BashlogCompiler {
   PlanNode root;
 
   public BashlogCompiler(PlanNode planNode) {
-    PlanSimplifier p = new PlanSimplifier();
-
-    System.out.println("before simplification");
-    System.out.println(planNode.toPrettyString());
-    root = p.apply(planNode);
+    root = new PlanSimplifier().apply(planNode);
+    root = new PushDownFilterOptimizer().apply(root);
     System.out.println("after simplification");
     System.out.println(root.toPrettyString());
 
     //this.root = root.transform(this::transform);
 
-    root = planNode.transform(this::transform);
+    root = root.transform(this::transform);
     //root = root.transform(this::pushSelection);
 
     System.out.println(root.toPrettyString());
