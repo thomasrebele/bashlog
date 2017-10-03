@@ -49,7 +49,7 @@ public class LogicalPlanBuilder {
     }
 
     Map<String, PlanNode> planNodes = new HashMap<>();
-    relationsToOutput.forEach(relation -> planNodes.put(relation, SIMPLIFIER.simplify(getPlanForRelation(relation, Collections.emptyMap()))));
+    relationsToOutput.forEach(relation -> planNodes.put(relation, SIMPLIFIER.apply(getPlanForRelation(relation, Collections.emptyMap()))));
     return planNodes;
   }
 
@@ -84,7 +84,7 @@ public class LogicalPlanBuilder {
       PlanNode exitPlan = exitRules.stream()
               .map(rule -> getPlanForRule(rule, filteredDeltaNode))
               .reduce(UnionNode::new)
-              .orElseGet(() -> new UnionNode(Integer.parseInt(relation.split("/")[1])));
+              .orElseGet(() -> PlanNode.empty(Integer.parseInt(relation.split("/")[1])));
 
       if (recursiveRules.isEmpty()) {
         return exitPlan; //No recursion

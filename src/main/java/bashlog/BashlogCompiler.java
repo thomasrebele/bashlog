@@ -304,11 +304,8 @@ public class BashlogCompiler {
         if (p.getProjection()[i] >= 0) {
           sb.append("$");
           sb.append(p.getProjection()[i] + 1);
-        } else if (p.getConstants().length >= i) {
-          Object cnst = p.getConstants()[i];
-          if (cnst != null) {
-            sb.append("\"" + escape(cnst.toString()) + "\"");
-          }
+        } else {
+          p.getConstant(i).ifPresent(cnst -> sb.append("\"" + escape(cnst.toString()) + "\""));
         }
       }
       sb.append("}'");
