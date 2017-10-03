@@ -3,6 +3,7 @@ package bashlog.plan;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.BiFunction;
 
 import common.plan.PlanNode;
 
@@ -20,6 +21,10 @@ public class SortNode implements PlanNode {
   @Override
   public int getArity() {
     return child.getArity();
+  }
+
+  public PlanNode getTable() {
+    return child;
   }
 
   @Override
@@ -49,5 +54,13 @@ public class SortNode implements PlanNode {
   @Override
   public int hashCode() {
     return Objects.hash(child, sortColumns);
+  }
+
+  @Override
+  public PlanNode transform(BiFunction<PlanNode, PlanNode[], PlanNode> fn) {
+    PlanNode newChild = child.transform(fn);
+    PlanNode newNode = fn.apply(this, new PlanNode[] { newChild });
+    if (newNode != null) return newNode;
+    return new SortNode(newChild, sortColumns);
   }
 }
