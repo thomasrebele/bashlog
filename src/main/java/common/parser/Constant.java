@@ -1,6 +1,6 @@
 package common.parser;
 
-public class Constant<T> extends Term implements Parseable {
+public class Constant<T extends Comparable> extends Term implements Parseable {
 
   T value;
 
@@ -25,8 +25,8 @@ public class Constant<T> extends Term implements Parseable {
 
   @Override
   public int compareTo(Object o) {
-    if (o instanceof Constant && value instanceof Comparable) {
-      return ((Comparable) value).compareTo(((Constant) o).value);
+    if (o instanceof Constant) {
+      return value.compareTo(((Constant) o).value);
     } else {
       return toString().compareTo(o.toString()); //TODO: inefficient
     }

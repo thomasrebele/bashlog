@@ -25,11 +25,11 @@ public abstract class Term implements Parseable, Comparable {
     }
 
     if (pr.peek() == '"' || pr.peek() == '\'') {
-      return new Constant(pr.readString());
+      return new Constant<>(pr.readString());
     }
 
     if (Character.isDigit(pr.peek())) {
-      return new Constant(pr.readNumber());
+      return new Constant<Comparable>((Comparable) pr.readNumber());
     }
 
     return null;

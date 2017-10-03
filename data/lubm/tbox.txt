@@ -1,0 +1,124 @@
+Employee(X) :- AdministrativeStaff(X).
+Publication(X) :- Article(X).
+Professor(X) :- AssistantProfessor(X).
+Professor(X) :- AssociateProfessor(X).
+Publication(X) :- Book(X).
+
+headOf(X,Y) :- supportChair(X,Y).
+Department(Y) :- supportChair(X,Y).
+Person(X) :- supportChair(X,Y).
+Professor(X) :- Chair(X).
+
+AdministrativeStaff(X) :- ClericalStaff(X).
+Organization(X) :- College(X).
+Article(X) :- ConferencePaper(X).
+Work(X) :- Course(X).
+
+headOf(X,Y) :- supportDean(X,Y).
+College(Y) :- supportDean(X,Y).
+Person(X) :- supportDean(X,Y).
+Professor(X) :- Dean(X).
+
+headOf(X,Y) :- supportDirector(X,Y).
+Program(Y) :- supportDirector(X,Y).
+Person(X) :- supportDirector(X,Y).
+
+worksFor(X,Y) :- supportEmployee(X,Y).
+Organization(Y) :- supportEmployee(X,Y).
+Person(X) :- supportEmployee(X,Y).
+
+Organization(X) :- Department(X).
+Employee(X) :- Faculty(X).
+Professor(X) :- FullProfessor(X).
+Course(X) :- GraduateCourse(X).
+Person(X) :- GraduateStudent(X).
+
+takesCourse(X,Y) :- supportGraduateCourse(X,Y).
+GraduateCourse(Y) :- supportGraduateCourse(X,Y).
+
+Organization(X) :- Institute(X).
+Article(X) :- JournalArticle(X).
+Faculty(X) :- Lecturer(X).
+Publication(X) :- Manual(X).
+Faculty(X) :- PostDoc(X).
+Faculty(X) :- Professor(X).
+Organization(X) :- Program(X).
+Work(X) :- Research(X).
+Student(X) :- ResearchAssistant(X).
+
+worksFor(X,Y) :- supportResearchGroup(X,Y).
+ResearchGroup(Y) :- supportResearchGroup(X,Y).
+
+Organization(X) :- ResearchGroup(X).
+Publication(X) :- Software(X).
+Publication(X) :- Specification(X).
+AdministrativeStaff(X) :- SystemsStaff(X).
+
+takesCourse(X,Y) :- supportStudent(X,Y).
+Course(Y) :- supportStudent(X,Y).
+Person(X) :- supportStudent(X,Y).
+
+teachingAssistantOf(X,Y) :- supportTeachingAssistant(X,Y).
+Course(Y) :- supportTeachingAssistant(X,Y).
+Person(X) :- supportTeachingAssistant(X,Y).
+
+Article(X) :- TechnicalReport(X).
+Student(X) :- UndergraduateStudent(X).
+Organization(X) :- University(X).
+Publication(X) :- UnofficialPublication(X).
+Professor(X) :- VisitingProfessor(X).
+
+
+Person(X) :- advisor(X,Y).
+Professor(Y) :- advisor(X,Y).
+Organization(X) :- affiliatedOrganizationOf(X,Y).
+Organization(Y) :- affiliatedOrganizationOf(X,Y).
+Organization(X) :- affiliateOf(X,Y).
+Person(Y) :- affiliateOf(X,Y).
+Person(X) :- age(X,Y).
+Person(X) :- degreeFrom(X,Y).
+University(Y) :- degreeFrom(X,Y).
+degreeFrom(X,Y) :- hasAlumnus(Y,X).
+hasAlumnus(X,Y) :- degreeFrom(Y,X).
+Person(X) :- doctoralDegreeFrom(X,Y).
+University(Y) :- doctoralDegreeFrom(X,Y).
+degreeFrom(X,Y) :- doctoralDegreeFrom(X,Y).
+Person(X) :- emailAddress(X,Y).
+University(X) :- hasAlumnus(X,Y).
+Person(Y) :- hasAlumnus(X,Y).
+worksFor(X,Y) :- headOf(X,Y).
+Schedule(X) :- listedCourse(X,Y).
+Course(Y) :- listedCourse(X,Y).
+Person(X) :- mastersDegreeFrom(X,Y).
+University(Y) :- mastersDegreeFrom(X,Y).
+degreeFrom(X,Y) :- mastersDegreeFrom(X,Y).
+Organization(X) :- member(X,Y).
+Person(Y) :- member(X,Y).
+memberOf(X,Y) :- member(Y,X).
+member(Y,X) :- memberOf(X,Y).
+Organization(X) :- orgPublication(X,Y).
+Publication(Y) :- orgPublication(X,Y).
+Publication(X) :- publicationAuthor(X,Y).
+Person(Y) :- publicationAuthor(X,Y).
+Publication(X) :- publicationDate(X,Y).
+Publication(X) :- publicationResearch(X,Y).
+Research(Y) :- publicationResearch(X,Y).
+ResearchGroup(X) :- researchProject(X,Y).
+Research(Y) :- researchProject(X,Y).
+Software(X) :- softwareDocumentation(X,Y).
+Publication(Y) :- softwareDocumentation(X,Y).
+Software(X) :- softwareVersion(X,Y).
+Organization(X) :- subOrganizationOf(X,Y).
+Organization(Y) :- subOrganizationOf(X,Y).
+subOrganizationOf(X,Z) :- subOrganizationOf(X,Y),subOrganizationOf(Y,Z).
+Faculty(X) :- teacherOf(X,Y).
+Course(Y) :- teacherOf(X,Y).
+TeachingAssistant(X) :- teachingAssistantOf(X,Y).
+Course(Y) :- teachingAssistantOf(X,Y).
+Person(X) :- telephone(X,Y).
+Professor(X) :- tenured(X,Y).
+Person(X) :- title(X,Y).
+Person(X) :- undergraduateDegreeFrom(X,Y).
+University(Y) :- undergraduateDegreeFrom(X,Y).
+degreeFrom(X,Y) :- undergraduateDegreeFrom(X,Y).
+memberOf(X,Y) :- worksFor(X,Y).
