@@ -40,10 +40,12 @@ public class PlanNodeTest {
     PlanNode bar = new BuiltinNode(new CompoundTerm("bar", args));
     PlanNode fooFilter = new ConstantEqualityFilterNode(foo, 0, "foo");
     PlanNode barFilter = new ConstantEqualityFilterNode(bar, 0, "foo");
+
     Assert.assertEquals(
             new UnionNode(fooFilter, barFilter),
             optimizer.apply(new ConstantEqualityFilterNode(new UnionNode(foo, bar), 0, "foo"))
     );
+
     Assert.assertEquals(
             new ProjectNode(fooFilter, new int[]{1, 0}),
             optimizer.apply(new ConstantEqualityFilterNode(new ProjectNode(foo, new int[]{1, 0}), 1, "foo"))
@@ -55,6 +57,23 @@ public class PlanNodeTest {
     Assert.assertEquals(
             PlanNode.empty(2),
             optimizer.apply(new ConstantEqualityFilterNode(new ProjectNode(foo, new int[]{0, -1}, new Comparable[]{null, "bar"}), 1, "foo"))
+    );
+
+    Assert.assertEquals(
+            new JoinNode(fooFilter, bar, new int[]{1}, new int[]{1}),
+            optimizer.apply(new ConstantEqualityFilterNode(new JoinNode(foo, bar, new int[]{1}, new int[]{1}), 0, "foo"))
+    );
+    Assert.assertEquals(
+            new JoinNode(foo, barFilter, new int[]{1}, new int[]{1}),
+            optimizer.apply(new ConstantEqualityFilterNode(new JoinNode(foo, bar, new int[]{1}, new int[]{1}), 2, "foo"))
+    );
+    Assert.assertEquals(
+            new JoinNode(fooFilter, barFilter, new int[]{0}, new int[]{0}),
+            optimizer.apply(new ConstantEqualityFilterNode(new JoinNode(foo, bar, new int[]{0}, new int[]{0}), 0, "foo"))
+    );
+    Assert.assertEquals(
+            new JoinNode(fooFilter, barFilter, new int[]{0}, new int[]{0}),
+            optimizer.apply(new ConstantEqualityFilterNode(new JoinNode(foo, bar, new int[]{0}, new int[]{0}), 2, "foo"))
     );
   }
 }
