@@ -23,6 +23,9 @@ public class BashlogCompiler {
 
     //this.root = root.transform(this::transform);
 
+    System.out.println("optimized");
+    System.out.println(root.toPrettyString());
+
     root = root.transform(this::transform);
     //root = root.transform(this::pushSelection);
 
