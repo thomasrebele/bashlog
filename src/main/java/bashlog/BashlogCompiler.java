@@ -1,7 +1,6 @@
 package bashlog;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 import bashlog.plan.SortJoinNode;
 import bashlog.plan.SortNode;
@@ -19,11 +18,18 @@ public class BashlogCompiler {
   PlanNode root;
 
   public BashlogCompiler(PlanNode planNode) {
-    root = planNode.simplify();
-    root = root.transform(this::transform);
+    PlanSimplifier p = new PlanSimplifier();
 
+    System.out.println("before simplification");
+    System.out.println(planNode.toPrettyString());
+    root = p.apply(planNode);
+    System.out.println("after simplification");
     System.out.println(root.toPrettyString());
-    root = root.transform(this::pushSelection);
+
+    //this.root = root.transform(this::transform);
+
+    root = planNode.transform(this::transform);
+    //root = root.transform(this::pushSelection);
 
     System.out.println(root.toPrettyString());
   }
@@ -72,94 +78,94 @@ public class BashlogCompiler {
     return sb.toString();
   }
 
-  private PlanNode transform(PlanNode p, PlanNode[] args) {
+  private PlanNode transform(PlanNode p) {
     if (p instanceof JoinNode) {
       // sort join
-      PlanNode left = new SortNode(args[0], ((JoinNode) p).getLeftJoinProjection());
-      PlanNode right = new SortNode(args[1], ((JoinNode) p).getRightJoinProjection());
-      return new SortJoinNode(left, right, ((JoinNode) p).getLeftJoinProjection(),
-          ((JoinNode) p).getRightJoinProjection());
+      JoinNode joinNode = (JoinNode) p;
+      PlanNode left = new SortNode(joinNode.getLeft(), joinNode.getLeftJoinProjection());
+      PlanNode right = new SortNode(joinNode.getRight(), joinNode.getRightJoinProjection());
+      return new SortJoinNode(left, right, joinNode.getLeftJoinProjection(), joinNode.getRightJoinProjection());
     } else if (p instanceof RecursionNode) {
-      PlanNode child = new SortNode(args[0], null);
-      PlanNode child2 = new SortNode(args[1], null);
-
-      return new RecursionNode(child, child2, (DeltaNode) args[2]);
+      return ((RecursionNode) p).transform(
+              (exitPlan) -> new SortNode(exitPlan, null),
+              (recursionPlan) -> new SortNode(recursionPlan, null)
+      );
     }
 
-    return null;
+    return p;
   }
 
-  private PlanNode pushSelection(PlanNode p, PlanNode[] args) {
-    if (p instanceof ConstantEqualityFilterNode) {
-    System.out
-        .println(
-            "push selection " + p.operatorString() + " args " + Arrays.stream(args).map(a -> a.toPrettyString()).collect(Collectors.joining(", ")));
-      ConstantEqualityFilterNode s = ((ConstantEqualityFilterNode) p);
-      // TODO: ConstantEqualityFilterNode
-      if (args[0] instanceof UnionNode) {
-        return new UnionNode(
-            args[0].args().stream().map(c -> new ConstantEqualityFilterNode(c, s.getField(), s.getValue()).transform(this::pushSelection))
-                .collect(Collectors.toSet()),
-            s.getArity());
-      } else if(args[0] instanceof ProjectNode) {
-        System.out.println("trying to push over " + args[0].operatorString());
-        ProjectNode pj = ((ProjectNode) args[0]);
-        int[] proj = pj.getProjection();
-        int dstCol = proj[s.getField()];
-        if (dstCol >= 0) {
-          return new ProjectNode(new ConstantEqualityFilterNode(pj.getTable(), dstCol, s.getValue()).transform(this::pushSelection), proj);
-        }
-      } else if (args[0] instanceof SortJoinNode) {
-        SortJoinNode sjn = (SortJoinNode) args[0];
-        boolean pushLeft = s.getField() < sjn.getLeft().getArity() || Arrays.stream(sjn.getLeftJoinProjection()).anyMatch(i -> i == s.getField());
-        boolean pushRight = s.getField() >= sjn.getRight().getArity() || Arrays.stream(sjn.getRightJoinProjection()).anyMatch(i -> i == s.getField());
-        
-        System.out.println("pushing " + s);
-        return new SortJoinNode(
-            (pushLeft ? new ConstantEqualityFilterNode(sjn.getLeft(), s.getField(), s.getValue()).transform(this::pushSelection) : sjn.getLeft()), //
-            (pushRight
-                ? new ConstantEqualityFilterNode(sjn.getRight(), s.getField() - sjn.getLeft().getArity(), s.getValue()).transform(this::pushSelection)
-                : sjn.getRight()), //
-            sjn.getLeftJoinProjection(), sjn.getRightJoinProjection()
-            );
-      } else if(args[0] instanceof SortNode) {
-        SortNode sn = (SortNode) args[0];
-        return new SortNode(new ConstantEqualityFilterNode(sn.getTable(), s.getField(), s.getValue()).transform(this::pushSelection),
-            sn.sortColumns());
-      } else if (args[0] instanceof RecursionNode) {
-        // only push to recursive plan, if selection arrives at all delta nodes (and occurs at least one more time)!
-        RecursionNode rn = (RecursionNode) args[0];
-        PlanNode newExit = new ConstantEqualityFilterNode(rn.getExitPlan(), s.getField(), s.getValue()).transform(this::pushSelection);
-
-        boolean canBePushedDown = false;
-        class DeltaCounter {
-
-          int count = 0;
-
-          public PlanNode count(PlanNode tmpP, PlanNode[] tmpArgs) {
-            if (tmpP instanceof DeltaNode) {
-              count++;
-            }
-            tmpP = pushSelection(tmpP, tmpArgs);
-            return tmpP; //tmpP.transform((DeltaCounter.this)::count);
-          }
-        }
-
-        DeltaCounter dc = new DeltaCounter();
-        System.out.println("new recursive plan: ");
-        PlanNode newRecursion; //= new ConstantEqualityFilterNode(rn.getRecursivePlan(), s.getField(), s.getValue()).transform(dc::count);
-        newRecursion = new ConstantEqualityFilterNode(rn.getRecursivePlan(), s.getField(), s.getValue()).transform(this::pushSelection);
-
-        System.out.println(newRecursion.toPrettyString());
-        System.out.println("found " + dc.count + " deltas");
-
-        System.exit(0);
-        //return 
-
-      }
-    } 
-    return null;
-  }
+  //  private PlanNode pushSelection(PlanNode p, PlanNode[] args) {
+  //    if (p instanceof ConstantEqualityFilterNode) {
+  //    System.out
+  //        .println(
+  //            "push selection " + p.operatorString() + " args " + Arrays.stream(args).map(a -> a.toPrettyString()).collect(Collectors.joining(", ")));
+  //      ConstantEqualityFilterNode s = ((ConstantEqualityFilterNode) p);
+  //      // TODO: ConstantEqualityFilterNode
+  //      if (args[0] instanceof UnionNode) {
+  //        return new UnionNode(
+  //            args[0].args().stream().map(c -> new ConstantEqualityFilterNode(c, s.getField(), s.getValue()).transform(this::pushSelection))
+  //                .collect(Collectors.toSet()),
+  //            s.getArity());
+  //      } else if(args[0] instanceof ProjectNode) {
+  //        System.out.println("trying to push over " + args[0].operatorString());
+  //        ProjectNode pj = ((ProjectNode) args[0]);
+  //        int[] proj = pj.getProjection();
+  //        int dstCol = proj[s.getField()];
+  //        if (dstCol >= 0) {
+  //          return new ProjectNode(new ConstantEqualityFilterNode(pj.getTable(), dstCol, s.getValue()).transform(this::pushSelection), proj);
+  //        }
+  //      } else if (args[0] instanceof SortJoinNode) {
+  //        SortJoinNode sjn = (SortJoinNode) args[0];
+  //        boolean pushLeft = s.getField() < sjn.getLeft().getArity() || Arrays.stream(sjn.getLeftJoinProjection()).anyMatch(i -> i == s.getField());
+  //        boolean pushRight = s.getField() >= sjn.getRight().getArity() || Arrays.stream(sjn.getRightJoinProjection()).anyMatch(i -> i == s.getField());
+  //        
+  //        System.out.println("pushing " + s);
+  //        return new SortJoinNode(
+  //            (pushLeft ? new ConstantEqualityFilterNode(sjn.getLeft(), s.getField(), s.getValue()).transform(this::pushSelection) : sjn.getLeft()), //
+  //            (pushRight
+  //                ? new ConstantEqualityFilterNode(sjn.getRight(), s.getField() - sjn.getLeft().getArity(), s.getValue()).transform(this::pushSelection)
+  //                : sjn.getRight()), //
+  //            sjn.getLeftJoinProjection(), sjn.getRightJoinProjection()
+  //            );
+  //      } else if(args[0] instanceof SortNode) {
+  //        SortNode sn = (SortNode) args[0];
+  //        return new SortNode(new ConstantEqualityFilterNode(sn.getTable(), s.getField(), s.getValue()).transform(this::pushSelection),
+  //            sn.sortColumns());
+  //      } else if (args[0] instanceof RecursionNode) {
+  //        // only push to recursive plan, if selection arrives at all delta nodes (and occurs at least one more time)!
+  //        RecursionNode rn = (RecursionNode) args[0];
+  //        PlanNode newExit = new ConstantEqualityFilterNode(rn.getExitPlan(), s.getField(), s.getValue()).transform(this::pushSelection);
+  //
+  //        boolean canBePushedDown = false;
+  //        class DeltaCounter {
+  //
+  //          int count = 0;
+  //
+  //          public PlanNode count(PlanNode tmpP, PlanNode[] tmpArgs) {
+  //            if (tmpP instanceof DeltaNode) {
+  //              count++;
+  //            }
+  //            tmpP = pushSelection(tmpP, tmpArgs);
+  //            return tmpP; //tmpP.transform((DeltaCounter.this)::count);
+  //          }
+  //        }
+  //
+  //        DeltaCounter dc = new DeltaCounter();
+  //        System.out.println("new recursive plan: ");
+  //        PlanNode newRecursion; //= new ConstantEqualityFilterNode(rn.getRecursivePlan(), s.getField(), s.getValue()).transform(dc::count);
+  //        newRecursion = new ConstantEqualityFilterNode(rn.getRecursivePlan(), s.getField(), s.getValue()).transform(this::pushSelection);
+  //
+  //        System.out.println(newRecursion.toPrettyString());
+  //        System.out.println("found " + dc.count + " deltas");
+  //
+  //        System.exit(0);
+  //        //return 
+  //
+  //      }
+  //    } 
+  //    return null;
+  //  }
 
   /** Counts how often each subplan occurs in the tree */
   private void analyzeUsage(PlanNode p) {
@@ -383,11 +389,8 @@ public class BashlogCompiler {
         if (p.getProjection()[i] >= 0) {
           sb.append("$");
           sb.append(p.getProjection()[i] + 1);
-        } else if (p.getConstants().length >= i) {
-          Object cnst = p.getConstants()[i];
-          if (cnst != null) {
-            sb.append("\"" + escape(cnst.toString()) + "\"");
-          }
+        } else {
+          p.getConstant(i).ifPresent(cnst -> sb.append("\"" + escape(cnst.toString()) + "\""));
         }
       }
       sb.append("}'");

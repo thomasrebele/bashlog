@@ -1,6 +1,6 @@
 package bashlog.plan;
 
-import java.util.function.BiFunction;
+import java.util.function.Function;
 
 import common.plan.JoinNode;
 import common.plan.PlanNode;
@@ -17,11 +17,8 @@ public class SortJoinNode extends JoinNode {
   }
 
   @Override
-  public PlanNode transform(BiFunction<PlanNode, PlanNode[], PlanNode> fn) {
-    PlanNode newLeft = getLeft().transform(fn);
-    PlanNode newRight = getRight().transform(fn);
-    PlanNode newNode = fn.apply(this, new PlanNode[] { newLeft, newRight });
-    if (newNode != null) return newNode;
-    return new SortJoinNode(newLeft, newRight, getLeftJoinProjection(), getRightJoinProjection());
+  public PlanNode transform(Function<PlanNode, PlanNode> fn) {
+    return fn.apply(new SortJoinNode(getLeft().transform(fn), getRight().transform(fn), getLeftJoinProjection(), getRightJoinProjection()));
   }
+
 }

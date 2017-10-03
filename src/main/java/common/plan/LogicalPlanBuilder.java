@@ -11,6 +11,8 @@ import java.util.stream.Stream;
  */
 public class LogicalPlanBuilder {
 
+  private static final PlanSimplifier SIMPLIFIER = new PlanSimplifier();
+
   private Set<String> builtin = new HashSet<>();
   private Set<String> relationsToOutput = new HashSet<>();
 
@@ -47,7 +49,7 @@ public class LogicalPlanBuilder {
     }
 
     Map<String, PlanNode> planNodes = new HashMap<>();
-    relationsToOutput.forEach(relation -> planNodes.put(relation, getPlanForRelation(relation, Collections.emptyMap()).simplify()));
+    relationsToOutput.forEach(relation -> planNodes.put(relation, SIMPLIFIER.apply(getPlanForRelation(relation, Collections.emptyMap()))));
     return planNodes;
   }
 
@@ -82,7 +84,7 @@ public class LogicalPlanBuilder {
       PlanNode exitPlan = exitRules.stream()
               .map(rule -> getPlanForRule(rule, filteredDeltaNode))
               .reduce(UnionNode::new)
-              .orElseGet(() -> new UnionNode(Integer.parseInt(relation.split("/")[1])));
+              .orElseGet(() -> PlanNode.empty(Integer.parseInt(relation.split("/")[1])));
 
       if (recursiveRules.isEmpty()) {
         return exitPlan; //No recursion

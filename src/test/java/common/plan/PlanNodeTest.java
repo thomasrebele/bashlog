@@ -9,25 +9,52 @@ import org.junit.Test;
 public class PlanNodeTest {
 
   @Test
-  public void testSimplify() {
+  public void testSimplifier() {
+    PlanSimplifier simplifier = new PlanSimplifier();
     TermList args = new TermList(new Variable("X"), new Variable("Y"));
     PlanNode foo = new BuiltinNode(new CompoundTerm("foo", args));
     PlanNode bar = new BuiltinNode(new CompoundTerm("bar", args));
     Assert.assertEquals(
             new UnionNode(foo, bar),
-            new UnionNode(foo, new UnionNode(bar, new UnionNode(2))).simplify()
+            simplifier.apply(new UnionNode(foo, new UnionNode(bar, PlanNode.empty(2))))
     );
     Assert.assertEquals(
             foo,
-            new UnionNode(foo, new UnionNode(foo, new UnionNode(2))).simplify()
+            simplifier.apply(new UnionNode(foo, new UnionNode(foo, PlanNode.empty(2))))
     );
     Assert.assertEquals(
             foo,
-            new ProjectNode(foo, new int[]{0, 1}).simplify()
+            simplifier.apply(new ProjectNode(foo, new int[]{0, 1}))
     );
     Assert.assertEquals(
-            new UnionNode(2),
-            new ProjectNode(new UnionNode(2), new int[]{0, 0}).simplify()
+            PlanNode.empty(2),
+            simplifier.apply(new ProjectNode(PlanNode.empty(2), new int[]{0, 0}))
+    );
+  }
+
+  @Test
+  public void testPushDownFilterOptimizer() {
+    Optimizer optimizer = new PushDownFilterOptimizer();
+    TermList args = new TermList(new Variable("X"), new Variable("Y"));
+    PlanNode foo = new BuiltinNode(new CompoundTerm("foo", args));
+    PlanNode bar = new BuiltinNode(new CompoundTerm("bar", args));
+    PlanNode fooFilter = new ConstantEqualityFilterNode(foo, 0, "foo");
+    PlanNode barFilter = new ConstantEqualityFilterNode(bar, 0, "foo");
+    Assert.assertEquals(
+            new UnionNode(fooFilter, barFilter),
+            optimizer.apply(new ConstantEqualityFilterNode(new UnionNode(foo, bar), 0, "foo"))
+    );
+    Assert.assertEquals(
+            new ProjectNode(fooFilter, new int[]{1, 0}),
+            optimizer.apply(new ConstantEqualityFilterNode(new ProjectNode(foo, new int[]{1, 0}), 1, "foo"))
+    );
+    Assert.assertEquals(
+            new ProjectNode(foo, new int[]{0, -1}, new Comparable[]{null, "foo"}),
+            optimizer.apply(new ConstantEqualityFilterNode(new ProjectNode(foo, new int[]{0, -1}, new Comparable[]{null, "foo"}), 1, "foo"))
+    );
+    Assert.assertEquals(
+            PlanNode.empty(2),
+            optimizer.apply(new ConstantEqualityFilterNode(new ProjectNode(foo, new int[]{0, -1}, new Comparable[]{null, "bar"}), 1, "foo"))
     );
   }
 }
