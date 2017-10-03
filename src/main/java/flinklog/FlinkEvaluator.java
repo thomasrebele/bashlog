@@ -198,6 +198,7 @@ public class FlinkEvaluator {
       DataSet<Tuple1<FlinkRow>> initialSetTuple = toTuple(initialSet);
       DeltaIteration<Tuple1<FlinkRow>, FlinkRow> iteration = initialSetTuple.iterateDelta(initialSet, MAX_ITERATION, 0);
       cache.put(node.getDelta(), Optional.of(iteration.getWorkset()));
+      cache.put(node.getFull(), Optional.of(fromTuple(iteration.getSolutionSet())));
       return mapPlanNode(node.getRecursivePlan())
               .map(recursivePlan -> fromTuple(iteration.closeWith(toTuple(recursivePlan), recursivePlan)))
               .orElse(initialSet);

@@ -1,14 +1,25 @@
 package common.plan;
 
-import org.junit.Assert;
-import org.junit.Test;
-
 import common.parser.CompoundTerm;
 import common.parser.TermList;
 import common.parser.Variable;
+import org.junit.Assert;
+import org.junit.Test;
 
 public class PlanNodeTest {
 
+  @Test
+  public void testPlanNode() {
+    TermList args2 = new TermList(new Variable("X"), new Variable("Y"));
+    PlanNode foo = new BuiltinNode(new CompoundTerm("foo", args2));
+    PlanNode bar = new BuiltinNode(new CompoundTerm("bar", args2));
+    Assert.assertTrue((new VariableEqualityFilterNode(foo, 1, 1)).contains(foo));
+    Assert.assertFalse((new VariableEqualityFilterNode(foo, 1, 1)).contains(bar));
+    Assert.assertEquals(
+            new VariableEqualityFilterNode(foo, 1, 1),
+            (new VariableEqualityFilterNode(bar, 1, 1)).replace(bar, foo)
+    );
+  }
   @Test
   public void testSimplifier() {
     PlanSimplifier simplifier = new PlanSimplifier();
