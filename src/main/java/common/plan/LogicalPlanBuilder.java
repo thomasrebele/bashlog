@@ -11,6 +11,8 @@ import java.util.stream.Stream;
  */
 public class LogicalPlanBuilder {
 
+  private static final PlanSimplifier SIMPLIFIER = new PlanSimplifier();
+
   private Set<String> builtin = new HashSet<>();
   private Set<String> relationsToOutput = new HashSet<>();
 
@@ -47,7 +49,7 @@ public class LogicalPlanBuilder {
     }
 
     Map<String, PlanNode> planNodes = new HashMap<>();
-    relationsToOutput.forEach(relation -> planNodes.put(relation, getPlanForRelation(relation, Collections.emptyMap()).simplify()));
+    relationsToOutput.forEach(relation -> planNodes.put(relation, SIMPLIFIER.simplify(getPlanForRelation(relation, Collections.emptyMap()))));
     return planNodes;
   }
 

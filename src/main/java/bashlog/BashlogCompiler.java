@@ -1,13 +1,13 @@
 package bashlog;
 
-import java.util.*;
-
 import bashlog.plan.SortJoinNode;
 import bashlog.plan.SortNode;
 import common.parser.CompoundTerm;
 import common.parser.Constant;
 import common.plan.*;
 import common.plan.RecursionNode.DeltaNode;
+
+import java.util.*;
 
 public class BashlogCompiler {
 
@@ -18,7 +18,6 @@ public class BashlogCompiler {
   PlanNode root;
 
   public BashlogCompiler(PlanNode root) {
-    this.root = root.simplify();
     this.root = root.transform(this::transform);
 
     System.out.println(this.root.toPrettyString());
@@ -67,18 +66,18 @@ public class BashlogCompiler {
     return sb.toString();
   }
 
-  private PlanNode transform(PlanNode p, PlanNode[] args) {
+  private PlanNode transform(PlanNode p) {
     if (p instanceof JoinNode) {
       // sort join
-      PlanNode left = new SortNode(args[0], ((JoinNode) p).getLeftJoinProjection());
-      PlanNode right = new SortNode(args[1], ((JoinNode) p).getRightJoinProjection());
-      return new SortJoinNode(left, right, ((JoinNode) p).getLeftJoinProjection(),
-          ((JoinNode) p).getRightJoinProjection());
+      JoinNode joinNode = (JoinNode) p;
+      PlanNode left = new SortNode(joinNode.getLeft(), joinNode.getLeftJoinProjection());
+      PlanNode right = new SortNode(joinNode.getRight(), joinNode.getRightJoinProjection());
+      return new SortJoinNode(left, right, joinNode.getLeftJoinProjection(), joinNode.getRightJoinProjection());
     } else if (p instanceof RecursionNode) {
-      PlanNode child = new SortNode(args[0], null);
-      PlanNode child2 = new SortNode(args[1], null);
-
-      return new RecursionNode(child, child2, (DeltaNode) args[2]);
+      return ((RecursionNode) p).transform(
+              (exitPlan) -> new SortNode(exitPlan, null),
+              (recursionPlan) -> new SortNode(recursionPlan, null)
+      );
     }
 
     return null;
