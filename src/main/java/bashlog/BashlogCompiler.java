@@ -46,7 +46,8 @@ public class BashlogCompiler {
 
   public String compile(String indent) {
     StringBuilder sb = new StringBuilder();
-    sb.append("#!/bin/bash");
+    sb.append("#!/bin/bash\n");
+    sb.append("export LC_ALL=C\n");
     sb.append("mkdir -p tmp\n");
     compile(root, sb, indent);
     return sb.toString();
@@ -144,7 +145,7 @@ public class BashlogCompiler {
       }
       sb.append("}'");
     }
-    sb.append(" | LC_ALL=C sort -t $'\\t' ");
+    sb.append(" | sort -t $'\\t' ");
     if (cols != null) {
       sb.append("-k ");
       sb.append(sortCol(n, cols));
@@ -164,7 +165,7 @@ public class BashlogCompiler {
     colLeft = sortCol(j.getLeft(), j.getLeftJoinProjection());
     colRight = sortCol(j.getRight(), j.getRightJoinProjection());
 
-    sb.append("LC_ALL=C join -t $'\\t' -1 ");
+    sb.append("join -t $'\\t' -1 ");
     sb.append(colLeft);
     sb.append(" -2 ");
     sb.append(colRight);
@@ -205,7 +206,7 @@ public class BashlogCompiler {
     sb.append(" > " + newDeltaFile + "\n");
 
     sb.append(indent + INDENT + "mv " + newDeltaFile + " " + deltaFile + "; \n");
-    sb.append(indent + INDENT + "LC_ALL=C sort -u --merge -o " + fullFile + " " + fullFile + " <(LC_ALL=C sort " + deltaFile + ")\n");
+    sb.append(indent + INDENT + "sort -u --merge -o " + fullFile + " " + fullFile + " <(sort " + deltaFile + ")\n");
   }
 
   private void recursionInMemory(RecursionNode rn, StringBuilder sb, String indent, String fullFile, String deltaFile, String newDeltaFile) {
