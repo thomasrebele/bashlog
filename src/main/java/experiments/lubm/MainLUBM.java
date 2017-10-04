@@ -7,13 +7,18 @@ import flinklog.SimpleFactsSet;
 
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collections;
 
 /**
  * Reuses the data from https://www.mat.unical.it/kr2012/
+ * To run it download https://www.mat.unical.it/kr2012/lubmTBoxTranslation.pdf and inflate it.
+ * Then update the DATA_PATH constant to the directory you want to retrieve date from (e.g. on of the subdirectory of the downloaded data)
  */
 public class MainLUBM {
+  private static final Path DATA_PATH = Paths.get("data/lubm/abox-10");
+
   public static void main(String[] args) throws IOException {
     Program program = Program.merge(Program.loadFile("data/lubm/tbox.txt"), Program.loadFile("data/lubm/queries.txt"));
     FactsSet facts = loadFacts();
@@ -26,7 +31,7 @@ public class MainLUBM {
 
   private static FactsSet loadFacts() throws IOException {
     SimpleFactsSet factsSet = new SimpleFactsSet();
-    Files.newDirectoryStream(Paths.get("data/lubm/abox-10")).forEach(file -> {
+    Files.newDirectoryStream(DATA_PATH).forEach(file -> {
       try {
         factsSet.loadFile(file);
       } catch (IOException e) {
