@@ -2,6 +2,7 @@ package bashlog;
 
 import bashlog.plan.SortJoinNode;
 import bashlog.plan.SortNode;
+import bashlog.plan.SortRecursionNode;
 import bashlog.plan.SortUnionNode;
 import common.parser.CompoundTerm;
 import common.parser.Constant;
@@ -123,7 +124,7 @@ public class BashlogCompiler {
       return new SortJoinNode(left, right, joinNode.getLeftJoinProjection(), joinNode.getRightJoinProjection());
     } else if (p instanceof RecursionNode) {
       RecursionNode r = (RecursionNode) p;
-      return r.transform(new SortNode(r.getExitPlan(), null), new SortNode(r.getRecursivePlan(), null));
+      return new SortRecursionNode(new SortNode(r.getExitPlan(), null), new SortNode(r.getRecursivePlan(), null), r.getDelta(), r.getFull());
     } else if (p instanceof UnionNode) {
       UnionNode u = (UnionNode) p;
       if (u.args().size() > 2) {
