@@ -138,7 +138,7 @@ public class LogicalPlanBuilder {
             colToVar[i] = variablesEncoding.get(arg);
             varToCol[colToVar[i]] = i;
           } else if (arg instanceof Constant) {
-            termNode = termNode.equalityFilter(i, (Comparable) ((Constant) arg).getValue());
+            termNode = termNode.equalityFilter(i, ((Constant) arg).getValue());
           } else {
             throw new UnsupportedOperationException("cannot handle " + termNode);
           }
@@ -203,7 +203,7 @@ public class LogicalPlanBuilder {
         projection[i] = body.varToCol[variablesEncoding.get(t)];
       } else if (t instanceof Constant) {
         // TODO: this is an unchecked constraint!
-        resultConstants[i] = (Comparable) ((Constant) t).getValue();
+        resultConstants[i] = ((Constant) t).getValue();
       } else {
         throw new UnsupportedOperationException();
       }
