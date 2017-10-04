@@ -4,12 +4,12 @@ import common.parser.*;
 import common.plan.*;
 import org.apache.commons.compress.utils.Sets;
 import org.apache.flink.api.common.functions.MapFunction;
+import org.apache.flink.api.common.typeinfo.TypeHint;
+import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.java.DataSet;
 import org.apache.flink.api.java.ExecutionEnvironment;
-import org.apache.flink.api.java.functions.KeySelector;
 import org.apache.flink.api.java.operators.DeltaIteration;
-import org.apache.flink.api.java.tuple.Tuple1;
-import org.apache.flink.api.java.tuple.Tuple2;
+import org.apache.flink.api.java.tuple.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,15 +33,107 @@ public class FlinkEvaluator {
 
   private ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
   private FactsSet factsSet;
-  private Map<PlanNode, Optional<DataSet<FlinkRow>>> cache = new HashMap<>();
+  private Map<PlanNode, Optional<DataSet<Tuple>>> cache = new HashMap<>();
 
   public FlinkEvaluator() {
     env.getConfig().enableObjectReuse();
   }
 
+  @SafeVarargs
+  private static <T> Tuple newTuple(T... values) {
+    switch (values.length) {
+      case 0:
+        return Tuple0.INSTANCE;
+      case 1:
+        return Tuple1.of(values[0]);
+      case 2:
+        return Tuple2.of(values[0], values[1]);
+      case 3:
+        return Tuple3.of(values[0], values[1], values[2]);
+      case 4:
+        return Tuple4.of(values[0], values[1], values[2], values[3]);
+      case 5:
+        return Tuple5.of(values[0], values[1], values[2], values[3], values[4]);
+      default:
+        throw new IllegalArgumentException("This arity is not supported");
+    }
+  }
+
+  private static Tuple concatTuples(Tuple t1, Tuple t2) {
+    Tuple result = newTuple(t1.getArity() + t2.getArity());
+    for (int i = 0; i < t1.getArity(); i++) {
+      result.setField(t1.getField(i), i);
+    }
+    for (int i = 0; i < t2.getArity(); i++) {
+      result.setField(t2.getField(i), t1.getArity() + i);
+    }
+    return result;
+  }
+
   private static <T> Stream<T> stream(Optional<T> optional) {
     //TODO: remove when targeting JDK 9+
     return optional.map(Stream::of).orElse(Stream.empty());
+  }
+
+  private PlanNode optimize(PlanNode node) {
+    for (Optimizer optimizer : OPTIMIZERS) {
+      node = optimizer.apply(node);
+    }
+    return node;
+  }
+
+  private static <T> Tuple newTuple(int arity) {
+    switch (arity) {
+      case 0:
+        return new Tuple0();
+      case 1:
+        return new Tuple1<T>();
+      case 2:
+        return new Tuple2<T, T>();
+      case 3:
+        return new Tuple3<T, T, T>();
+      case 4:
+        return new Tuple4<T, T, T, T>();
+      case 5:
+        return new Tuple5<T, T, T, T, T>();
+      default:
+        throw new IllegalArgumentException("This arity is not supported");
+    }
+  }
+
+  private static TypeInformation typeInfo(int arity) {
+    switch (arity) {
+      case 0:
+        return TypeInformation.of(new TypeHint<Tuple0>() {
+        });
+      case 1:
+        return TypeInformation.of(new TypeHint<Tuple1<Comparable>>() {
+        });
+      case 2:
+        return TypeInformation.of(new TypeHint<Tuple2<Comparable, Comparable>>() {
+        });
+      case 3:
+        return TypeInformation.of(new TypeHint<Tuple3<Comparable, Comparable, Comparable>>() {
+        });
+      case 4:
+        return TypeInformation.of(new TypeHint<Tuple4<Comparable, Comparable, Comparable, Comparable>>() {
+        });
+      case 5:
+        return TypeInformation.of(new TypeHint<Tuple5<Comparable, Comparable, Comparable, Comparable, Comparable>>() {
+        });
+      default:
+        throw new IllegalArgumentException("This arity is not supported");
+    }
+  }
+
+  private Rule buildLoadRuleForRelation(String relation) {
+    String rel = relation.split("/")[0];
+    int arity = Integer.parseInt(relation.split("/")[1]);
+    Variable[] variables = IntStream.range(0, arity).mapToObj(i -> new Variable(Integer.toString(i))).toArray(Variable[]::new);
+    return new Rule(
+            new CompoundTerm(rel, variables),
+            new CompoundTerm("flink_entry_values", new Constant<>(relation), new TermList(variables))
+    );
   }
 
   public FactsSet evaluate(Program program, FactsSet facts, Set<String> relationsToOutput) {
@@ -58,15 +150,13 @@ public class FlinkEvaluator {
               PlanNode plan = optimize(relationPlan.getValue());
               LOGGER.info("Evaluating relation " + relation + " with plan:\n" + plan.toPrettyString());
               return stream(this.mapPlanNode(plan).map(dataSet ->
-                      (DataSet<Tuple2<String, Comparable[]>>) dataSet.map(new MapFunction<FlinkRow, Tuple2<String, Comparable[]>>() {
-                        @Override
-                        public Tuple2<String, Comparable[]> map(FlinkRow row) throws Exception {
-                          Comparable[] args = new Comparable[row.getArity()];
-                          for (int i = 0; i < args.length; i++) {
-                            args[i] = row.getField(i);
-                          }
-                          return new Tuple2<>(relation, args);
+                      (DataSet<Tuple2<String, Comparable[]>>) dataSet.map((MapFunction<Tuple, Tuple2<String, Comparable[]>>) row -> {
+                        Comparable[] args = new Comparable[row.getArity()];
+                        for (int i = 0; i < args.length; i++) {
+                          args[i] = row.getField(i);
                         }
+                        return new Tuple2<>(relation, args);
+                      }).returns(new TypeHint<Tuple2<String, Comparable[]>>() {
                       })
               ));
             })
@@ -81,31 +171,14 @@ public class FlinkEvaluator {
     return result;
   }
 
-  private PlanNode optimize(PlanNode node) {
-    for (Optimizer optimizer : OPTIMIZERS) {
-      node = optimizer.apply(node);
-    }
-    return node;
-  }
-
-  private Rule buildLoadRuleForRelation(String relation) {
-    String rel = relation.split("/")[0];
-    int arity = Integer.parseInt(relation.split("/")[1]);
-    Variable[] variables = IntStream.range(0, arity).mapToObj(i -> new Variable(Integer.toString(i))).toArray(Variable[]::new);
-    return new Rule(
-            new CompoundTerm(rel, variables),
-            new CompoundTerm("flink_entry_values", new Constant<>(relation), new TermList(variables))
-    );
-  }
-
-  private Optional<DataSet<FlinkRow>> mapPlanNode(PlanNode planNode) {
+  private Optional<DataSet<Tuple>> mapPlanNode(PlanNode planNode) {
     if (!cache.containsKey(planNode)) {
       cache.put(planNode, buildForPlanNode(planNode));
     }
     return cache.get(planNode);
   }
 
-  private Optional<DataSet<FlinkRow>> buildForPlanNode(PlanNode node) {
+  private Optional<DataSet<Tuple>> buildForPlanNode(PlanNode node) {
     if (node instanceof BuiltinNode) {
       return mapBuiltinNode((BuiltinNode) node);
     } else if (node instanceof ConstantEqualityFilterNode) {
@@ -125,13 +198,13 @@ public class FlinkEvaluator {
     }
   }
 
-  private Optional<DataSet<FlinkRow>> mapBuiltinNode(BuiltinNode node) {
+  private Optional<DataSet<Tuple>> mapBuiltinNode(BuiltinNode node) {
     String name = node.compoundTerm.name;
     switch (name) {
       case "flink_entry_values":
         String relation = ((String) ((Constant) node.compoundTerm.args[0]).getValue()).trim();
         //TODO: do not materialize here
-        List<FlinkRow> tuples = factsSet.getByRelation(relation).map(FlinkRow::new).collect(Collectors.toList());
+        List<Tuple> tuples = factsSet.getByRelation(relation).map(FlinkEvaluator::newTuple).collect(Collectors.toList());
         if (tuples.isEmpty()) {
           LOGGER.info("Empty relation: " + relation);
           return Optional.empty();
@@ -144,8 +217,8 @@ public class FlinkEvaluator {
           Path file = Paths.get(command.substring(4).trim()).toAbsolutePath();
           Pattern pattern = Pattern.compile("[ \t\r\n]");
           return Optional.of(env.readTextFile("file://" + file.toString()).map(line ->
-                  new FlinkRow(Arrays.stream(pattern.split(line)))
-          ));
+                  newTuple(Arrays.stream(pattern.split(line)).toArray(Comparable[]::new))
+          ).returns(typeInfo(node.getArity())));
         } else {
           throw new IllegalArgumentException("Unsupported bash command: " + node.toString());
         }
@@ -154,91 +227,68 @@ public class FlinkEvaluator {
     }
   }
 
-  private Optional<DataSet<FlinkRow>> mapConstantEqualityFilterNode(ConstantEqualityFilterNode node) {
+  private Optional<DataSet<Tuple>> mapConstantEqualityFilterNode(ConstantEqualityFilterNode node) {
     return mapPlanNode(node.getTable()).map(dataSet -> {
       int field = node.getField();
       Comparable value = node.getValue();
-      return dataSet.filter(row -> {
-        return value.equals(row.getField(field));
-      });
+      return dataSet.filter(row -> value.equals(row.getField(field)));
     });
   }
 
-  private KeySelector<FlinkRow, FlinkRow> selectorForColumns(int columns[]) {
-    return (KeySelector<FlinkRow, FlinkRow>) full -> {
-      FlinkRow filtered = new FlinkRow(columns.length);
-      for (int i = 0; i < columns.length; i++) {
-        filtered.setField(i, full.getField(columns[i]));
-      }
-      return filtered;
-    };
-  }
-
-  private Optional<DataSet<FlinkRow>> mapJoinNode(JoinNode node) {
+  private Optional<DataSet<Tuple>> mapJoinNode(JoinNode node) {
     return mapPlanNode(node.getLeft()).flatMap(left ->
             mapPlanNode(node.getRight()).map(right ->
                     left.join(right)
-                            .where(selectorForColumns(node.getLeftJoinProjection()))
-                            .equalTo(selectorForColumns(node.getRightJoinProjection()))
-                            .with(FlinkRow::concat)));
+                            .where(node.getLeftJoinProjection())
+                            .equalTo(node.getRightJoinProjection())
+                            .with(FlinkEvaluator::concatTuples)
+                            .returns(typeInfo(node.getArity()))
+
+            )
+    );
   }
 
-  private Optional<DataSet<FlinkRow>> mapProjectNode(ProjectNode node) {
+  private Optional<DataSet<Tuple>> mapProjectNode(ProjectNode node) {
     return mapPlanNode(node.getTable()).map(dataSet -> {
       int[] projection = node.getProjection();
       Comparable[] constants = node.getConstants();
       return dataSet.map(row -> {
         int arity = projection.length;
-        FlinkRow result = new FlinkRow(arity);
+        Tuple result = newTuple(arity);
         for (int i = 0; i < arity; i++) {
           if (projection[i] >= 0) {
-            result.setField(i, row.getField(projection[i]));
+            result.setField(row.getField(projection[i]), i);
           } else if (constants.length > i) {
-            result.setField(i, constants[i]);
+            result.setField(constants[i], i);
           }
         }
         return result;
-      });
+      }).returns(typeInfo(node.getArity()));
     });
   }
 
-  private Optional<DataSet<FlinkRow>> mapRecursionNode(RecursionNode node) {
+  private Optional<DataSet<Tuple>> mapRecursionNode(RecursionNode node) {
     return mapPlanNode(node.getExitPlan()).map(initialSet -> {
-      DataSet<Tuple1<FlinkRow>> initialSetTuple = toTuple(initialSet);
-      DeltaIteration<Tuple1<FlinkRow>, FlinkRow> iteration = initialSetTuple.iterateDelta(initialSet, MAX_ITERATION, 0);
+      DeltaIteration<Tuple, Tuple> iteration = initialSet.iterateDelta(initialSet, MAX_ITERATION, range(node.getArity()));
       cache.put(node.getDelta(), Optional.of(iteration.getWorkset()));
-      cache.put(node.getFull(), Optional.of(fromTuple(iteration.getSolutionSet())));
+      cache.put(node.getFull(), Optional.of(iteration.getSolutionSet()));
       return mapPlanNode(node.getRecursivePlan())
-              .map(recursivePlan -> fromTuple(iteration.closeWith(toTuple(recursivePlan), recursivePlan)))
+              .map(recursivePlan -> iteration.closeWith(recursivePlan, recursivePlan))
               .orElse(initialSet);
     });
   }
 
-  private DataSet<Tuple1<FlinkRow>> toTuple(DataSet<FlinkRow> dataSet) {
-    return dataSet.map(new MapFunction<FlinkRow, Tuple1<FlinkRow>>() {
-      @Override
-      public Tuple1<FlinkRow> map(FlinkRow value) throws Exception {
-        return new Tuple1<>(value);
-      }
-    });
+  private int[] range(int bound) {
+    return IntStream.range(0, bound).toArray();
   }
 
-  private DataSet<FlinkRow> fromTuple(DataSet<Tuple1<FlinkRow>> dataSet) {
-    return dataSet.map(new MapFunction<Tuple1<FlinkRow>, FlinkRow>() {
-      @Override
-      public FlinkRow map(Tuple1<FlinkRow> value) throws Exception {
-        return value.f0;
-      }
-    });
-  }
-
-  private Optional<DataSet<FlinkRow>> mapUnionNode(UnionNode node) {
+  private Optional<DataSet<Tuple>> mapUnionNode(UnionNode node) {
     return node.getChildren().stream()
             .flatMap(child -> stream(this.mapPlanNode(child)))
             .reduce(DataSet::union);
   }
 
-  private Optional<DataSet<FlinkRow>> mapVariableEqualityFilterNode(VariableEqualityFilterNode node) {
+  private Optional<DataSet<Tuple>> mapVariableEqualityFilterNode(VariableEqualityFilterNode node) {
     return mapPlanNode(node.getTable()).map(dataSet -> {
       int field1 = node.getField1();
       int field2 = node.getField2();
