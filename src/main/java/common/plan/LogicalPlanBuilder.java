@@ -94,11 +94,27 @@ public class LogicalPlanBuilder {
       RecursionNode recursionPlan = exitPlan.recursion();
       Map<String, PlanNode> newDeltaNodes = withEntry(filteredDeltaNode, relation, recursionPlan.getDelta());
       recursiveRules.forEach(rule -> {
-        recursionPlan.addRecursivePlan(getPlanForRule(rule, newDeltaNodes)); //TODO: update
+        recursionPlan.addRecursivePlan(introduceFullRecursion(getPlanForRule(rule, newDeltaNodes), recursionPlan.getDelta(), recursionPlan.getFull()));
       });
       planForRelation.put(relationWithDeltaNodes, recursionPlan);
     }
     return planForRelation.get(relationWithDeltaNodes);
+  }
+
+  private PlanNode introduceFullRecursion(PlanNode baseNode, PlanNode delta, PlanNode full) {
+    return baseNode.transform(n -> {
+      //We look for joins between to subtrees depending on dela and we replace one by Full
+      if (n instanceof JoinNode) {
+        JoinNode join = (JoinNode) n;
+        if (join.getLeft().contains(delta) && join.getRight().contains(delta)) {
+          return new UnionNode(
+                  join.getLeft().join(join.getRight().replace(delta, full), join.getLeftJoinProjection(), join.getRightJoinProjection()),
+                  join.getLeft().replace(delta, full).join(join.getRight(), join.getLeftJoinProjection(), join.getRightJoinProjection())
+          );
+        }
+      }
+      return n;
+    });
   }
 
   private PlanNode getPlanForRule(Rule rule, Map<String, PlanNode> deltaNodes) {

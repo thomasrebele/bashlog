@@ -9,11 +9,25 @@ import org.junit.Test;
 public class PlanNodeTest {
 
   @Test
+  public void testPlanNode() {
+    TermList args2 = new TermList(new Variable("X"), new Variable("Y"));
+    PlanNode foo = new BuiltinNode(new CompoundTerm("foo", args2));
+    PlanNode bar = new BuiltinNode(new CompoundTerm("bar", args2));
+    Assert.assertTrue((new VariableEqualityFilterNode(foo, 1, 1)).contains(foo));
+    Assert.assertFalse((new VariableEqualityFilterNode(foo, 1, 1)).contains(bar));
+    Assert.assertEquals(
+            new VariableEqualityFilterNode(foo, 1, 1),
+            (new VariableEqualityFilterNode(bar, 1, 1)).replace(bar, foo)
+    );
+  }
+  @Test
   public void testSimplifier() {
     PlanSimplifier simplifier = new PlanSimplifier();
-    TermList args = new TermList(new Variable("X"), new Variable("Y"));
-    PlanNode foo = new BuiltinNode(new CompoundTerm("foo", args));
-    PlanNode bar = new BuiltinNode(new CompoundTerm("bar", args));
+    TermList args2 = new TermList(new Variable("X"), new Variable("Y"));
+    TermList args4 = new TermList(new Variable("X"), new Variable("Y"), new Variable("Z"), new Variable("W"));
+    PlanNode foo = new BuiltinNode(new CompoundTerm("foo", args2));
+    PlanNode bar = new BuiltinNode(new CompoundTerm("bar", args2));
+    PlanNode baz = new BuiltinNode(new CompoundTerm("bar", args4));
     Assert.assertEquals(
             new UnionNode(foo, bar),
             simplifier.apply(new UnionNode(foo, new UnionNode(bar, PlanNode.empty(2))))
@@ -30,6 +44,13 @@ public class PlanNodeTest {
             PlanNode.empty(2),
             simplifier.apply(new ProjectNode(PlanNode.empty(2), new int[]{0, 0}))
     );
+    Assert.assertEquals( //
+        new ProjectNode(baz, new int[] { 0, 1, 3 }), //
+        simplifier.apply(new ProjectNode(//
+            /**/new ProjectNode(baz, new int[] { 3, 0, 1 }), //
+            new int[] { 1, 2, 0 })) //
+    );
+    
   }
 
   @Test

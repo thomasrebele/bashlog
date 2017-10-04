@@ -2,12 +2,15 @@ package bashlog;
 
 import bashlog.plan.SortJoinNode;
 import bashlog.plan.SortNode;
+import bashlog.plan.SortRecursionNode;
+import bashlog.plan.SortUnionNode;
 import common.parser.CompoundTerm;
 import common.parser.Constant;
 import common.plan.*;
 import common.plan.RecursionNode.DeltaNode;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class BashlogCompiler {
 
@@ -21,31 +24,53 @@ public class BashlogCompiler {
     root = new PlanSimplifier().apply(planNode);
     root = new PushDownFilterOptimizer().apply(root);
 
-    //this.root = root.transform(this::transform);
-
     System.out.println("optimized");
     System.out.println(root.toPrettyString());
 
     root = root.transform(this::transform);
-    //root = root.transform(this::pushSelection);
 
     System.out.println("bashlog plan");
     System.out.println(root.toPrettyString());
+
+    root = new BashlogOptimizer().apply(root);
+
   }
 
   public String compile() {
     return compile("");
   }
 
+  private void print() {
+    System.out.println("bashlog plan optimized");
+    System.out.println(root.toPrettyString((node, str) -> {
+      Info info = planToInfo.get(node);
+      String add = "";
+      if (info != null) {
+        add = "uc:" + info.planUseCount;
+        add += " rc:" + info.recursions.size();
+        add += " d:" + info.recursionDeltas().size();
+        add += " " + (info.reuse() ? "reuse" : "     ");
+        add += " " + (info.materialize() ? "mat" : "   ");
+      }
+
+      return String.format(" %-25s%s", add, str);
+    }));
+  }
+
   public String compile(String indent) {
     analyzeUsage(root);
     analyzeReuse(root, 1, new ArrayList<>(), new HashSet<>());
+    analyzeMaterialize(root);
+    print();
 
     StringBuilder sb = new StringBuilder();
     sb.append("# reuse common plans\n");
     sb.append("mkdir -p tmp\n");
-    planToInfo.forEach((p, info) -> {
-      if (info.reuse()) {
+    // TODO: order of materialization
+    planToInfo.entrySet().stream().forEach(e -> {
+      PlanNode p = e.getKey();
+      Info info = e.getValue();
+      if (info.reuse() && info.reuseAt() == null) {
         if (!info.materialize()) {
 
           sb.append("mkfifo");
@@ -54,7 +79,7 @@ public class BashlogCompiler {
           }
           sb.append("\n");
         }
-          compileRaw(p, sb, indent);
+        compileRaw(p, sb, indent);
         sb.append(" \\\n");
         if (info.materialize()) {
           sb.append(" > ");
@@ -77,6 +102,22 @@ public class BashlogCompiler {
     return sb.toString();
   }
 
+  private void analyzeMaterialize(PlanNode p) {
+    Info info = planToInfo.get(p);
+    if (info == null) {
+      System.out.println("no info for " + p);
+    }
+
+    // (reuse || (recursions.size() - recursionsDeltas.size()) > 0)
+    if (info.recursions.size() - info.recursionDeltas().size() > 0) {
+      info.materialize = true;
+    }
+
+    if (!info.materialize) {
+      p.args().forEach(c -> analyzeMaterialize(c));
+    }
+  }
+
   private PlanNode transform(PlanNode p) {
     if (p instanceof JoinNode) {
       // sort join
@@ -85,87 +126,18 @@ public class BashlogCompiler {
       PlanNode right = new SortNode(joinNode.getRight(), joinNode.getRightJoinProjection());
       return new SortJoinNode(left, right, joinNode.getLeftJoinProjection(), joinNode.getRightJoinProjection());
     } else if (p instanceof RecursionNode) {
-      RecursionNode recursionNode = (RecursionNode) p;
-      return recursionNode.transform(
-              new SortNode(recursionNode.getExitPlan(), null),
-              new SortNode(recursionNode.getRecursivePlan(), null)
-      );
+      RecursionNode r = (RecursionNode) p;
+      return new SortRecursionNode(new SortNode(r.getExitPlan(), null), new SortNode(r.getRecursivePlan(), null), r.getDelta(), r.getFull());
+    } else if (p instanceof UnionNode) {
+      UnionNode u = (UnionNode) p;
+      if (u.args().size() > 2) {
+        throw new UnsupportedOperationException("Only unions with two arguments supported");
+      }
+      return new SortUnionNode(u.args().stream().map(c -> new SortNode(c, null)).collect(Collectors.toSet()), u.getArity());
     }
 
     return p;
   }
-
-  //  private PlanNode pushSelection(PlanNode p, PlanNode[] args) {
-  //    if (p instanceof ConstantEqualityFilterNode) {
-  //    System.out
-  //        .println(
-  //            "push selection " + p.operatorString() + " args " + Arrays.stream(args).map(a -> a.toPrettyString()).collect(Collectors.joining(", ")));
-  //      ConstantEqualityFilterNode s = ((ConstantEqualityFilterNode) p);
-  //      // TODO: ConstantEqualityFilterNode
-  //      if (args[0] instanceof UnionNode) {
-  //        return new UnionNode(
-  //            args[0].args().stream().map(c -> new ConstantEqualityFilterNode(c, s.getField(), s.getValue()).transform(this::pushSelection))
-  //                .collect(Collectors.toSet()),
-  //            s.getArity());
-  //      } else if(args[0] instanceof ProjectNode) {
-  //        System.out.println("trying to push over " + args[0].operatorString());
-  //        ProjectNode pj = ((ProjectNode) args[0]);
-  //        int[] proj = pj.getProjection();
-  //        int dstCol = proj[s.getField()];
-  //        if (dstCol >= 0) {
-  //          return new ProjectNode(new ConstantEqualityFilterNode(pj.getTable(), dstCol, s.getValue()).transform(this::pushSelection), proj);
-  //        }
-  //      } else if (args[0] instanceof SortJoinNode) {
-  //        SortJoinNode sjn = (SortJoinNode) args[0];
-  //        boolean pushLeft = s.getField() < sjn.getLeft().getArity() || Arrays.stream(sjn.getLeftJoinProjection()).anyMatch(i -> i == s.getField());
-  //        boolean pushRight = s.getField() >= sjn.getRight().getArity() || Arrays.stream(sjn.getRightJoinProjection()).anyMatch(i -> i == s.getField());
-  //        
-  //        System.out.println("pushing " + s);
-  //        return new SortJoinNode(
-  //            (pushLeft ? new ConstantEqualityFilterNode(sjn.getLeft(), s.getField(), s.getValue()).transform(this::pushSelection) : sjn.getLeft()), //
-  //            (pushRight
-  //                ? new ConstantEqualityFilterNode(sjn.getRight(), s.getField() - sjn.getLeft().getArity(), s.getValue()).transform(this::pushSelection)
-  //                : sjn.getRight()), //
-  //            sjn.getLeftJoinProjection(), sjn.getRightJoinProjection()
-  //            );
-  //      } else if(args[0] instanceof SortNode) {
-  //        SortNode sn = (SortNode) args[0];
-  //        return new SortNode(new ConstantEqualityFilterNode(sn.getTable(), s.getField(), s.getValue()).transform(this::pushSelection),
-  //            sn.sortColumns());
-  //      } else if (args[0] instanceof RecursionNode) {
-  //        // only push to recursive plan, if selection arrives at all delta nodes (and occurs at least one more time)!
-  //        RecursionNode rn = (RecursionNode) args[0];
-  //        PlanNode newExit = new ConstantEqualityFilterNode(rn.getExitPlan(), s.getField(), s.getValue()).transform(this::pushSelection);
-  //
-  //        boolean canBePushedDown = false;
-  //        class DeltaCounter {
-  //
-  //          int count = 0;
-  //
-  //          public PlanNode count(PlanNode tmpP, PlanNode[] tmpArgs) {
-  //            if (tmpP instanceof DeltaNode) {
-  //              count++;
-  //            }
-  //            tmpP = pushSelection(tmpP, tmpArgs);
-  //            return tmpP; //tmpP.transform((DeltaCounter.this)::count);
-  //          }
-  //        }
-  //
-  //        DeltaCounter dc = new DeltaCounter();
-  //        System.out.println("new recursive plan: ");
-  //        PlanNode newRecursion; //= new ConstantEqualityFilterNode(rn.getRecursivePlan(), s.getField(), s.getValue()).transform(dc::count);
-  //        newRecursion = new ConstantEqualityFilterNode(rn.getRecursivePlan(), s.getField(), s.getValue()).transform(this::pushSelection);
-  //
-  //        System.out.println(newRecursion.toPrettyString());
-  //        System.out.println("found " + dc.count + " deltas");
-  //
-  //        System.exit(0);
-  //        //return 
-  //
-  //      }
-  //    } 
-  //    return null;
-  //  }
 
   /** Counts how often each subplan occurs in the tree */
   private void analyzeUsage(PlanNode p) {
@@ -328,7 +300,7 @@ public class BashlogCompiler {
   private void compile(PlanNode planNode, StringBuilder sb, String indent) {
     Info info = planToInfo.get(planNode);
     if (info.reuse()) {
-        sb.append("cat " + planToInfo.get(planNode).filename);
+      sb.append("cat " + planToInfo.get(planNode).filename);
       if (!info.materialize()) {
         sb.append("_" + info.bashUseCount++);
       }
@@ -410,6 +382,14 @@ public class BashlogCompiler {
       if ("bash_command".equals(ct.name)) {
         sb.append(indent + ((Constant) ct.args[0]).getValue());
       }
+    } else if (planNode instanceof SortUnionNode) {
+      sb.append("comm -3 \\\n");
+      for (PlanNode child : ((UnionNode) planNode).getChildren()) {
+        sb.append(indent);
+        sb.append("<( \\\n");
+        compile(child, sb, indent + INDENT);
+        sb.append(") \\\n");
+      }
     } else if (planNode instanceof UnionNode) {
       sb.append("cat \\\n");
       for (PlanNode child : ((UnionNode) planNode).getChildren()) {
@@ -457,25 +437,53 @@ public class BashlogCompiler {
     /** Recursion ancestor nodes, which iterate over plan node */
     Set<PlanNode> recursions = new HashSet<>();
 
+    Set<PlanNode> recursionsDeltas = null;
+
     /** Count how often a named pipe for plan node was used */
     int bashUseCount = 0;
 
     /** If reuse, either materialize output to file, or create named pipes and fill them with tee */
     private boolean reuse = false;
 
+    private boolean materialize = false;
+
     /** Save output to file; works only if reuse == true */
     //boolean materialize = false;
 
     public Info(PlanNode plan) {
       this.plan = plan;
+
+    }
+
+    Set<PlanNode> recursionDeltas() {
+      if (recursionsDeltas == null) {
+        recursionsDeltas = new HashSet<>();
+        this.plan.transform(n -> {
+          if (n instanceof DeltaNode) {
+            DeltaNode d = (DeltaNode) n;
+            if (recursions.contains(d.getRecursionNode())) {
+              recursionsDeltas.add(d.getRecursionNode());
+            }
+          }
+          return n;
+        });
+      }
+      return recursionsDeltas;
     }
 
     boolean reuse() {
-      return reuse && !(plan instanceof BuiltinNode);
+      return (reuse || materialize) && !(plan instanceof BuiltinNode);
     }
 
     boolean materialize() {
-      return reuse && recursions.size() > 0;
+      return materialize && !(plan instanceof BuiltinNode);
+    }
+
+    PlanNode reuseAt() {
+      if (recursionDeltas().size() == 0) return null;
+      if (recursionDeltas().size() == 1) return recursionDeltas().iterator().next();
+      // TODO
+      throw new UnsupportedOperationException("recursion within recursion not yet supported");
     }
 
     @Override

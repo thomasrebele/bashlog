@@ -29,6 +29,7 @@ public class FlinkEvaluator {
   private static final Logger LOGGER = LoggerFactory.getLogger(FlinkEvaluator.class);
   private static final int MAX_ITERATION = Integer.MAX_VALUE;
   private static final Set<String> BUILDS_IN = Sets.newHashSet("flink_entry_values", "bash_command");
+  private static final List<Optimizer> OPTIMIZERS = Arrays.asList(new PlanSimplifier(), new PushDownFilterOptimizer(), new PlanSimplifier());
 
   private ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
   private FactsSet factsSet;
@@ -54,8 +55,9 @@ public class FlinkEvaluator {
     (new LogicalPlanBuilder(BUILDS_IN, relationsToOutput)).getPlanForProgram(program).entrySet().stream()
             .flatMap(relationPlan -> {
               String relation = relationPlan.getKey();
-              LOGGER.info("Evaluating relation " + relation + " with plan:\n" + relationPlan.getValue().toPrettyString());
-              return stream(this.mapPlanNode(relationPlan.getValue()).map(dataSet ->
+              PlanNode plan = optimize(relationPlan.getValue());
+              LOGGER.info("Evaluating relation " + relation + " with plan:\n" + plan.toPrettyString());
+              return stream(this.mapPlanNode(plan).map(dataSet ->
                       (DataSet<Tuple2<String, Comparable[]>>) dataSet.map(new MapFunction<FlinkRow, Tuple2<String, Comparable[]>>() {
                         @Override
                         public Tuple2<String, Comparable[]> map(FlinkRow row) throws Exception {
@@ -77,6 +79,13 @@ public class FlinkEvaluator {
               }
             });
     return result;
+  }
+
+  private PlanNode optimize(PlanNode node) {
+    for (Optimizer optimizer : OPTIMIZERS) {
+      node = optimizer.apply(node);
+    }
+    return node;
   }
 
   private Rule buildLoadRuleForRelation(String relation) {
@@ -198,6 +207,7 @@ public class FlinkEvaluator {
       DataSet<Tuple1<FlinkRow>> initialSetTuple = toTuple(initialSet);
       DeltaIteration<Tuple1<FlinkRow>, FlinkRow> iteration = initialSetTuple.iterateDelta(initialSet, MAX_ITERATION, 0);
       cache.put(node.getDelta(), Optional.of(iteration.getWorkset()));
+      cache.put(node.getFull(), Optional.of(fromTuple(iteration.getSolutionSet())));
       return mapPlanNode(node.getRecursivePlan())
               .map(recursivePlan -> fromTuple(iteration.closeWith(toTuple(recursivePlan), recursivePlan)))
               .orElse(initialSet);
