@@ -301,7 +301,7 @@ public class BashlogCompiler {
         sb.append(indent + ((Constant) ct.args[0]).getValue());
       }
     } else if (planNode instanceof SortUnionNode) {
-      sb.append("comm -3 \\\n");
+      sb.append("comm --output-delimiter='' -3 \\\n");
       for (PlanNode child : ((UnionNode) planNode).getChildren()) {
         sb.append(indent);
         sb.append("<( \\\n");
