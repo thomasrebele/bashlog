@@ -66,8 +66,11 @@ public class BashlogCompiler {
     StringBuilder sb = new StringBuilder();
     sb.append("# reuse common plans\n");
     sb.append("mkdir -p tmp\n");
-    planToInfo.forEach((p, info) -> {
-      if (info.reuse()) {
+    // TODO: order of materialization
+    planToInfo.entrySet().stream().forEach(e -> {
+      PlanNode p = e.getKey();
+      Info info = e.getValue();
+      if (info.reuse() && info.reuseAt() == null) {
         if (!info.materialize()) {
 
           sb.append("mkfifo");
@@ -469,11 +472,18 @@ public class BashlogCompiler {
     }
 
     boolean reuse() {
-      return reuse && !(plan instanceof BuiltinNode);
+      return (reuse || materialize) && !(plan instanceof BuiltinNode);
     }
 
     boolean materialize() {
       return materialize && !(plan instanceof BuiltinNode);
+    }
+
+    PlanNode reuseAt() {
+      if (recursionDeltas().size() == 0) return null;
+      if (recursionDeltas().size() == 1) return recursionDeltas().iterator().next();
+      // TODO
+      throw new UnsupportedOperationException("recursion within recursion not yet supported");
     }
 
     @Override
