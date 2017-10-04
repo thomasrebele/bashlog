@@ -1,10 +1,12 @@
 package bashlog;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 import bashlog.plan.SortJoinNode;
 import bashlog.plan.SortNode;
 import bashlog.plan.SortRecursionNode;
+import bashlog.plan.SortUnionNode;
 import common.parser.CompoundTerm;
 import common.parser.Constant;
 import common.plan.*;
@@ -32,17 +34,34 @@ public class BashlogCompiler {
 
     root = new BashlogOptimizer().apply(root);
 
-    System.out.println("bashlog plan optimized");
-    System.out.println(root.toPrettyString());
   }
 
   public String compile() {
     return compile("");
   }
 
+  private void print() {
+    System.out.println("bashlog plan optimized");
+    System.out.println(root.toPrettyString((node, str) -> {
+      Info info = planToInfo.get(node);
+      String add = "";
+      if (info != null) {
+        add = "uc:" + info.planUseCount;
+        add += " rc:" + info.recursions.size();
+        add += " d:" + info.recursionDeltas().size();
+        add += " " + (info.reuse() ? "reuse" : "     ");
+        add += " " + (info.materialize() ? "mat" : "   ");
+      }
+
+      return String.format(" %-25s%s", add, str);
+    }));
+  }
+
   public String compile(String indent) {
     analyzeUsage(root);
     analyzeReuse(root, 1, new ArrayList<>(), new HashSet<>());
+    analyzeMaterialize(root);
+    print();
 
     StringBuilder sb = new StringBuilder();
     sb.append("# reuse common plans\n");
@@ -57,7 +76,7 @@ public class BashlogCompiler {
           }
           sb.append("\n");
         }
-          compileRaw(p, sb, indent);
+        compileRaw(p, sb, indent);
         sb.append(" \\\n");
         if (info.materialize()) {
           sb.append(" > ");
@@ -80,6 +99,22 @@ public class BashlogCompiler {
     return sb.toString();
   }
 
+  private void analyzeMaterialize(PlanNode p) {
+    Info info = planToInfo.get(p);
+    if (info == null) {
+      System.out.println("no info for " + p);
+    }
+
+    // (reuse || (recursions.size() - recursionsDeltas.size()) > 0)
+    if (info.recursions.size() - info.recursionDeltas().size() > 0) {
+      info.materialize = true;
+    }
+
+    if (!info.materialize) {
+      p.args().forEach(c -> analyzeMaterialize(c));
+    }
+  }
+
   private PlanNode transform(PlanNode p) {
     if (p instanceof JoinNode) {
       // sort join
@@ -90,6 +125,12 @@ public class BashlogCompiler {
     } else if (p instanceof RecursionNode) {
       RecursionNode r = (RecursionNode) p;
       return new SortRecursionNode(new SortNode(r.getExitPlan(), null), new SortNode(r.getRecursivePlan(), null), r.getDelta());
+    } else if (p instanceof UnionNode) {
+      UnionNode u = (UnionNode) p;
+      if (u.args().size() > 2) {
+        throw new UnsupportedOperationException("Only unions with two arguments supported");
+      }
+      return new SortUnionNode(u.args().stream().map(c -> new SortNode(c, null)).collect(Collectors.toSet()), u.getArity());
     }
 
     return p;
@@ -256,7 +297,7 @@ public class BashlogCompiler {
   private void compile(PlanNode planNode, StringBuilder sb, String indent) {
     Info info = planToInfo.get(planNode);
     if (info.reuse()) {
-        sb.append("cat " + planToInfo.get(planNode).filename);
+      sb.append("cat " + planToInfo.get(planNode).filename);
       if (!info.materialize()) {
         sb.append("_" + info.bashUseCount++);
       }
@@ -338,6 +379,14 @@ public class BashlogCompiler {
       if ("bash_command".equals(ct.name)) {
         sb.append(indent + ((Constant) ct.args[0]).getValue());
       }
+    } else if (planNode instanceof SortUnionNode) {
+      sb.append("comm -3 \\\n");
+      for (PlanNode child : ((UnionNode) planNode).getChildren()) {
+        sb.append(indent);
+        sb.append("<( \\\n");
+        compile(child, sb, indent + INDENT);
+        sb.append(") \\\n");
+      }
     } else if (planNode instanceof UnionNode) {
       sb.append("cat \\\n");
       for (PlanNode child : ((UnionNode) planNode).getChildren()) {
@@ -385,17 +434,38 @@ public class BashlogCompiler {
     /** Recursion ancestor nodes, which iterate over plan node */
     Set<PlanNode> recursions = new HashSet<>();
 
+    Set<PlanNode> recursionsDeltas = null;
+
     /** Count how often a named pipe for plan node was used */
     int bashUseCount = 0;
 
     /** If reuse, either materialize output to file, or create named pipes and fill them with tee */
     private boolean reuse = false;
 
+    private boolean materialize = false;
+
     /** Save output to file; works only if reuse == true */
     //boolean materialize = false;
 
     public Info(PlanNode plan) {
       this.plan = plan;
+
+    }
+
+    Set<PlanNode> recursionDeltas() {
+      if (recursionsDeltas == null) {
+        recursionsDeltas = new HashSet<>();
+        this.plan.transform(n -> {
+          if (n instanceof DeltaNode) {
+            DeltaNode d = (DeltaNode) n;
+            if (recursions.contains(d.getRecursionNode())) {
+              recursionsDeltas.add(d.getRecursionNode());
+            }
+          }
+          return n;
+        });
+      }
+      return recursionsDeltas;
     }
 
     boolean reuse() {
@@ -403,7 +473,7 @@ public class BashlogCompiler {
     }
 
     boolean materialize() {
-      return reuse && recursions.size() > 0;
+      return materialize && !(plan instanceof BuiltinNode);
     }
 
     @Override
