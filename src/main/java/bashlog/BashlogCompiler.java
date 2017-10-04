@@ -11,12 +11,16 @@ import bashlog.plan.SortUnionNode;
 import common.parser.CompoundTerm;
 import common.parser.Constant;
 import common.plan.*;
+import common.plan.MaterializationNode.ReuseNode;
 import common.plan.RecursionNode.DeltaNode;
 
 public class BashlogCompiler {
 
+  int tmpFileIndex = 0;
+
   Map<RecursionNode, String> recursionNodeToFilename = new HashMap<>();
 
+  Map<MaterializationNode, String> matNodeToFilename = new HashMap<>();
 
   PlanNode root;
 
@@ -28,14 +32,12 @@ public class BashlogCompiler {
     System.out.println(root.toPrettyString());
 
     root = root.transform(this::transform);
+    root = new BashlogOptimizer().apply(root);
+    root = new MaterializationOptimizer().apply(root);
 
     System.out.println("bashlog plan");
     System.out.println(root.toPrettyString());
 
-    root = new BashlogOptimizer().apply(root);
-
-    root = new MaterializationOptimizer().apply(root);
-    System.exit(0);
   }
 
   public String compile() {
@@ -43,42 +45,9 @@ public class BashlogCompiler {
   }
 
   public String compile(String indent) {
-
     StringBuilder sb = new StringBuilder();
-    sb.append("# reuse common plans\n");
+    sb.append("#!/bin/bash");
     sb.append("mkdir -p tmp\n");
-    // TODO: order of materialization
-    /*planToInfo.entrySet().stream().forEach(e -> {
-      PlanNode p = e.getKey();
-      Info info = e.getValue();
-      if (info.reuse() && info.reuseAt() == null) {
-        if (!info.materialize()) {
-    
-          sb.append("mkfifo");
-          for (int i = 0; i < info.planUseCount; i++) {
-            sb.append(" " + info.filename + "_" + i);
-          }
-          sb.append("\n");
-        }
-        compileRaw(p, sb, indent);
-        sb.append(" \\\n");
-        if (info.materialize()) {
-          sb.append(" > ");
-          sb.append(info.filename);
-        } else {
-          for (int i = 0; i < info.planUseCount; i++) {
-            sb.append(i < info.planUseCount - 1 ? " | tee " : " > ");
-            sb.append(info.filename + "_" + i);
-          }
-          sb.append(" &");
-        }
-        sb.append("\n");
-      }
-      System.out.println(info + " <- " + ("" + p.hashCode()).substring(0, 3) + "  " + p);
-    });
-    System.out.println();*/
-
-    sb.append("\n\n# main plan\n");
     compile(root, sb, indent);
     return sb.toString();
   }
@@ -217,19 +186,6 @@ public class BashlogCompiler {
     sb.append(")");
   }
 
-  /** Compile, reusing common subplans (including planNode) */
-  private void compile(PlanNode planNode, StringBuilder sb, String indent) {
-    /*Info info = planToInfo.get(planNode);
-    if (info.reuse()) {
-      sb.append("cat " + planToInfo.get(planNode).filename);
-      if (!info.materialize()) {
-        sb.append("_" + info.bashUseCount++);
-      }
-    } else {*/
-      compileRaw(planNode, sb, indent);
-    //}
-  }
-
   /** Remove all lines from pipe that occur in filename */
   private void setMinusInMemory(String filename, StringBuilder sb) {
     sb.append("| grep -v -F -f ");
@@ -262,9 +218,49 @@ public class BashlogCompiler {
     sb.append(indent + INDENT + "mv " + newDeltaFile + " " + deltaFile + "; \n");
   }
 
-  /** Compile planNode as is, reuse its decendants */
-  private void compileRaw(PlanNode planNode, StringBuilder sb, String indent) {
-    if (planNode instanceof SortNode) {
+  private void compile(PlanNode planNode, StringBuilder sb, String indent) {
+    if (planNode instanceof MaterializationNode) {
+      MaterializationNode m = (MaterializationNode) planNode;
+      String matFile = "tmp/mat" + tmpFileIndex++;
+      matNodeToFilename.putIfAbsent(m, matFile);
+
+      boolean asFile = true;
+      sb.append("\n").append(indent).append("# ").append(m.operatorString()).append("\n");
+      /*if (!asFile) {
+        sb.append("mkfifo");
+        for (int i = 0; i < info.planUseCount; i++) {
+          sb.append(" " + info.filename + "_" + i);
+        }
+        sb.append("\n");
+      }*/
+      compile(m.getReusedPlan(), sb, indent);
+      sb.append(" \\\n");
+      if (asFile) {
+        sb.append(" > ");
+        sb.append(matFile);
+      } else {
+        /*for (int i = 0; i < info.planUseCount; i++) {
+          sb.append(i < info.planUseCount - 1 ? " | tee " : " > ");
+          sb.append(info.filename + "_" + i);
+        }
+        sb.append(" &");*/
+        throw new UnsupportedOperationException("pipes not yet supported");
+      }
+      sb.append("\n");
+      
+      if (!(m.getMainPlan() instanceof MaterializationNode)) {
+        sb.append("# plan\n");
+      }
+      compile(m.getMainPlan(), sb, indent);
+
+    } else if (planNode instanceof ReuseNode) {
+      sb.append("cat " + matNodeToFilename.get(((ReuseNode) planNode).getMaterializeNode()));
+      // TODO: pipes
+      /*if (!info.materialize()) {
+        sb.append("_" + info.bashUseCount++);
+      }*/
+
+    } else if (planNode instanceof SortNode) {
       sort(planNode.args().get(0), ((SortNode) planNode).sortColumns(), sb, indent);
     } else if (planNode instanceof SortJoinNode) {
       SortJoinNode j = (SortJoinNode) planNode;
@@ -321,9 +317,10 @@ public class BashlogCompiler {
       }
     } else if (planNode instanceof RecursionNode) {
       RecursionNode rn = (RecursionNode) planNode;
-      String deltaFile = "tmp/delta" + recursionNodeToFilename.size();
-      String newDeltaFile = "tmp/new" + recursionNodeToFilename.size();
-      String fullFile = "tmp/full" + recursionNodeToFilename.size();
+      int idx = tmpFileIndex++;
+      String deltaFile = "tmp/delta" + idx;
+      String newDeltaFile = "tmp/new" + idx;
+      String fullFile = "tmp/full" + idx;
       recursionNodeToFilename.put(rn, deltaFile);
       compile(rn.getExitPlan(), sb, indent + INDENT);
       sb.append(" | tee " + fullFile + " > " + deltaFile + "\n");
