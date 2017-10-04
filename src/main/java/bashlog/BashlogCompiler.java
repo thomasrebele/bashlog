@@ -1,16 +1,15 @@
 package bashlog;
 
-import java.util.*;
-import java.util.stream.Collectors;
-
 import bashlog.plan.SortJoinNode;
 import bashlog.plan.SortNode;
-import bashlog.plan.SortRecursionNode;
 import bashlog.plan.SortUnionNode;
 import common.parser.CompoundTerm;
 import common.parser.Constant;
 import common.plan.*;
 import common.plan.RecursionNode.DeltaNode;
+
+import java.util.*;
+import java.util.stream.Collectors;
 
 public class BashlogCompiler {
 
@@ -127,7 +126,7 @@ public class BashlogCompiler {
       return new SortJoinNode(left, right, joinNode.getLeftJoinProjection(), joinNode.getRightJoinProjection());
     } else if (p instanceof RecursionNode) {
       RecursionNode r = (RecursionNode) p;
-      return new SortRecursionNode(new SortNode(r.getExitPlan(), null), new SortNode(r.getRecursivePlan(), null), r.getDelta());
+      return r.transform(new SortNode(r.getExitPlan(), null), new SortNode(r.getRecursivePlan(), null));
     } else if (p instanceof UnionNode) {
       UnionNode u = (UnionNode) p;
       if (u.args().size() > 2) {
