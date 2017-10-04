@@ -1,4 +1,8 @@
 *.class 
+*.log
+*.aux
+*.out
+*.pdf
 .classpath
 .project
 .settings
