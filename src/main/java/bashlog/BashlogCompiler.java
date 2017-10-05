@@ -24,6 +24,37 @@ public class BashlogCompiler {
 
   PlanNode root;
 
+  enum Context {
+    NONE, FILE, PIPE;
+    
+    public void start(Context next, StringBuilder sb) {
+      if (this == FILE && next == PIPE) {
+        sb.append(" <(");
+      }
+      if (this == FILE && next == FILE) {
+        sb.append(" ");
+      }
+      if (this == PIPE && next == FILE) {
+        sb.append(" [START FILE CONTEXT] ");
+      }
+    }
+
+    public void end(Context next, StringBuilder sb) {
+      if (this == FILE && next == PIPE) {
+        sb.append(")");
+      }
+      if (this == PIPE && next == FILE) {
+        sb.append(" [END FILE CONTEXT] ");
+      }
+    }
+
+    public void expect(Context next) {
+      if (this != next) {
+        throw new UnsupportedOperationException("cannot switch to context " + next);
+      }
+    }
+  }
+
   public BashlogCompiler(PlanNode planNode) {
     root = new PlanSimplifier().apply(planNode);
     root = new PushDownFilterOptimizer().apply(root);
@@ -49,7 +80,7 @@ public class BashlogCompiler {
     sb.append("#!/bin/bash\n");
     sb.append("export LC_ALL=C\n");
     sb.append("mkdir -p tmp\n");
-    compile(root, sb, indent);
+    compile(root, sb, indent, Context.PIPE);
     return sb.toString();
   }
 
@@ -99,7 +130,7 @@ public class BashlogCompiler {
   final static String AWK = "awk -v FS=$'\\t' '";
 
   /** Awk command which caches the left subtree, and joins it with the right subtree */
-  private void leftHashJoin(JoinNode j, StringBuilder sb, String indent) {
+  private void leftHashJoin(JoinNode j, StringBuilder sb, String indent, Context ctx) {
     sb.append(indent + AWK + "NR==FNR { ");
     sb.append("key = ");
     sb.append(keyMask(j.getLeftJoinProjection()));
@@ -113,14 +144,10 @@ public class BashlogCompiler {
     sb.append(" print h[key] FS $0");
     sb.append(" } }' \\\n");
     sb.append(indent);
-    sb.append(" <(");
-    compile(j.getLeft(), sb, indent + INDENT);
-    sb.append(")");
+    compile(j.getLeft(), sb, indent + INDENT, Context.FILE);
     sb.append(" \\\n");
     sb.append(indent);
-    sb.append(" <(");
-    compile(j.getRight(), sb, indent + INDENT);
-    sb.append(")");
+    compile(j.getRight(), sb, indent + INDENT, Context.FILE);
   }
 
   /**
@@ -131,8 +158,9 @@ public class BashlogCompiler {
    * @param indent
    * @return column which is sorted (1-based index)
    */
-  private void sort(PlanNode n, int[] cols, StringBuilder sb, String indent) {
-    compile(n, sb, indent + INDENT);
+  private void sort(PlanNode n, int[] cols, StringBuilder sb, String indent, Context ctx) {
+    ctx.start(Context.PIPE, sb);
+    compile(n, sb, indent + INDENT, Context.PIPE);
     sb.append(" \\\n" + indent);
     if (cols != null && cols.length > 1) {
       sb.append(" | " + AWK + "{ print $0 FS ");
@@ -150,6 +178,7 @@ public class BashlogCompiler {
       sb.append("-k ");
       sb.append(sortCol(n, cols));
     }
+    ctx.end(Context.PIPE, sb);
   }
 
   private int sortCol(PlanNode n, int[] cols) {
@@ -160,7 +189,8 @@ public class BashlogCompiler {
   }
 
   /** Sort left and right tree, and join with 'join' command */
-  private void sortJoin(SortJoinNode j, StringBuilder sb, String indent) {
+  private void sortJoin(SortJoinNode j, StringBuilder sb, String indent, Context ctx) {
+    ctx.start(Context.PIPE, sb);
     int colLeft, colRight;
     colLeft = sortCol(j.getLeft(), j.getLeftJoinProjection());
     colRight = sortCol(j.getRight(), j.getRightJoinProjection());
@@ -179,12 +209,12 @@ public class BashlogCompiler {
       if (i > 0) sb.append(",");
       sb.append("2." + (i + 1));
     }
-
-    sb.append(" <( \\\n");
-    compile(j.getLeft(), sb, indent);
-    sb.append(") <( \\\n");
-    compile(j.getRight(), sb, indent);
-    sb.append(")");
+    sb.append(" ");
+    compile(j.getLeft(), sb, indent, Context.FILE);
+    sb.append(" \\\n");
+    compile(j.getRight(), sb, indent, Context.FILE);
+    sb.append("");
+    ctx.end(Context.PIPE, sb);
   }
 
   /** Remove all lines from pipe that occur in filename */
@@ -198,8 +228,10 @@ public class BashlogCompiler {
     sb.append(filename);
   }
 
-  private void recursionSorted(RecursionNode rn, StringBuilder sb, String indent, String fullFile, String deltaFile, String newDeltaFile) {
-    compile(rn.getRecursivePlan(), sb, indent + INDENT);
+  private void recursionSorted(RecursionNode rn, StringBuilder sb, String indent, Context ctx, String fullFile, String deltaFile,
+      String newDeltaFile) {
+    ctx.start(Context.PIPE, sb);
+    compile(rn.getRecursivePlan(), sb, indent + INDENT, Context.PIPE);
     sb.append(" \\\n" + indent + INDENT);
     //setMinusInMemory(fullFile, sb);
     setMinusSorted(fullFile, sb);
@@ -207,20 +239,25 @@ public class BashlogCompiler {
 
     sb.append(indent + INDENT + "mv " + newDeltaFile + " " + deltaFile + "; \n");
     sb.append(indent + INDENT + "sort -u --merge -o " + fullFile + " " + fullFile + " <(sort " + deltaFile + ")\n");
+    ctx.end(Context.PIPE, sb);
   }
 
-  private void recursionInMemory(RecursionNode rn, StringBuilder sb, String indent, String fullFile, String deltaFile, String newDeltaFile) {
-    compile(rn.getRecursivePlan(), sb, indent + INDENT);
+  private void recursionInMemory(RecursionNode rn, StringBuilder sb, String indent, Context ctx, String fullFile, String deltaFile,
+      String newDeltaFile) {
+    ctx.start(Context.PIPE, sb);
+    compile(rn.getRecursivePlan(), sb, indent + INDENT, Context.PIPE);
     sb.append(" \\\n" + indent);
     sb.append(INDENT);
     setMinusInMemory(fullFile, sb);
     sb.append(" | tee -a " + fullFile);
     sb.append(" > " + newDeltaFile + "\n");
     sb.append(indent + INDENT + "mv " + newDeltaFile + " " + deltaFile + "; \n");
+    ctx.end(Context.PIPE, sb);
   }
 
-  private void compile(PlanNode planNode, StringBuilder sb, String indent) {
+  private void compile(PlanNode planNode, StringBuilder sb, String indent, Context ctx) {
     if (planNode instanceof MaterializationNode) {
+      ctx.start(Context.PIPE, sb);
       MaterializationNode m = (MaterializationNode) planNode;
       String matFile = "tmp/mat" + tmpFileIndex++;
       matNodeToFilename.putIfAbsent(m, matFile);
@@ -234,7 +271,7 @@ public class BashlogCompiler {
         }
         sb.append("\n");
       }*/
-      compile(m.getReusedPlan(), sb, indent);
+      compile(m.getReusedPlan(), sb, indent, Context.PIPE);
       sb.append(" \\\n");
       if (asFile) {
         sb.append(" > ");
@@ -252,25 +289,35 @@ public class BashlogCompiler {
       if (!(m.getMainPlan() instanceof MaterializationNode)) {
         sb.append("# plan\n");
       }
-      compile(m.getMainPlan(), sb, indent);
+      compile(m.getMainPlan(), sb, indent, Context.PIPE);
+      ctx.end(Context.PIPE, sb);
 
     } else if (planNode instanceof ReuseNode) {
-      sb.append("cat " + matNodeToFilename.get(((ReuseNode) planNode).getMaterializeNode()));
+      String matFile = matNodeToFilename.get(((ReuseNode) planNode).getMaterializeNode());
+      if (ctx == Context.FILE) {
+        sb.append(matFile);
+      }
+      else {
+        ctx.start(Context.PIPE, sb);
+        sb.append("cat " + matFile);
+        ctx.end(Context.PIPE, sb);
+      }
       // TODO: pipes
       /*if (!info.materialize()) {
         sb.append("_" + info.bashUseCount++);
       }*/
 
     } else if (planNode instanceof SortNode) {
-      sort(planNode.args().get(0), ((SortNode) planNode).sortColumns(), sb, indent);
+      sort(planNode.args().get(0), ((SortNode) planNode).sortColumns(), sb, indent, ctx);
     } else if (planNode instanceof SortJoinNode) {
       SortJoinNode j = (SortJoinNode) planNode;
       //leftHashJoin(j, sb, indent);
-      sortJoin(j, sb, indent);
+      sortJoin(j, sb, indent, ctx);
     } else if (planNode instanceof ProjectNode) {
       // TODO: filtering of duplicates might be necessary
+      ctx.start(Context.PIPE, sb);
       ProjectNode p = ((ProjectNode) planNode);
-      compile(p.getTable(), sb, indent + INDENT);
+      compile(p.getTable(), sb, indent + INDENT, Context.PIPE);
       sb.append(" \\\n");
       sb.append(indent);
       sb.append("| " + AWK + "{ print ");
@@ -284,7 +331,9 @@ public class BashlogCompiler {
         }
       }
       sb.append("}'");
+      ctx.end(Context.PIPE, sb);
     } else if (planNode instanceof ConstantEqualityFilterNode) {
+      ctx.start(Context.PIPE, sb);
       ConstantEqualityFilterNode n = (ConstantEqualityFilterNode) planNode;
       sb.append(AWK + "$");
       sb.append(n.getField() + 1);
@@ -292,51 +341,67 @@ public class BashlogCompiler {
       sb.append(escape(n.getValue().toString()));
       sb.append("\" { print $0 }' \\\n");
       sb.append(indent);
-      sb.append(" <(\\\n");
-      compile(n.getTable(), sb, indent + INDENT);
-      sb.append(")");
+      compile(n.getTable(), sb, indent + INDENT, Context.FILE);
+      ctx.end(Context.PIPE, sb);
     } else if (planNode instanceof BuiltinNode) {
       CompoundTerm ct = ((BuiltinNode) planNode).compoundTerm;
       if ("bash_command".equals(ct.name)) {
+        ctx.start(Context.PIPE, sb);
         sb.append(indent + ((Constant) ct.args[0]).getValue());
+        ctx.end(Context.PIPE, sb);
+      }
+      else {
+        throw new UnsupportedOperationException("predicate not supported: " + ct.getRelation());
       }
     } else if (planNode instanceof SortUnionNode) {
-      sb.append("comm --output-delimiter='' -3 \\\n");
+      ctx.start(Context.PIPE, sb);
+      // delimit columns by null character
+      sb.append("comm --output-delimiter=$'\\0' \\\n");
       for (PlanNode child : ((UnionNode) planNode).getChildren()) {
         sb.append(indent);
-        sb.append("<( \\\n");
-        compile(child, sb, indent + INDENT);
-        sb.append(") \\\n");
+        compile(child, sb, indent + INDENT, Context.FILE);
       }
+      // remove null character
+      sb.append("| sed -E 's/^\\x0\\x0?//g'"); // 
+      ctx.end(Context.PIPE, sb);
     } else if (planNode instanceof UnionNode) {
+      ctx.start(Context.PIPE, sb);
       sb.append("cat \\\n");
       for (PlanNode child : ((UnionNode) planNode).getChildren()) {
-        sb.append(indent);
-        sb.append("<( \\\n");
-        compile(child, sb, indent + INDENT);
-        sb.append(") \\\n");
+        compile(child, sb, indent + INDENT, Context.FILE);
       }
+      ctx.end(Context.PIPE, sb);
     } else if (planNode instanceof RecursionNode) {
+      ctx.start(Context.PIPE, sb);
       RecursionNode rn = (RecursionNode) planNode;
       int idx = tmpFileIndex++;
       String deltaFile = "tmp/delta" + idx;
       String newDeltaFile = "tmp/new" + idx;
       String fullFile = "tmp/full" + idx;
       recursionNodeToFilename.put(rn, deltaFile);
-      compile(rn.getExitPlan(), sb, indent + INDENT);
+      compile(rn.getExitPlan(), sb, indent + INDENT, Context.PIPE);
       sb.append(" | tee " + fullFile + " > " + deltaFile + "\n");
       // "do while" loop in bash
       sb.append(indent + "while \n");
 
-      recursionSorted(rn, sb, indent, fullFile, deltaFile, newDeltaFile);
+      recursionSorted(rn, sb, indent, Context.PIPE, fullFile, deltaFile, newDeltaFile);
       //recursionInMemory(rn, sb, indent, fullFile, deltaFile, newDeltaFile);
 
       sb.append(indent + INDENT + "[ -s " + deltaFile + " ]; \n");
       sb.append(indent + "do continue; done\n");
       //sb.append(indent + "rm " + deltaFile + "\n");
       sb.append("cat " + fullFile);
+      ctx.end(Context.PIPE, sb);
     } else if (planNode instanceof DeltaNode) {
-      sb.append("cat " + recursionNodeToFilename.get(((DeltaNode) planNode).getRecursionNode()));
+      String deltaFile = recursionNodeToFilename.get(((DeltaNode) planNode).getRecursionNode());
+      if(ctx == Context.FILE) {
+        sb.append(deltaFile);
+      }
+      else {
+        ctx.start(Context.PIPE, sb);
+        sb.append("cat " + deltaFile);
+        ctx.end(Context.PIPE, sb);
+      }
     } else {
       System.err.println("compilation of " + planNode.getClass() + " not yet supported");
     }
