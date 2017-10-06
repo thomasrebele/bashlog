@@ -421,7 +421,7 @@ public class BashlogCompiler {
         compile(child, ctx.file());
       }
       // remove null character
-      ctx.append(" | sed -E 's/^\\o001\\o001?//g'"); // 
+      ctx.append(" | sed -E 's/^\\o001\\o001?//g' | uniq "); // 
       ctx.endPipe();
     } else if (planNode instanceof SortRecursionNode) {
       ctx.startPipe();
