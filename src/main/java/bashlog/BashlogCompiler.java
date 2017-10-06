@@ -2,6 +2,7 @@ package bashlog;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 import bashlog.plan.SortJoinNode;
@@ -22,8 +23,14 @@ public class BashlogCompiler {
 
   Map<MaterializationNode, String> matNodeToFilename = new HashMap<>();
 
+  Map<MaterializationNode, AtomicInteger> matNodeToCount = new HashMap<>();
+
   PlanNode root;
 
+  /** Helper class:
+   * - inserts <() at correct position
+   * - deals with indent
+   */
   public static class Context {
 
     private final int FILE = 1, PIPE = 0;
@@ -100,7 +107,6 @@ public class BashlogCompiler {
 
     public void info(PlanNode planNode, String string) {
       append(" `#_________ ").append(planNode.operatorString()).append(" ").append(string).append(" _________` \\\n");
-
     }
   }
 
@@ -112,10 +118,14 @@ public class BashlogCompiler {
     System.out.println(root.toPrettyString());
 
     root = root.transform(this::transform);
+
+    System.out.println("bashlog plan");
+    System.out.println(root.toPrettyString());
+
     root = new BashlogOptimizer().apply(root);
     root = new MaterializationOptimizer().apply(root);
 
-    System.out.println("bashlog plan");
+    System.out.println("optimized bashlog plan");
     System.out.println(root.toPrettyString());
 
   }
@@ -130,7 +140,6 @@ public class BashlogCompiler {
     ctx.append("export LC_ALL=C\n");
     ctx.append("mkdir -p tmp\n");
 
-    ctx.append("\n#test\n");
     compile(root, ctx);
     return ctx.generate();
   }
@@ -214,7 +223,7 @@ public class BashlogCompiler {
       ctx.append(" | " + AWK + "{ print $0 FS ");
       for (int i = 0; i < cols.length; i++) {
         if (i > 0) {
-          ctx.append(",");
+          ctx.append(" \"\\001\" ");
         }
         ctx.append("$");
         ctx.append(cols[i] + 1);
@@ -309,28 +318,29 @@ public class BashlogCompiler {
       String matFile = "tmp/mat" + tmpFileIndex++;
       matNodeToFilename.putIfAbsent(m, matFile);
 
-      boolean asFile = true;
+      boolean asFile = m.getReuseCount() <= 1;
       ctx.append("\n");
       ctx.info(planNode);
-      /*if (!asFile) {
-        sb.append("mkfifo");
-        for (int i = 0; i < info.planUseCount; i++) {
-          sb.append(" " + info.filename + "_" + i);
+      
+      if (!asFile) {
+        matNodeToCount.put(m, new AtomicInteger(0));
+        ctx.append("mkfifo");
+        for (int i = 0; i < m.getReuseCount(); i++) {
+          ctx.append(" " + matFile + "_" + i);
         }
-        sb.append("\n");
-      }*/
+        ctx.append("\n");
+      }
       compile(m.getReusedPlan(), ctx.pipe());
       ctx.append(" \\\n");
       if (asFile) {
         ctx.append(" > ");
         ctx.append(matFile);
       } else {
-        /*for (int i = 0; i < info.planUseCount; i++) {
-          sb.append(i < info.planUseCount - 1 ? " | tee " : " > ");
-          sb.append(info.filename + "_" + i);
+        for (int i = 0; i < m.getReuseCount(); i++) {
+          ctx.append(i < m.getReuseCount() - 1 ? " | tee " : " > ");
+          ctx.append(matFile + "_" + i);
         }
-        sb.append(" &");*/
-        throw new UnsupportedOperationException("pipes not yet supported");
+        ctx.append(" &");
       }
       ctx.append("\n");
       
@@ -342,20 +352,20 @@ public class BashlogCompiler {
 
     } else if (planNode instanceof ReuseNode) {
       ctx.info(planNode);
-      String matFile = matNodeToFilename.get(((ReuseNode) planNode).getMaterializeNode());
-      if (ctx.isFile()) {
-        ctx.append(matFile);
-      }
-      else {
+      MaterializationNode matNode = ((ReuseNode) planNode).getMaterializeNode();
+      String matFile = matNodeToFilename.get(matNode);
+      if (!ctx.isFile()) {
         ctx.startPipe();
-        ctx.append("cat " + matFile);
+        ctx.append("cat ");
+      }
+      ctx.append(matFile);
+      AtomicInteger useCount = matNodeToCount.get(matNode);
+      if (useCount != null) {
+        ctx.append("_").append(useCount.getAndIncrement());
+      }
+      if (!ctx.isFile()) {
         ctx.endPipe();
       }
-      // TODO: pipes
-      /*if (!info.materialize()) {
-        sb.append("_" + info.bashUseCount++);
-      }*/
-
     } else if (planNode instanceof SortNode) {
       SortNode s = (SortNode) planNode;
       sort(s, ctx);
@@ -406,12 +416,12 @@ public class BashlogCompiler {
     } else if (planNode instanceof SortUnionNode) {
       ctx.startPipe();
       // delimit columns by null character
-      ctx.append("comm --output-delimiter=$'\\0' ");
+      ctx.append("comm --output-delimiter=$'\\001' ");
       for (PlanNode child : ((UnionNode) planNode).getChildren()) {
         compile(child, ctx.file());
       }
       // remove null character
-      ctx.append(" | sed -E 's/^\\x0\\x0?//g'"); // 
+      ctx.append(" | sed -E 's/^\\o001\\o001?//g'"); // 
       ctx.endPipe();
     } else if (planNode instanceof SortRecursionNode) {
       ctx.startPipe();

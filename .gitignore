@@ -1,8 +1,11 @@
 *.class 
+*.bbl
+*.blg
 *.log
 *.aux
 *.out
 *.pdf
+*.gz
 .classpath
 .project
 .settings
