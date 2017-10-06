@@ -19,8 +19,11 @@
 
 package experiments.lubm.generator;
 
-import java.util.*;
-import java.io.*;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.PrintStream;
+import java.util.ArrayList;
+import java.util.Random;
 
 public class Generator {
 
@@ -371,12 +374,12 @@ public class Generator {
   /**
    * main method
    */
-  public static void main(String[] args) {
+  /*public static void main(String[] args) {
     //default values
     int univNum = 1, startIndex = 0, seed = 0;
     boolean daml = false;
     String ontology = null;
-
+  
     try {
       String arg;
       int i = 0;
@@ -446,9 +449,9 @@ public class Generator {
                          "\t-onto <univ-bench ontology url>");
       System.exit(0);
     }
-
+  
     new Generator().start(univNum, startIndex, seed, daml, ontology);
-  }
+  }*/
 
   /**
    * constructor
@@ -479,22 +482,23 @@ public class Generator {
    * @param daml Generates DAML+OIL data if true, OWL data otherwise.
    * @param ontology Ontology url.
    */
-  public void start(int univNum, int startIndex, int seed, boolean daml,
-                    String ontology) {
+  public void start(int univNum, int startIndex, int seed, Writer writer,
+      String ontology) {
     this.ontology = ontology;
 
-    isDaml_ = daml;
+    writer_ = writer;
+    /*isDaml_ = daml;
     if (daml)
       writer_ = new DamlWriter(this);
     else
-      writer_ = new OwlWriter(this);
+      writer_ = new OwlWriter(this);*/
 
     startIndex_ = startIndex;
     baseSeed_ = seed;
     instances_[CS_C_UNIV].num = univNum;
     instances_[CS_C_UNIV].count = startIndex;
     _generate();
-    System.out.println("See log.txt for more details.");
+    //System.out.println("See log.txt for more details.");
   }
 
   ///////////////////////////////////////////////////////////////////////////
@@ -603,10 +607,19 @@ public class Generator {
 
   /** Begins data generation according to the specification */
   private void _generate() {
-    System.out.println("Started...");
+    //System.out.println("Started...");
     try {
       log_ = new PrintStream(new FileOutputStream(System.getProperty("user.dir") +
                                                  "\\" + LOG_FILE));
+      log_ = new PrintStream(System.out) {
+
+        @Override
+        public void println(String x) {
+        }
+
+        public void println() {
+        }
+      };
       writer_.start();
       for (int i = 0; i < instances_[CS_C_UNIV].num; i++) {
         _generateUniv(i + startIndex_);
@@ -617,7 +630,7 @@ public class Generator {
     catch (IOException e) {
       System.out.println("Failed to create log file!");
     }
-    System.out.println("Completed!");
+    //System.out.println("Completed!");
   }
 
   /**
@@ -687,7 +700,7 @@ public class Generator {
     _generateCourses();
     _generateRaTa();
 
-    System.out.println(fileName + " generated");
+    //System.out.println(fileName + " generated");
     String bar = "";
     for (int i = 0; i < fileName.length(); i++)
       bar += '-';
@@ -1436,11 +1449,11 @@ public class Generator {
     comment = "TOTAL SO FAR: " + totalPropInstNum;
     log_.println(comment);
 
-    System.out.println("CLASS INSTANCE #: " + classInstNum + ", TOTAL SO FAR: " +
-                       totalClassInstNum);
-    System.out.println("PROPERTY INSTANCE #: " + propInstNum +
-                       ", TOTAL SO FAR: " + totalPropInstNum);
-    System.out.println();
+    //System.out.println("CLASS INSTANCE #: " + classInstNum + ", TOTAL SO FAR: " +
+    //                   totalClassInstNum);
+    //System.out.println("PROPERTY INSTANCE #: " + propInstNum +
+    //                   ", TOTAL SO FAR: " + totalPropInstNum);
+    //System.out.println();
 
     log_.println();
   }
