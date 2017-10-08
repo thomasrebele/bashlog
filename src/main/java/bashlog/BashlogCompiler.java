@@ -1,9 +1,7 @@
 package bashlog;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
 
 import bashlog.plan.SortJoinNode;
 import bashlog.plan.SortNode;
@@ -14,18 +12,21 @@ import common.parser.Constant;
 import common.plan.*;
 import common.plan.MaterializationNode.ReuseNode;
 import common.plan.RecursionNode.DeltaNode;
+import common.plan.RecursionNode.FullNode;
 
 public class BashlogCompiler {
 
   int tmpFileIndex = 0;
 
-  Map<RecursionNode, String> recursionNodeToFilename = new HashMap<>();
+  Map<RecursionNode, String> recursionNodeToIdx = new HashMap<>();
 
   Map<MaterializationNode, String> matNodeToFilename = new HashMap<>();
 
   Map<MaterializationNode, AtomicInteger> matNodeToCount = new HashMap<>();
 
   PlanNode root;
+
+  private String debug = "";
 
   /** Helper class:
    * - inserts <() at correct position
@@ -112,22 +113,26 @@ public class BashlogCompiler {
 
   public BashlogCompiler(PlanNode planNode) {
     root = new PlanSimplifier().apply(planNode);
+
+    debug += "simplified\n";
+    debug += root.toPrettyString() + "\n";
+
     root = new PushDownFilterOptimizer().apply(root);
 
-    System.out.println("optimized");
-    System.out.println(root.toPrettyString());
+    debug += "optimized\n";
+    debug += root.toPrettyString() + "\n";
 
     root = root.transform(this::transform);
 
-    System.out.println("bashlog plan");
-    System.out.println(root.toPrettyString());
+    debug += "bashlog plan" + "\n";
+    debug += root.toPrettyString() + "\n";
 
     root = new BashlogOptimizer().apply(root);
     root = new MaterializationOptimizer().apply(root);
 
-    System.out.println("optimized bashlog plan");
-    System.out.println(root.toPrettyString());
-
+    debug += "optimized bashlog plan";
+    debug += root.toPrettyString();
+    debug = "#" + debug.replaceAll("\n", "\n# ");
   }
 
   public String compile() {
@@ -144,23 +149,56 @@ public class BashlogCompiler {
     return ctx.generate();
   }
 
+  public String debugInfo() {
+    return debug;
+  }
+
+  /** Adds extra column with dummy value */
+  private PlanNode prepareSortCrossProduct(PlanNode p) {
+    int[] proj = new int[p.getArity() + 1];
+    Comparable<?>[] cnst = new Comparable[proj.length];
+    for (int i = 0; i < p.getArity(); i++) {
+      proj[i + 1] = i;
+    }
+    proj[0] = -1;
+    cnst[0] = "_";
+    return p.project(proj, cnst);
+  }
 
   private PlanNode transform(PlanNode p) {
     if (p instanceof JoinNode) {
       // sort join
       JoinNode joinNode = (JoinNode) p;
-      PlanNode left = new SortNode(joinNode.getLeft(), joinNode.getLeftJoinProjection());
-      PlanNode right = new SortNode(joinNode.getRight(), joinNode.getRightJoinProjection());
-      return new SortJoinNode(left, right, joinNode.getLeftJoinProjection(), joinNode.getRightJoinProjection());
+      if (joinNode.getLeftJoinProjection().length == 0) {
+        PlanNode left = prepareSortCrossProduct(joinNode.getLeft());
+        PlanNode right = prepareSortCrossProduct(joinNode.getRight());
+        PlanNode crossProduct = new SortJoinNode(left, right, new int[] { 0 }, new int[] { 0 });
+        int[] proj = new int[left.getArity() + right.getArity() - 2];
+        for (int i = 1; i < left.getArity(); i++) {
+          proj[i-1] = i;
+        }
+        for(int i=1; i<right.getArity(); i++) {
+          proj[left.getArity() - 2 + i] = left.getArity() + i;
+        }
+        return crossProduct.project(proj);
+      } else {
+        PlanNode left = new SortNode(joinNode.getLeft(), joinNode.getLeftJoinProjection());
+        PlanNode right = new SortNode(joinNode.getRight(), joinNode.getRightJoinProjection());
+        return new SortJoinNode(left, right, joinNode.getLeftJoinProjection(), joinNode.getRightJoinProjection());
+      }
     } else if (p instanceof RecursionNode) {
       RecursionNode r = (RecursionNode) p;
       return new SortRecursionNode(new SortNode(r.getExitPlan(), null), new SortNode(r.getRecursivePlan(), null), r.getDelta(), r.getFull());
     } else if (p instanceof UnionNode) {
       UnionNode u = (UnionNode) p;
-      if (u.args().size() > 2) {
-        throw new UnsupportedOperationException("Only unions with two arguments supported");
+      List<PlanNode> children = u.args();
+      if (children.size() == 0) return u;
+      if(children.size() == 1) return children.get(0);
+      PlanNode current = new SortNode(children.get(0), null);
+      for(int i=1; i<children.size(); i++) {
+        current = new SortUnionNode(new HashSet<>(Arrays.asList(current, new SortNode(children.get(i), null))), u.getArity());
       }
-      return new SortUnionNode(u.args().stream().map(c -> new SortNode(c, null)).collect(Collectors.toSet()), u.getArity());
+      return current;
     }
 
     return p;
@@ -431,7 +469,7 @@ public class BashlogCompiler {
       String deltaFile = "tmp/delta" + idx;
       String newDeltaFile = "tmp/new" + idx;
       String fullFile = "tmp/full" + idx;
-      recursionNodeToFilename.put(rn, deltaFile);
+      recursionNodeToIdx.put(rn, "" + idx);
       compile(rn.getExitPlan(), ctx.pipe());
       ctx.append(" | tee " + fullFile + " > " + deltaFile + "\n");
       // "do while" loop in bash
@@ -445,7 +483,7 @@ public class BashlogCompiler {
       ctx.append("cat " + fullFile);
       ctx.endPipe();
     } else if (planNode instanceof DeltaNode) {
-      String deltaFile = recursionNodeToFilename.get(((DeltaNode) planNode).getRecursionNode());
+      String deltaFile = "tmp/delta" + recursionNodeToIdx.get(((DeltaNode) planNode).getRecursionNode());
       if (ctx.isFile()) {
         ctx.append(deltaFile);
       }
@@ -454,6 +492,22 @@ public class BashlogCompiler {
         ctx.append("cat " + deltaFile);
         ctx.endPipe();
       }
+    } else if (planNode instanceof FullNode) {
+      String fullFile = "tmp/full" + recursionNodeToIdx.get(((FullNode) planNode).getRecursionNode());
+      if (ctx.isFile()) {
+        ctx.append(fullFile);
+      } else {
+        ctx.startPipe();
+        ctx.append("cat " + fullFile);
+        ctx.endPipe();
+      }
+    } else if (planNode instanceof UnionNode) {
+      if (planNode.args().size() > 0) {
+        throw new UnsupportedOperationException();
+      }
+      ctx.startPipe();
+      ctx.append("true");
+      ctx.endPipe();
     } else {
       System.err.println("compilation of " + planNode.getClass() + " not yet supported");
     }
