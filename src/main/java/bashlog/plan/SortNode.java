@@ -47,12 +47,12 @@ public class SortNode implements PlanNode {
 
   @Override
   public boolean equals(Object obj) {
-    return obj instanceof SortNode && Objects.equals(child, ((SortNode) obj).child) && Objects.equals(sortColumns, ((SortNode) obj).sortColumns);
+    return obj instanceof SortNode && Objects.equals(child, ((SortNode) obj).child) && Arrays.equals(sortColumns, ((SortNode) obj).sortColumns);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(child, sortColumns);
+    return Objects.hash(child, Arrays.hashCode(sortColumns));
   }
 
   @Override
