@@ -2,6 +2,7 @@ package common;
 
 import java.util.*;
 import java.util.function.BiConsumer;
+import java.util.stream.Collectors;
 
 import org.junit.Assert;
 
@@ -10,6 +11,10 @@ public class Check implements AutoCloseable {
   Map<List<Object>, Integer> expected = new HashMap<>(), expectedParts = new HashMap<>();
 
   Map<List<Object>, Integer> unexpected = new HashMap<>();
+
+  public boolean apply(Object... vals) {
+    return apply(Arrays.stream(vals).collect(Collectors.toList()));
+  }
 
   public boolean apply(List<Object> vals) {
     System.out.println("got " + vals);
@@ -59,18 +64,26 @@ public class Check implements AutoCloseable {
     }
   }
 
+  public <T> void onceList(List<T> objects) {
+    timesList(1, objects);
+  }
+
   public void once(Object... objects) {
     times(1, objects);
   }
 
-  public void times(int times, Object... objects) {
+  @SuppressWarnings("unchecked")
+  public <T> void timesList(int times, List<T> objects) {
     for (Object o : objects) {
       if (o == null) {
-        expectedParts.put(Arrays.asList(objects), times);
+        expectedParts.put((List<Object>) objects, times);
         return;
       }
     }
-    expected.put(Arrays.asList(objects), times);
+    expected.put((List<Object>) objects, times);
   }
 
+  public void times(int times, Object... objects) {
+    timesList(times, Arrays.asList(objects));
+  }
 }
