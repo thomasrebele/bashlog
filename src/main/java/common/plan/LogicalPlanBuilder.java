@@ -35,7 +35,7 @@ public class LogicalPlanBuilder {
     return clone;
   }
 
-  private static int[] concat(int[] first, int[] second) {
+  public static int[] concat(int[] first, int[] second) {
     int[] result = Arrays.copyOf(first, first.length + second.length);
     System.arraycopy(second, 0, result, first.length, second.length);
     return result;

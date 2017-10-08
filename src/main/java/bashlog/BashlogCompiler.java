@@ -117,7 +117,9 @@ public class BashlogCompiler {
     debug += "simplified\n";
     debug += root.toPrettyString() + "\n";
 
+    root = new JoinReorderOptimizer().apply(root);
     root = new PushDownFilterOptimizer().apply(root);
+    root = new PlanSimplifier().apply(root);
 
     debug += "optimized\n";
     debug += root.toPrettyString() + "\n";
