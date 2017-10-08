@@ -4,9 +4,7 @@ Professor(X) :- AssistantProfessor(X).
 Professor(X) :- AssociateProfessor(X).
 Publication(X) :- Book(X).
 
-headOf(X,Y) :- supportChair(X,Y).
-Department(Y) :- supportChair(X,Y).
-Person(X) :- supportChair(X,Y).
+Chair(X) :- headOf(X,Y), Department(Y), Person(X).
 Professor(X) :- Chair(X).
 
 AdministrativeStaff(X) :- ClericalStaff(X).
@@ -14,18 +12,12 @@ Organization(X) :- College(X).
 Article(X) :- ConferencePaper(X).
 Work(X) :- Course(X).
 
-headOf(X,Y) :- supportDean(X,Y).
-College(Y) :- supportDean(X,Y).
-Person(X) :- supportDean(X,Y).
+Dean(X) :- headOf(X,Y), College(Y), Person(X).
 Professor(X) :- Dean(X).
 
-headOf(X,Y) :- supportDirector(X,Y).
-Program(Y) :- supportDirector(X,Y).
-Person(X) :- supportDirector(X,Y).
+Director(X) :- headOf(X,Y), Program(Y), Person(X).
 
-worksFor(X,Y) :- supportEmployee(X,Y).
-Organization(Y) :- supportEmployee(X,Y).
-Person(X) :- supportEmployee(X,Y).
+Employee(X) :- worksFor(X,Y), Organization(Y), Person(X).
 
 Organization(X) :- Department(X).
 Employee(X) :- Faculty(X).
@@ -33,8 +25,7 @@ Professor(X) :- FullProfessor(X).
 Course(X) :- GraduateCourse(X).
 Person(X) :- GraduateStudent(X).
 
-takesCourse(X,Y) :- supportGraduateCourse(X,Y).
-GraduateCourse(Y) :- supportGraduateCourse(X,Y).
+GraduateStudent(X) :- takesCourse(X,Y), GraduateCourse(Y).
 
 Organization(X) :- Institute(X).
 Article(X) :- JournalArticle(X).
@@ -46,21 +37,16 @@ Organization(X) :- Program(X).
 Work(X) :- Research(X).
 Student(X) :- ResearchAssistant(X).
 
-worksFor(X,Y) :- supportResearchGroup(X,Y).
-ResearchGroup(Y) :- supportResearchGroup(X,Y).
+ResearchAssistant(X) :- worksFor(X,Y), ResearchGroup(Y).
 
 Organization(X) :- ResearchGroup(X).
 Publication(X) :- Software(X).
 Publication(X) :- Specification(X).
 AdministrativeStaff(X) :- SystemsStaff(X).
 
-takesCourse(X,Y) :- supportStudent(X,Y).
-Course(Y) :- supportStudent(X,Y).
-Person(X) :- supportStudent(X,Y).
+Student(X) :- takesCourse(X,Y), Course(Y), Person(X).
 
-teachingAssistantOf(X,Y) :- supportTeachingAssistant(X,Y).
-Course(Y) :- supportTeachingAssistant(X,Y).
-Person(X) :- supportTeachingAssistant(X,Y).
+TeachingAssistant(X) :- teachingAssistantOf(X,Y), Course(Y) , Person(X).
 
 Article(X) :- TechnicalReport(X).
 Student(X) :- UndergraduateStudent(X).
@@ -122,3 +108,4 @@ Person(X) :- undergraduateDegreeFrom(X,Y).
 University(Y) :- undergraduateDegreeFrom(X,Y).
 degreeFrom(X,Y) :- undergraduateDegreeFrom(X,Y).
 memberOf(X,Y) :- worksFor(X,Y).
+
