@@ -1,10 +1,10 @@
 package common.plan;
 
-import common.parser.*;
-
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
+import common.parser.*;
 
 /**
  * TODO: support recursion f(x,z) <- f(x,y), f(y,z). (join with full)
@@ -245,6 +245,11 @@ public class LogicalPlanBuilder {
       this.node = node;
       this.colToVar = colToVar;
       this.varToCol = varToCol;
+    }
+
+    public NodeWithMask debug(String string) {
+      System.out.println(string + " " + node.operatorString() + " c2V " + Arrays.toString(colToVar) + " v2C " + Arrays.toString(varToCol));
+      return this;
     }
   }
 
