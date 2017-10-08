@@ -1,7 +1,13 @@
 package flinklog;
 
-import common.parser.*;
-import common.plan.*;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.*;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
+
 import org.apache.commons.compress.utils.Sets;
 import org.apache.flink.api.common.functions.MapFunction;
 import org.apache.flink.api.common.typeinfo.TypeHint;
@@ -13,19 +19,15 @@ import org.apache.flink.api.java.tuple.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.*;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
-import java.util.stream.Stream;
+import common.Evaluator;
+import common.parser.*;
+import common.plan.*;
 
 /**
  * Evaluates a Program on a FactsSet and returns a new FactsSet
  * See flinklog.IntegrationTests for examples of programs.
  */
-public class FlinkEvaluator {
+public class FlinkEvaluator implements Evaluator {
   private static final Logger LOGGER = LoggerFactory.getLogger(FlinkEvaluator.class);
   private static final int MAX_ITERATION = Integer.MAX_VALUE;
   private static final Set<String> BUILDS_IN = Sets.newHashSet("flink_entry_values", "bash_command");
