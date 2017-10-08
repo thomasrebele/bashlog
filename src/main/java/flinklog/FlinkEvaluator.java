@@ -56,6 +56,16 @@ public class FlinkEvaluator implements Evaluator {
         return Tuple4.of(values[0], values[1], values[2], values[3]);
       case 5:
         return Tuple5.of(values[0], values[1], values[2], values[3], values[4]);
+      case 6:
+        return Tuple6.of(values[0], values[1], values[2], values[3], values[4], values[5]);
+      case 7:
+        return Tuple7.of(values[0], values[1], values[2], values[3], values[4], values[5], values[6]);
+      case 8:
+        return Tuple8.of(values[0], values[1], values[2], values[3], values[4], values[5], values[6], values[7]);
+      case 9:
+        return Tuple9.of(values[0], values[1], values[2], values[3], values[4], values[5], values[6], values[7], values[8]);
+      case 10:
+        return Tuple10.of(values[0], values[1], values[2], values[3], values[4], values[5], values[6], values[7], values[8], values[9]);
       default:
         throw new IllegalArgumentException("This arity is not supported");
     }
@@ -98,6 +108,16 @@ public class FlinkEvaluator implements Evaluator {
         return new Tuple4<T, T, T, T>();
       case 5:
         return new Tuple5<T, T, T, T, T>();
+      case 6:
+        return new Tuple6<T, T, T, T, T, T>();
+      case 7:
+        return new Tuple7<T, T, T, T, T, T, T>();
+      case 8:
+        return new Tuple8<T, T, T, T, T, T, T, T>();
+      case 9:
+        return new Tuple9<T, T, T, T, T, T, T, T, T>();
+      case 10:
+        return new Tuple10<T, T, T, T, T, T, T, T, T, T>();
       default:
         throw new IllegalArgumentException("This arity is not supported");
     }
@@ -122,6 +142,21 @@ public class FlinkEvaluator implements Evaluator {
         });
       case 5:
         return TypeInformation.of(new TypeHint<Tuple5<Comparable, Comparable, Comparable, Comparable, Comparable>>() {
+        });
+      case 6:
+        return TypeInformation.of(new TypeHint<Tuple6<Comparable, Comparable, Comparable, Comparable, Comparable, Comparable>>() {
+        });
+      case 7:
+        return TypeInformation.of(new TypeHint<Tuple7<Comparable, Comparable, Comparable, Comparable, Comparable, Comparable, Comparable>>() {
+        });
+      case 8:
+        return TypeInformation.of(new TypeHint<Tuple8<Comparable, Comparable, Comparable, Comparable, Comparable, Comparable, Comparable, Comparable>>() {
+        });
+      case 9:
+        return TypeInformation.of(new TypeHint<Tuple9<Comparable, Comparable, Comparable, Comparable, Comparable, Comparable, Comparable, Comparable, Comparable>>() {
+        });
+      case 10:
+        return TypeInformation.of(new TypeHint<Tuple10<Comparable, Comparable, Comparable, Comparable, Comparable, Comparable, Comparable, Comparable, Comparable, Comparable>>() {
         });
       default:
         throw new IllegalArgumentException("This arity is not supported");
