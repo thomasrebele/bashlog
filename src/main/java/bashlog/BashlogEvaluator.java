@@ -5,10 +5,11 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.*;
-import java.util.stream.IntStream;
 
 import common.Evaluator;
-import common.parser.*;
+import common.parser.ParserReader;
+import common.parser.Program;
+import common.parser.Rule;
 import common.plan.LogicalPlanBuilder;
 import common.plan.PlanNode;
 import flinklog.FactsSet;
@@ -64,14 +65,7 @@ public class BashlogEvaluator implements Evaluator {
       });
       writer.close();
       // construct bash command 'cat $path'
-      String[] rel = relation.split("/");
-      int arity = Integer.parseInt(rel[1]);
-      Term[] args = IntStream.range(0, arity).mapToObj(tmpI -> new Variable("tmp_" + tmpI)).toArray(Term[]::new);
-      CompoundTerm ct = new CompoundTerm("bash_command");
-      Constant<String> c = new Constant<>("cat " + path);
-      ct.args = new Term[] { c, new TermList(args) };
-      Rule r = new Rule(new CompoundTerm(rel[0], args), ct);
-      program.addRule(r);
+      program.addRule(Rule.bashRule(relation, "cat " + path));
     }
 
     SimpleFactsSet result = new SimpleFactsSet();

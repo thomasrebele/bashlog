@@ -2,6 +2,7 @@ package common.parser;
 
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 public class Rule implements Parseable {
 
@@ -88,6 +89,17 @@ public class Rule implements Parseable {
     System.out.println("remaining: " + pr.peekLine());
     r = read(pr = new ParserReader("pred(A) :~ cat a.txt"));
     System.out.println(r);
+  }
+
+  public static Rule bashRule(String relation, String cmd) {
+    String[] rel = relation.split("/");
+    int arity = Integer.parseInt(rel[1]);
+    Term[] args = IntStream.range(0, arity).mapToObj(tmpI -> new Variable("tmp_" + tmpI)).toArray(Term[]::new);
+    CompoundTerm ct = new CompoundTerm("bash_command");
+    Constant<String> c = new Constant<>(cmd);
+    ct.args = new Term[] { c, new TermList(args) };
+    Rule r = new Rule(new CompoundTerm(rel[0], args), ct);
+    return r;
   }
 
 }
