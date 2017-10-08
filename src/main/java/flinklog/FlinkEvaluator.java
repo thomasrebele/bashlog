@@ -1,13 +1,8 @@
 package flinklog;
 
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.*;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
-import java.util.stream.Stream;
-
+import common.Evaluator;
+import common.parser.*;
+import common.plan.*;
 import org.apache.commons.compress.utils.Sets;
 import org.apache.flink.api.common.functions.MapFunction;
 import org.apache.flink.api.common.typeinfo.TypeHint;
@@ -19,9 +14,13 @@ import org.apache.flink.api.java.tuple.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import common.Evaluator;
-import common.parser.*;
-import common.plan.*;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.*;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 /**
  * Evaluates a Program on a FactsSet and returns a new FactsSet
@@ -31,11 +30,11 @@ public class FlinkEvaluator implements Evaluator {
   private static final Logger LOGGER = LoggerFactory.getLogger(FlinkEvaluator.class);
   private static final int MAX_ITERATION = Integer.MAX_VALUE;
   private static final Set<String> BUILDS_IN = Sets.newHashSet("flink_entry_values", "bash_command");
-  private static final List<Optimizer> OPTIMIZERS = Arrays.asList(new PlanSimplifier(), new PushDownFilterOptimizer(), new PlanSimplifier());
+  private static final List<Optimizer> OPTIMIZERS = Arrays.asList(new PlanSimplifier(), new PushDownFilterOptimizer(), new JoinReorderOptimizer(), new PlanSimplifier());
 
   private ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
   private FactsSet factsSet;
-  private Map<PlanNode, Optional<DataSet<Tuple>>> cache = new HashMap<>();
+  private Map<PlanNode, Optional<DataSet<Tuple>>> cache;
 
   public FlinkEvaluator() {
     env.getConfig().enableObjectReuse();
@@ -175,6 +174,7 @@ public class FlinkEvaluator implements Evaluator {
 
   public FactsSet evaluate(Program program, FactsSet facts, Set<String> relationsToOutput) {
     //Initialize globals
+    cache = new HashMap<>();
     factsSet = facts;
 
     //We to program the loading from the factset

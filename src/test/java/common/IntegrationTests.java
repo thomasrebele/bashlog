@@ -1,13 +1,11 @@
 package common;
 
-import org.apache.commons.compress.utils.Sets;
-import org.junit.Assert;
-
 import common.parser.ParserReader;
 import common.parser.Program;
-import common.plan.LogicalPlanBuilder;
 import flinklog.FactsSet;
 import flinklog.SimpleFactsSet;
+import org.apache.commons.compress.utils.Sets;
+import org.junit.Assert;
 
 public class IntegrationTests {
 
@@ -48,7 +46,6 @@ public class IntegrationTests {
     facts.add("parent/2", "bob", "alice");
     facts.add("parent/2", "alice", "charly");
     facts.add("parent/2", "charly", "david");
-    System.out.println(new LogicalPlanBuilder().getPlanForProgram(program).get("ancestor/2").toPrettyString());
 
     FactsSet result = eval.evaluate(program, facts, Sets.newHashSet("ancestor/2"));
 
@@ -63,7 +60,6 @@ public class IntegrationTests {
     facts.add("foo/2", "bob", "alice");
     facts.add("foo/2", "alice", "charly");
     facts.add("foo/2", "charly", "david");
-    System.out.println(new LogicalPlanBuilder().getPlanForProgram(program).get("bar/2").toPrettyString());
 
     FactsSet result = eval.evaluate(program, facts, Sets.newHashSet("baz/2"));
 

@@ -1,10 +1,10 @@
 package common.plan;
 
+import common.parser.*;
+
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
-import common.parser.*;
 
 /**
  * TODO: support recursion f(x,z) <- f(x,y), f(y,z). (join with full)
@@ -13,15 +13,11 @@ public class LogicalPlanBuilder {
 
   private static final PlanSimplifier SIMPLIFIER = new PlanSimplifier();
 
-  private Set<String> builtin = new HashSet<>();
-  private Set<String> relationsToOutput = new HashSet<>();
+  private Set<String> builtin;
+  private Set<String> relationsToOutput;
 
-  private Map<RelationWithDeltaNodes, PlanNode> planForRelation = new HashMap<>();
-
+  private Map<RelationWithDeltaNodes, PlanNode> planForRelation;
   private Program program;
-
-  public LogicalPlanBuilder() {
-  }
 
   public LogicalPlanBuilder(Set<String> builtin, Set<String> relationsToOutput) {
     this.builtin = builtin;
@@ -42,7 +38,9 @@ public class LogicalPlanBuilder {
   }
 
   public Map<String, PlanNode> getPlanForProgram(Program program) {
+    planForRelation = new HashMap<>();
     this.program = program;
+
     //We fill relationsToOutput if needed
     if (relationsToOutput.isEmpty()) {
       program.rules().forEach(rule -> relationsToOutput.add(rule.head.getRelation()));
@@ -156,7 +154,7 @@ public class LogicalPlanBuilder {
           } else if (arg instanceof Constant) {
             termNode = termNode.equalityFilter(i, ((Constant) arg).getValue());
           } else {
-            throw new UnsupportedOperationException("cannot handle " + termNode);
+            throw new UnsupportedOperationException("cannot handle " + term);
           }
         }
       }
