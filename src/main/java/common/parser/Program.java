@@ -1,10 +1,10 @@
 package common.parser;
 
-import javatools.filehandlers.FileUtils;
-
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
+
+import javatools.filehandlers.FileUtils;
 
 /**
  * Parses datalog
@@ -48,6 +48,10 @@ public class Program implements Parseable {
   public void addRule(Rule rule) {
     rules.add(rule);
     relationToRules.computeIfAbsent(rule.head.getRelation(), k -> new ArrayList<>()).add(rule);
+  }
+
+  public void addRules(Program p) {
+    p.rules().forEach(this::addRule);
   }
 
   @Override
