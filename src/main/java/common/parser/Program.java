@@ -45,6 +45,12 @@ public class Program implements Parseable {
     return p;
   }
 
+  public Program copy() {
+    Program result = new Program();
+    this.rules.forEach(result::addRule);
+    return result;
+  }
+
   public void addRule(Rule rule) {
     rules.add(rule);
     relationToRules.computeIfAbsent(rule.head.getRelation(), k -> new ArrayList<>()).add(rule);

@@ -7,5 +7,5 @@ import flinklog.FactsSet;
 
 public interface Evaluator {
 
-  FactsSet evaluate(Program program, FactsSet facts, Set<String> relationsToOutput);
+  FactsSet evaluate(Program program, FactsSet facts, Set<String> relationsToOutput) throws Exception;
 }

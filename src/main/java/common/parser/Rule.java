@@ -18,7 +18,7 @@ public class Rule implements Parseable {
     this(head, Arrays.asList(body));
   }
 
-  protected static Rule read(ParserReader pr) {
+  public static Rule read(ParserReader pr) {
     Map<String, Variable> variables = new HashMap<>();
 
     pr.skipComments();
