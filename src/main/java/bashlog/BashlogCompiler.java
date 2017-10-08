@@ -360,6 +360,16 @@ public class BashlogCompiler {
       ctx.append("\" { print $0 }' ");
       compile(n.getTable(), ctx.file());
       ctx.endPipe();
+    } else if (planNode instanceof VariableEqualityFilterNode) {
+      ctx.startPipe();
+      VariableEqualityFilterNode n = (VariableEqualityFilterNode) planNode;
+      ctx.append(AWK + "$");
+      ctx.append(n.getField1() + 1);
+      ctx.append(" == $");
+      ctx.append(n.getField2() + 1);
+      ctx.append(" { print $0 }' ");
+      compile(n.getTable(), ctx.file());
+      ctx.endPipe();
     } else if (planNode instanceof BuiltinNode) {
       CompoundTerm ct = ((BuiltinNode) planNode).compoundTerm;
       if ("bash_command".equals(ct.name)) {

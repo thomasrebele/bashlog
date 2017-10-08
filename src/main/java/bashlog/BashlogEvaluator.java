@@ -25,7 +25,6 @@ public class BashlogEvaluator implements Evaluator {
   }
 
   public static String compileQuery(Program p, String query) throws IOException {
-
     Set<String> builtin = new HashSet<>();
     builtin.add("bash_command");
     Map<String, PlanNode> plan = new LogicalPlanBuilder(builtin, new HashSet<>()).getPlanForProgram(p);
@@ -42,7 +41,11 @@ public class BashlogEvaluator implements Evaluator {
   }
 
   @Override
-  public FactsSet evaluate(Program program, FactsSet facts, Set<String> relationsToOutput) throws IOException {
+  public FactsSet evaluate(Program program, FactsSet facts, Set<String> relationsToOutput) throws Exception {
+    return evaluate(program, facts, relationsToOutput, false);
+  }
+
+  public FactsSet evaluate(Program program, FactsSet facts, Set<String> relationsToOutput, boolean debug) throws IOException {
 
     program = program.copy();
     for (String relation : facts.getRelations()) {
@@ -75,6 +78,9 @@ public class BashlogEvaluator implements Evaluator {
     for (String relation : relationsToOutput) {
       Runtime run = Runtime.getRuntime();
       String query = compileQuery(program, relation);
+      if (debug) {
+        System.out.println(query);
+      }
       Process proc = run.exec(new String[] { "/bin/bash", "-c", query });
       BufferedReader br = new BufferedReader(new InputStreamReader(proc.getInputStream()));
       String line;
@@ -86,7 +92,12 @@ public class BashlogEvaluator implements Evaluator {
     return result;
   }
 
-  public static void main(String[] args) throws IOException {
+  @Override
+  public void debug(Program program, FactsSet facts, Set<String> relationsToOutput) throws Exception {
+    evaluate(program, facts, relationsToOutput, true);
+  }
+
+  public static void main(String[] args) throws Exception {
     /*    args = new String[] { "data/bashlog/recursion/datalog.txt", "tc/2" };
     //args = new String[] { "data/bashlog/fast-join/datalog.txt", "main/3" };
     //args = new String[] { "data/bashlog/fast-join/datalog.txt", "test/3" };
