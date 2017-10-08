@@ -2,7 +2,6 @@ package sqllog;
 
 import common.parser.ParserReader;
 import common.parser.Program;
-import flinklog.SimpleFactsSet;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -15,10 +14,7 @@ public class IntegrationTests {
     Program program = Program.read(new ParserReader(
             "sibling(X,Y) :- parent(X,Z), parent(Y,Z). bad(X,X) :- parent(X,X). bobParent(X) :- parent(\"bob\", X)."
     ));
-    SimpleFactsSet facts = new SimpleFactsSet();
-    facts.add("parent/2", "bob", "alice");
-    facts.add("parent/2", "charly", "alice");
-
+    
     Assert.assertEquals(
             "SELECT T1.C0, T2.C0 FROM parent AS T1, parent AS T2 WHERE T1.C1 = T2.C1",
             (new SqllogCompiler()).compile(program, Collections.singleton("parent/2"), "sibling/2")
