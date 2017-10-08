@@ -1,7 +1,5 @@
 package bashlog.plan;
 
-import java.util.function.BiFunction;
-
 import common.plan.JoinNode;
 import common.plan.PlanNode;
 
@@ -17,8 +15,9 @@ public class SortJoinNode extends JoinNode {
   }
 
   @Override
-  public PlanNode transform(BiFunction<PlanNode, PlanNode, PlanNode> fn) {
-    return fn.apply(this, new SortJoinNode(getLeft().transform(fn), getRight().transform(fn), getLeftJoinProjection(), getRightJoinProjection()));
+  public PlanNode transform(Transform fn, PlanNode oldParent) {
+    return fn.apply(this,
+        new SortJoinNode(getLeft().transform(fn, this), getRight().transform(fn, this), getLeftJoinProjection(), getRightJoinProjection()), oldParent);
   }
 
 }

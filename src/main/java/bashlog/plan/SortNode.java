@@ -3,7 +3,6 @@ package bashlog.plan;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
-import java.util.function.BiFunction;
 
 import common.plan.PlanNode;
 
@@ -57,8 +56,8 @@ public class SortNode implements PlanNode {
   }
 
   @Override
-  public PlanNode transform(BiFunction<PlanNode, PlanNode, PlanNode> fn) {
-    return fn.apply(this, new SortNode(child.transform(fn), sortColumns));
+  public PlanNode transform(Transform fn, PlanNode oldParent) {
+    return fn.apply(this, new SortNode(child.transform(fn, this), sortColumns), oldParent);
   }
 
   public static int[] defaultSort(int arity) {
