@@ -12,6 +12,12 @@ public class Check implements AutoCloseable {
 
   Map<List<Object>, Integer> unexpected = new HashMap<>();
 
+  boolean ignoreUnexpected = true;
+
+  public void ignoreUnexpected() {
+    this.ignoreUnexpected = true;
+  }
+
   public boolean apply(Object... vals) {
     return apply(Arrays.stream(vals).collect(Collectors.toList()));
   }
@@ -55,10 +61,12 @@ public class Check implements AutoCloseable {
 
     expected.forEach(f);
     expectedParts.forEach(f);
-    unexpected.forEach((l, c) -> {
-      System.out.println("unexpected (" + c + "x): " + l);
-      fail[0] = true;
-    });
+    if (!ignoreUnexpected) {
+      unexpected.forEach((l, c) -> {
+        System.out.println("unexpected (" + c + "x): " + l);
+        fail[0] = true;
+      });
+    }
     if (fail[0]) {
       Assert.fail("unexpected output, check console output");
     }
