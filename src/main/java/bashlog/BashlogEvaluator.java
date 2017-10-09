@@ -1,11 +1,5 @@
 package bashlog;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.util.*;
-
 import common.Evaluator;
 import common.parser.ParserReader;
 import common.parser.Program;
@@ -15,6 +9,12 @@ import common.plan.PlanNode;
 import flinklog.FactsSet;
 import flinklog.SimpleFactsSet;
 import javatools.filehandlers.TSVWriter;
+
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.*;
 
 public class BashlogEvaluator implements Evaluator {
 
@@ -28,7 +28,7 @@ public class BashlogEvaluator implements Evaluator {
   public static String compileQuery(Program p, String query) throws IOException {
     Set<String> builtin = new HashSet<>();
     builtin.add("bash_command");
-    Map<String, PlanNode> plan = new LogicalPlanBuilder(builtin, new HashSet<>()).getPlanForProgram(p);
+    Map<String, PlanNode> plan = new LogicalPlanBuilder(builtin).getPlanForProgram(p);
 
     PlanNode pn = plan.get(query);
     BashlogCompiler bc = new BashlogCompiler(pn);

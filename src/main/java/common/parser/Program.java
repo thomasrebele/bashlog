@@ -1,10 +1,11 @@
 package common.parser;
 
+import javatools.filehandlers.FileUtils;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
-
-import javatools.filehandlers.FileUtils;
+import java.util.stream.Collectors;
 
 /**
  * Parses datalog
@@ -78,32 +79,29 @@ public class Program implements Parseable {
     return relationToRules.getOrDefault(relation, Collections.emptyList());
   }
 
-  public Set<String> getDependencies(String relation) {
-    Set<String> result = new HashSet<>();
-    getDependencies(relation, result, new HashSet<>());
-    return result;
+  public boolean isRecursive(Rule rule, Set<String> ignoredRelations) {
+    return rule.body.stream()
+            .map(CompoundTerm::getRelation)
+            .filter(rel -> !ignoredRelations.contains(rel))
+            .anyMatch(rel -> hasAncestor(rel, rule.head.getRelation(), ignoredRelations));
   }
 
-  private void getDependencies(String relation, Set<String> result, Set<Rule> doneRules) {
-    if (result.contains(relation) || !relationToRules.containsKey(relation)) return;
-    for (Rule rule : relationToRules.get(relation)) {
-      getDependencies(rule, result, doneRules);
+  public boolean hasAncestor(String relation, String ancestor) {
+    return hasAncestor(relation, ancestor, Collections.emptySet());
+  }
+
+  public boolean hasAncestor(String relation, String ancestor, Set<String> ignoredRelation) {
+    if (relation.equals(ancestor)) {
+      return true;
     }
-  }
-
-  public Set<String> getDependencies(Rule rule) {
-    Set<String> result = new HashSet<>();
-    getDependencies(rule, result, new HashSet<>());
-    return result;
-  }
-
-  public void getDependencies(Rule rule, Set<String> result, Set<Rule> doneRules) {
-    if (doneRules.contains(rule)) return;
-    doneRules.add(rule);
-    for (String relation : rule.getDependencies()) {
-      getDependencies(relation, result, doneRules);
-      result.add(relation);
-    }
+    Set<String> parents = rulesForRelation(relation).stream()
+            .flatMap(t -> t.body.stream())
+            .map(CompoundTerm::getRelation)
+            .filter(rel -> !ignoredRelation.contains(rel))
+            .collect(Collectors.toSet());
+    Set<String> newIgnoredRelations = new HashSet<>(ignoredRelation);
+    newIgnoredRelations.addAll(parents);
+    return parents.stream().anyMatch(rel -> hasAncestor(rel, ancestor, newIgnoredRelations));
   }
 
   public static Program merge(Program p1, Program p2) {
