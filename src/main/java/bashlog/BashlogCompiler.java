@@ -180,7 +180,7 @@ public class BashlogCompiler {
       ctx.append(" | " + AWK + "{ print $0 FS ");
       for (int i = 0; i < cols.length; i++) {
         if (i > 0) {
-          ctx.append(" \"\\001\" ");
+          ctx.append(" \"\\002\" ");
         }
         ctx.append("$");
         ctx.append(cols[i] + 1);
@@ -383,12 +383,12 @@ public class BashlogCompiler {
     } else if (planNode instanceof SortUnionNode) {
       ctx.startPipe();
       // delimit columns by null character
-      ctx.append("comm --output-delimiter=$'\\001' ");
+      ctx.append("comm --output-delimiter=$'\\002' ");
       for (PlanNode child : ((UnionNode) planNode).getChildren()) {
         compile(child, ctx.file());
       }
       // remove null character
-      ctx.append(" | sed -E 's/^\\o001\\o001?//g' | uniq "); // 
+      ctx.append(" | sed -E 's/^\\o002\\o002?//g' | uniq "); // 
       ctx.endPipe();
     } else if (planNode instanceof SortRecursionNode) {
       ctx.startPipe();
