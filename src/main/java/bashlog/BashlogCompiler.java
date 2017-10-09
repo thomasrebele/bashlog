@@ -276,6 +276,7 @@ public class BashlogCompiler {
       matNodeToFilename.putIfAbsent(m, matFile);
 
       boolean asFile = m.getReuseCount() <= 1;
+      asFile = true;
       ctx.append("\n");
       ctx.info(planNode);
       
