@@ -44,13 +44,20 @@ public class PlanNodeTest {
             PlanNode.empty(2),
             simplifier.apply(new ProjectNode(PlanNode.empty(2), new int[]{0, 0}))
     );
-    Assert.assertEquals( //
-        new ProjectNode(baz, new int[] { 0, 1, 3 }), //
-        simplifier.apply(new ProjectNode(//
-            /**/new ProjectNode(baz, new int[] { 3, 0, 1 }), //
-            new int[] { 1, 2, 0 })) //
+    Assert.assertEquals(
+            new ProjectNode(baz, new int[]{0, 1, 3}),
+            simplifier.apply(new ProjectNode(
+                    new ProjectNode(baz, new int[]{3, 0, 1}),
+                    new int[]{1, 2, 0}))
     );
-    
+
+    RecursionNode recursionNode = new RecursionNode(PlanNode.empty(2));
+    recursionNode.addRecursivePlan(new UnionNode(recursionNode.getDelta(), foo));
+    Assert.assertTrue(simplifier.apply(recursionNode) instanceof RecursionNode);
+
+    RecursionNode recursionNode2 = new RecursionNode(PlanNode.empty(2));
+    recursionNode2.addRecursivePlan(recursionNode2.getDelta());
+    Assert.assertEquals(PlanNode.empty(2), simplifier.apply(recursionNode2));
   }
 
   @Test
