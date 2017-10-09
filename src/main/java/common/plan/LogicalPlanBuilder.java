@@ -24,6 +24,10 @@ public class LogicalPlanBuilder {
     this.relationsToOutput = relationsToOutput;
   }
 
+  public LogicalPlanBuilder(Set<String> builtin) {
+    this(builtin, new HashSet<>());
+  }
+
   private static <T, U> Map<T, U> withEntry(Map<T, U> map, T key, U value) {
     Map<T, U> clone = new HashMap<>();
     clone.putAll(map);
@@ -31,7 +35,7 @@ public class LogicalPlanBuilder {
     return clone;
   }
 
-  public static int[] concat(int[] first, int[] second) {
+  static int[] concat(int[] first, int[] second) {
     int[] result = Arrays.copyOf(first, first.length + second.length);
     System.arraycopy(second, 0, result, first.length, second.length);
     return result;
@@ -47,7 +51,9 @@ public class LogicalPlanBuilder {
     }
 
     Map<String, PlanNode> planNodes = new HashMap<>();
-    relationsToOutput.forEach(relation -> planNodes.put(relation, SIMPLIFIER.apply(getPlanForRelation(relation, Collections.emptyMap()))));
+    relationsToOutput.forEach(relation ->
+            planNodes.put(relation, SIMPLIFIER.apply(getPlanForRelation(relation, Collections.emptyMap())))
+    );
     return planNodes;
   }
 
@@ -60,7 +66,7 @@ public class LogicalPlanBuilder {
     //We filter the delta node map to remove not useful deltas
     Map<String, PlanNode> filteredDeltaNode = new HashMap<>();
     deltaNodes.forEach((key, value) -> {
-      if (hasAncestor(relation, key)) {
+      if (program.hasAncestor(relation, key)) {
         filteredDeltaNode.put(key, value);
       }
     });
@@ -71,7 +77,7 @@ public class LogicalPlanBuilder {
       List<Rule> exitRules = new ArrayList<>();
       List<Rule> recursiveRules = new ArrayList<>();
       program.rulesForRelation(relation).forEach(rule -> {
-        if (isRecursive(rule)) {
+        if (program.isRecursive(rule, deltaNodes.keySet())) { //We do not want to tag as recursive rules that are already in a loop
           recursiveRules.add(rule);
         } else {
           exitRules.add(rule);
@@ -91,9 +97,9 @@ public class LogicalPlanBuilder {
       //We build recursion
       RecursionNode recursionPlan = exitPlan.recursion();
       Map<String, PlanNode> newDeltaNodes = withEntry(filteredDeltaNode, relation, recursionPlan.getDelta());
-      recursiveRules.forEach(rule -> {
-        recursionPlan.addRecursivePlan(introduceFullRecursion(getPlanForRule(rule, newDeltaNodes), recursionPlan.getDelta(), recursionPlan.getFull()));
-      });
+      recursiveRules.forEach(rule ->
+              recursionPlan.addRecursivePlan(introduceFullRecursion(getPlanForRule(rule, newDeltaNodes), recursionPlan.getDelta(), recursionPlan.getFull()))
+      );
       planForRelation.put(relationWithDeltaNodes, recursionPlan);
     }
     return planForRelation.get(relationWithDeltaNodes);
@@ -117,9 +123,6 @@ public class LogicalPlanBuilder {
 
   private PlanNode getPlanForRule(Rule rule, Map<String, PlanNode> deltaNodes) {
     //TODO: check if the rule is sane
-    //a(X,Y,c) <- b(X,d), c(X,Y)
-    //b.filter(1, d).map([0, -1]).join(c.map([0, 1])).project([0, 1], [null, null, c])
-
     //Variables integer encoding
     Map<Term, Integer> variablesEncoding = new HashMap<>();
     Stream.concat(
@@ -223,14 +226,6 @@ public class LogicalPlanBuilder {
       }
     }
     return body.node.project(projection, resultConstants);
-  }
-
-  private boolean isRecursive(Rule rule) {
-    return program.getDependencies(rule).contains(rule.head.getRelation());
-  }
-
-  private boolean hasAncestor(String relation, String ancestor) {
-    return program.getDependencies(relation).contains(ancestor);
   }
 
   private static class NodeWithMask {

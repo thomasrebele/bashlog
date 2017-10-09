@@ -63,7 +63,21 @@ public class IntegrationTests {
 
     FactsSet result = eval.evaluate(program, facts, Sets.newHashSet("baz/2"));
 
-    Assert.assertEquals(4, result.getByRelation("bar/2").count());
+    Assert.assertEquals(4, result.getByRelation("baz/2").count());
+  }
+
+  public static void testInnerLoop(Evaluator eval) throws Exception {
+    Program program = Program.read(new ParserReader(
+            "a(X,Z) :- b(X,Y), in(Y,Z). b(X,Z) :- b(X,Y), in(Y,Z). b(X,Z) :- c(X,Y), in(Y,Z). c(X,Z) :- a(X,Y), in(Y,Z)."
+    ));
+    SimpleFactsSet facts = new SimpleFactsSet();
+    facts.add("in/2", "bob", "alice");
+    facts.add("in/2", "alice", "charly");
+    facts.add("in/2", "charly", "david");
+
+    FactsSet result = eval.evaluate(program, facts, Sets.newHashSet("a/2"));
+
+    Assert.assertEquals(-1, result.getByRelation("a/2").count()); //TODO: compter le résultat attendu
   }
 
   public static void testReadFile(Evaluator eval) throws Exception {

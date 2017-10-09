@@ -186,7 +186,7 @@ public class FlinkEvaluator implements Evaluator {
               String relation = relationPlan.getKey();
               PlanNode plan = optimize(relationPlan.getValue());
               LOGGER.info("Evaluating relation " + relation + " with plan:\n" + plan.toPrettyString());
-              return stream(this.mapPlanNode(plan).map(dataSet ->
+              return stream(mapPlanNode(plan).map(dataSet ->
                       (DataSet<Tuple2<String, Comparable[]>>) dataSet.map((MapFunction<Tuple, Tuple2<String, Comparable[]>>) row -> {
                         Comparable[] args = new Comparable[row.getArity()];
                         for (int i = 0; i < args.length; i++) {
