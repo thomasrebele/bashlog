@@ -1,14 +1,15 @@
 query1(X) :- GraduateStudent(X),takesCourse(X,"http://www.Department0.University0.edu/GraduateCourse0") .
-query2(X) :- GraduateStudent(X),University(Y),Department(Z),memberOf(X,Z),subOrganizationOf(Z,Y),undergraduateDegreeFrom(X,Y) .
+query2(X,Y,Z) :- GraduateStudent(X),University(Y),Department(Z),memberOf(X,Z),subOrganizationOf(Z,Y),undergraduateDegreeFrom(X,Y) .
 query3(X) :- Publication(X),publicationAuthor(X,"http://www.Department0.University0.edu/AssistantProfessor0") .
-query4(X) :- Professor(X),worksFor(X,"http://www.Department0.University0.edu"),name(X,Y1),emailAddress(X,Y2),telephone(X,Y3) .
+query4(X,Y1,Y2,Y3) :- Professor(X),worksFor(X,"http://www.Department0.University0.edu"),name(X,Y1),emailAddress(X,Y2),telephone(X,Y3) .
 query5(X) :- Person(X),memberOf(X,"http://www.Department0.University0.edu") .
 query6(X) :- Student(X) .
-query7(X) :- Student(X),Course(Y),teacherOf("http://www.Department0.University0.edu/AssociateProfessor0",Y),takesCourse(X,Y) .
-query8(X) :- Student(X),Department(Y),memberOf(X,Y),subOrganizationOf(Y,"http://www.University0.edu"),emailAddress(X,Z) .
-query9(X) :- Student(X),Faculty(Y),Course(Z),advisor(X,Y),takesCourse(X,Z),teacherOf(Y,Z) .
+query7(X, Y) :- Student(X),Course(Y),takesCourse(X,Y),teacherOf("http://www.Department0.University0.edu/AssociateProfessor0",Y) .
+query8(X,Y,Z) :- Student(X),Department(Y),memberOf(X,Y),subOrganizationOf(Y,"http://www.University0.edu"),emailAddress(X,Z) .
+query9(X,Y,Z) :- Student(X),Faculty(Y),Course(Z),advisor(X,Y),teacherOf(Y,Z),takesCourse(X,Z) .
 query10(X) :- Student(X),takesCourse(X,"http://www.Department0.University0.edu/GraduateCourse0") .
 query11(X) :- ResearchGroup(X),subOrganizationOf(X,"http://www.University0.edu") .
-query12(X) :- ResearchGroup(X),subOrganizationOf(X,"http://www.University0.edu") .
+query12(X,Y) :- Chair(X),Department(Y),worksFor(X,Y),subOrganizationOf(Y,"http://www.University0.edu") .
 query13(X) :- Person(X),hasAlumnus("http://www.University0.edu",X) .
 query14(X) :- UndergraduateStudent(X) .
+

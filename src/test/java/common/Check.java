@@ -12,6 +12,8 @@ public class Check implements AutoCloseable {
 
   Map<List<Object>, Integer> unexpected = new HashMap<>();
 
+  boolean debug = false;
+
   boolean ignoreUnexpected = true;
 
   public void ignoreUnexpected() {
@@ -23,7 +25,9 @@ public class Check implements AutoCloseable {
   }
 
   public boolean apply(List<Object> vals) {
-    System.out.println("got " + vals);
+    if (debug) {
+      System.out.println("got " + vals);
+    }
     Integer count = expected.computeIfPresent(vals, (l, c) -> --c);
     if (count == null) {
       next_exp: for (List<Object> os : expectedParts.keySet()) {
@@ -48,27 +52,34 @@ public class Check implements AutoCloseable {
   public void close() throws Exception {
     boolean fail[] = { false };
 
-    BiConsumer<List<Object>, Integer> f = (l, c) -> {
-      if (c > 0) {
-        System.out.println("missing (" + c + "x): " + l);
-        fail[0] = true;
-      }
-      if (c < 0) {
-        System.out.println("too often (" + c + "x): " + l);
-        fail[0] = true;
-      }
-    };
+    try {
+      int count[] = { 0 };
+      BiConsumer<List<Object>, Integer> f = (l, c) -> {
+        if (c > 0) {
+          System.out.println("missing (" + c + "x): " + l);
+          fail[0] = true;
+          if (count[0]++ > 10) return;
+        }
+        if (c < 0) {
+          System.out.println("too often (" + c + "x): " + l);
+          fail[0] = true;
+          if (count[0]++ > 10) return;
+        }
+      };
 
-    expected.forEach(f);
-    expectedParts.forEach(f);
-    if (!ignoreUnexpected) {
-      unexpected.forEach((l, c) -> {
-        System.out.println("unexpected (" + c + "x): " + l);
-        fail[0] = true;
-      });
-    }
-    if (fail[0]) {
-      Assert.fail("unexpected output, check console output");
+      expected.forEach(f);
+      expectedParts.forEach(f);
+      if (!ignoreUnexpected) {
+        unexpected.forEach((l, c) -> {
+          System.out.println("unexpected (" + c + "x): " + l);
+          fail[0] = true;
+          if (count[0]++ > 10) return;
+        });
+      }
+    } finally {
+      if (fail[0]) {
+        Assert.fail("unexpected output, check console output");
+      }
     }
   }
 

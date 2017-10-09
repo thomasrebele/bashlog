@@ -29,6 +29,9 @@ public class BashlogCompiler {
   private String debug = "";
 
   public BashlogCompiler(PlanNode planNode) {
+    if (planNode == null) {
+      throw new IllegalArgumentException("cannot compile an empty plan");
+    }
     root = new PlanSimplifier().apply(planNode);
 
     debug += "simplified\n";
