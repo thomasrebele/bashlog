@@ -310,6 +310,7 @@ public class BashlogCompiler {
       ctx.endPipe();
 
     } else if (planNode instanceof ReuseNode) {
+      ctx.append("\\\n");
       ctx.info(planNode);
       MaterializationNode matNode = ((ReuseNode) planNode).getMaterializeNode();
       String matFile = matNodeToFilename.get(matNode);

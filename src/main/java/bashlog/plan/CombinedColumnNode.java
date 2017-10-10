@@ -26,6 +26,11 @@ public class CombinedColumnNode implements PlanNode {
   }
 
   @Override
+  public String toString() {
+    return operatorString() + "(" + child + ")";
+  }
+
+  @Override
   public String operatorString() {
     return "combine_{" + Arrays.toString(columns) + "}";
   }
