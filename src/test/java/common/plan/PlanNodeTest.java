@@ -20,6 +20,7 @@ public class PlanNodeTest {
             (new VariableEqualityFilterNode(bar, 1, 1)).replace(bar, foo)
     );
   }
+
   @Test
   public void testSimplifier() {
     PlanSimplifier simplifier = new PlanSimplifier();
@@ -36,6 +37,7 @@ public class PlanNodeTest {
             foo,
             simplifier.apply(new UnionNode(foo, new UnionNode(foo, PlanNode.empty(2))))
     );
+
     Assert.assertEquals(
             foo,
             simplifier.apply(new ProjectNode(foo, new int[]{0, 1}))
@@ -49,6 +51,15 @@ public class PlanNodeTest {
             simplifier.apply(new ProjectNode(
                     new ProjectNode(baz, new int[]{3, 0, 1}),
                     new int[]{1, 2, 0}))
+    );
+
+    Assert.assertEquals(
+            PlanNode.empty(4),
+            simplifier.apply(new JoinNode(foo, PlanNode.empty(2), new int[]{0}, new int[]{0}))
+    );
+    Assert.assertEquals(
+            simplifier.apply(new JoinNode(foo, bar, new int[]{0}, new int[]{0})),
+            simplifier.apply(new JoinNode(foo, bar, new int[]{0}, new int[]{0}))
     );
 
     RecursionNode recursionNode = new RecursionNode(PlanNode.empty(2));
