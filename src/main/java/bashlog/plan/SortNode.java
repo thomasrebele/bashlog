@@ -4,6 +4,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 
+import common.ArrayTools;
 import common.plan.PlanNode;
 
 public class SortNode implements PlanNode {
@@ -14,7 +15,7 @@ public class SortNode implements PlanNode {
 
   public SortNode(PlanNode child, int[] sortColumns) {
     this.child = child;
-    this.sortColumns = sortColumns == null ? defaultSort(child.getArity()) : sortColumns;
+    this.sortColumns = sortColumns == null ? ArrayTools.sequence(child.getArity()) : sortColumns;
   }
 
   @Override
@@ -58,14 +59,6 @@ public class SortNode implements PlanNode {
   @Override
   public PlanNode transform(Transform fn, PlanNode oldParent) {
     return fn.apply(this, new SortNode(child.transform(fn, this), sortColumns), oldParent);
-  }
-
-  public static int[] defaultSort(int arity) {
-    int[] result = new int[arity];
-    for (int i = 0; i < result.length; i++) {
-      result[i] = i;
-    }
-    return result;
   }
 
 }

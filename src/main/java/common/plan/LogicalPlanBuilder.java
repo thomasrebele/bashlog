@@ -1,5 +1,6 @@
 package common.plan;
 
+import common.ArrayTools;
 import common.parser.*;
 
 import java.util.*;
@@ -33,12 +34,6 @@ public class LogicalPlanBuilder {
     clone.putAll(map);
     clone.put(key, value);
     return clone;
-  }
-
-  static int[] concat(int[] first, int[] second) {
-    int[] result = Arrays.copyOf(first, first.length + second.length);
-    System.arraycopy(second, 0, result, first.length, second.length);
-    return result;
   }
 
   public Map<String, PlanNode> getPlanForProgram(Program program) {
@@ -204,7 +199,7 @@ public class LogicalPlanBuilder {
       colLeft = Arrays.copyOfRange(colLeft, 0, count);
       colRight = Arrays.copyOfRange(colRight, 0, count);
       PlanNode jn = nm1.node.join(nm2.node, colLeft, colRight);
-      return new NodeWithMask(jn, concat(nm1.colToVar, nm2.colToVar), nm1.varToCol);
+      return new NodeWithMask(jn, ArrayTools.concat(nm1.colToVar, nm2.colToVar), nm1.varToCol);
     }).orElseThrow(() -> new UnsupportedOperationException("rule without body"));
 
     if (builtin.contains(rule.head.name)) {
