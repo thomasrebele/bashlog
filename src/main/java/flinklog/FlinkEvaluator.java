@@ -246,7 +246,7 @@ public class FlinkEvaluator implements Evaluator {
           LOGGER.info("Empty relation: " + relation);
           return Optional.empty();
         } else {
-          return Optional.of(env.fromCollection(tuples));
+          return Optional.of(env.fromCollection(tuples, typeInfo(tuples.get(0).getArity()))); //Type info needed to have comparable everywhere
         }
       case "bash_command":
         String command = ((String) ((Constant) node.compoundTerm.args[0]).getValue()).trim();
@@ -280,7 +280,6 @@ public class FlinkEvaluator implements Evaluator {
                             .equalTo(node.getRightJoinProjection())
                             .with(FlinkEvaluator::concatTuples)
                             .returns(typeInfo(node.getArity()))
-
             )
     );
   }
