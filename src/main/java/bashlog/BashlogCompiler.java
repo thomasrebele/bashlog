@@ -3,10 +3,8 @@ package bashlog;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import bashlog.plan.SortJoinNode;
-import bashlog.plan.SortNode;
-import bashlog.plan.SortRecursionNode;
-import bashlog.plan.SortUnionNode;
+import bashlog.plan.*;
+import common.ArrayTools;
 import common.parser.CompoundTerm;
 import common.parser.Constant;
 import common.plan.*;
@@ -87,6 +85,14 @@ public class BashlogCompiler {
     return p.project(proj, cnst);
   }
 
+  private PlanNode prepareSortJoin(PlanNode p, int[] columns) {
+    if(columns.length == 1) {
+      return new SortNode(p, columns);
+    }
+    CombinedColumnNode c = new CombinedColumnNode(p, columns);
+    return new SortNode(c, new int[] { p.getArity() });
+  }
+
   private PlanNode transform(PlanNode p) {
     if (p instanceof JoinNode) {
       // sort join
@@ -104,9 +110,16 @@ public class BashlogCompiler {
         }
         return crossProduct.project(proj);
       } else {
-        PlanNode left = new SortNode(joinNode.getLeft(), joinNode.getLeftJoinProjection());
-        PlanNode right = new SortNode(joinNode.getRight(), joinNode.getRightJoinProjection());
-        return new SortJoinNode(left, right, joinNode.getLeftJoinProjection(), joinNode.getRightJoinProjection());
+        PlanNode left = prepareSortJoin(joinNode.getLeft(), joinNode.getLeftJoinProjection());
+        PlanNode right = prepareSortJoin(joinNode.getRight(), joinNode.getRightJoinProjection());
+        if (joinNode.getLeftJoinProjection().length == 1) {
+          return new SortJoinNode(left, right, joinNode.getLeftJoinProjection(), joinNode.getRightJoinProjection());
+        }
+        PlanNode join = new SortJoinNode(left, right, new int[] { left.getArity() - 1 }, new int[] { right.getArity() - 1 });
+        int rightStart = left.getArity() + 1;
+        return join.project(ArrayTools.concat(
+            ArrayTools.sequence(left.getArity() - 1),
+            ArrayTools.sequence(rightStart, rightStart + right.getArity() - 1)));
       }
     } else if (p instanceof RecursionNode) {
       RecursionNode r = (RecursionNode) p;
@@ -179,38 +192,23 @@ public class BashlogCompiler {
     compile(s.args().get(0), ctx.pipe());
     ctx.append(" \\\n");
     ctx.info(s);
-    if (cols != null && cols.length > 1) {
-      ctx.append(" | " + AWK + "{ print $0 FS ");
-      for (int i = 0; i < cols.length; i++) {
-        if (i > 0) {
-          ctx.append(" \"\\002\" ");
-        }
-        ctx.append("$");
-        ctx.append(cols[i] + 1);
-      }
-      ctx.append("}'");
-    }
     ctx.append(" | sort -t $'\\t' ");
     if (cols != null) {
-      ctx.append("-k ");
-      ctx.append(sortCol(s, cols));
+      for (int col : cols) {
+        ctx.append("-k ");
+        ctx.append(col + 1);
+        ctx.append(" ");
+      }
     }
     ctx.endPipe();
-  }
-
-  private int sortCol(PlanNode n, int[] cols) {
-    if (cols.length > 1) {
-      return n.getArity() + 1;
-    }
-    return cols[0] + 1;
   }
 
   /** Sort left and right tree, and join with 'join' command */
   private void sortJoin(SortJoinNode j, Context ctx) {
     ctx.startPipe();
     int colLeft, colRight;
-    colLeft = sortCol(j.getLeft(), j.getLeftJoinProjection());
-    colRight = sortCol(j.getRight(), j.getRightJoinProjection());
+    colLeft = j.getLeftJoinProjection()[0] + 1;
+    colRight = j.getRightJoinProjection()[0] + 1;
 
     ctx.append("join -t $'\\t' -1 ");
     ctx.append(colLeft);
@@ -335,6 +333,22 @@ public class BashlogCompiler {
       SortJoinNode j = (SortJoinNode) planNode;
       //leftHashJoin(j, sb, indent);
       sortJoin(j, ctx);
+    } else if (planNode instanceof CombinedColumnNode) {
+      CombinedColumnNode c = (CombinedColumnNode) planNode;
+      ctx.startPipe();
+      compile(c.getTable(), ctx.pipe());
+      ctx.append(" \\\n");
+      ctx.info(planNode);
+      ctx.append(" | " + AWK + "{ print $0 FS ");
+      for (int i = 0; i < c.getColumns().length; i++) {
+        if (i > 0) {
+          ctx.append(" \"\\002\" ");
+        }
+        ctx.append("$");
+        ctx.append(c.getColumns()[i] + 1);
+      }
+      ctx.append("}'");
+      ctx.endPipe();
     } else if (planNode instanceof ProjectNode) {
       // TODO: filtering of duplicates might be necessary
       ctx.startPipe();
