@@ -52,7 +52,7 @@ public class BashlogCompiler {
     root = new BashlogOptimizer().apply(root);
     root = new MaterializationOptimizer().apply(root);
 
-    debug += "optimized bashlog plan";
+    debug += "optimized bashlog plan\n";
     debug += root.toPrettyString();
     debug = "#" + debug.replaceAll("\n", "\n# ");
   }
