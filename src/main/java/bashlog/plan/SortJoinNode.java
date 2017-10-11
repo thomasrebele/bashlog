@@ -3,10 +3,13 @@ package bashlog.plan;
 import common.plan.JoinNode;
 import common.plan.PlanNode;
 
+/** Join two sorted inputs based on ONE column */
 public class SortJoinNode extends JoinNode {
 
   public SortJoinNode(PlanNode left, PlanNode right, int[] leftJoinProjection, int[] rightJoinProjection) {
     super(left, right, leftJoinProjection, rightJoinProjection);
+    if (leftJoinProjection.length > 1) throw new UnsupportedOperationException("sort join does not support sorting on more than one column");
+    if (leftJoinProjection.length != rightJoinProjection.length) throw new UnsupportedOperationException("join requires one column on each child");
   }
 
   @Override
