@@ -69,6 +69,10 @@ public class PlanNodeTest {
     RecursionNode recursionNode2 = new RecursionNode(PlanNode.empty(2));
     recursionNode2.addRecursivePlan(recursionNode2.getDelta());
     Assert.assertEquals(PlanNode.empty(2), simplifier.apply(recursionNode2));
+
+    RecursionNode recursionNode3 = new RecursionNode(foo);
+    recursionNode3.addRecursivePlan(bar);
+    Assert.assertEquals(foo.union(bar), simplifier.apply(recursionNode3));
   }
 
   @Test
