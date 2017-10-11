@@ -77,7 +77,7 @@ public abstract class LUBMTest {
       }
 
       String prefix = "query" + i + "/";
-      for (int j = 0; j < 4; j++) {
+      for (int j = 0; j < 5; j++) {
         String relation = prefix + j;
         if (lubmProgram.rulesForRelation(relation).isEmpty()) continue;
         try {
@@ -89,6 +89,7 @@ public abstract class LUBMTest {
           throw e;
         }
       }
+      throw new IllegalStateException("no relation found for query " + i);
     }
   }
 
