@@ -10,6 +10,6 @@ public interface Evaluator {
   FactsSet evaluate(Program program, FactsSet facts, Set<String> queryRelations) throws Exception;
 
   default void debug(Program program, FactsSet facts, Set<String> queryRelations) throws Exception {
-    throw new UnsupportedOperationException();
+    System.err.println("warning: " + this.getClass() + " does not provide debug information");
   }
 }
