@@ -116,7 +116,7 @@ public class BashlogCompiler {
           return new SortJoinNode(left, right, joinNode.getLeftJoinProjection(), joinNode.getRightJoinProjection());
         }
         PlanNode join = new SortJoinNode(left, right, new int[] { left.getArity() - 1 }, new int[] { right.getArity() - 1 });
-        int rightStart = left.getArity() + 1;
+        int rightStart = left.getArity();
         return join.project(ArrayTools.concat(
             ArrayTools.sequence(left.getArity() - 1),
             ArrayTools.sequence(rightStart, rightStart + right.getArity() - 1)));
