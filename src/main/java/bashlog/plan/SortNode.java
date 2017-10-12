@@ -4,7 +4,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 
-import common.ArrayTools;
+import common.Tools;
 import common.plan.PlanNode;
 
 public class SortNode implements PlanNode {
@@ -15,7 +15,7 @@ public class SortNode implements PlanNode {
 
   public SortNode(PlanNode child, int[] sortColumns) {
     this.child = child;
-    this.sortColumns = sortColumns == null ? ArrayTools.sequence(child.getArity()) : sortColumns;
+    this.sortColumns = sortColumns == null ? Tools.sequence(child.getArity()) : sortColumns;
   }
 
   @Override

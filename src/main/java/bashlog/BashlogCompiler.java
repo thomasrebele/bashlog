@@ -4,7 +4,7 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import bashlog.plan.*;
-import common.ArrayTools;
+import common.Tools;
 import common.parser.CompoundTerm;
 import common.parser.Constant;
 import common.plan.*;
@@ -117,9 +117,7 @@ public class BashlogCompiler {
         }
         PlanNode join = new SortJoinNode(left, right, new int[] { left.getArity() - 1 }, new int[] { right.getArity() - 1 });
         int rightStart = left.getArity();
-        return join.project(ArrayTools.concat(
-            ArrayTools.sequence(left.getArity() - 1),
-            ArrayTools.sequence(rightStart, rightStart + right.getArity() - 1)));
+        return join.project(Tools.concat(Tools.sequence(left.getArity() - 1), Tools.sequence(rightStart, rightStart + right.getArity() - 1)));
       }
     } else if (p instanceof RecursionNode) {
       RecursionNode r = (RecursionNode) p;
