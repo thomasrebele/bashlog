@@ -1,15 +1,24 @@
 package common;
 
+import org.apache.commons.compress.utils.Sets;
+import org.junit.Assert;
+import org.junit.Test;
+
 import common.parser.ParserReader;
 import common.parser.Program;
 import flinklog.FactsSet;
 import flinklog.SimpleFactsSet;
-import org.apache.commons.compress.utils.Sets;
-import org.junit.Assert;
 
 public class IntegrationTests {
 
-  public static void testSimple(Evaluator eval) throws Exception {
+  protected Evaluator eval;
+
+  public IntegrationTests(Evaluator eval) {
+    this.eval = eval;
+  }
+
+  @Test
+  public void testSimple() throws Exception {
     Program program = Program.read(new ParserReader(
             "sibling(X,Y) :- parent(X,Z), parent(Y,Z). bad(X,X) :- parent(X,X). bobParent(X) :- parent(\"bob\", X)."
     ));
@@ -24,7 +33,8 @@ public class IntegrationTests {
     Assert.assertEquals(1, result.getByRelation("bobParent/1").count());
   }
 
-  public static void testLinearClosure(Evaluator eval) throws Exception {
+  @Test
+  public void testLinearClosure() throws Exception {
     Program program = Program.read(new ParserReader(
             "ancestor(X,Y) :- parent(X,Y). ancestor(X,Z) :- ancestor(X,Y), parent(Y,Z)."
     ));
@@ -38,7 +48,8 @@ public class IntegrationTests {
     Assert.assertEquals(6, result.getByRelation("ancestor/2").count());
   }
 
-  public static void testSymmetricClosure(Evaluator eval) throws Exception {
+  @Test
+  public void testSymmetricClosure() throws Exception {
     Program program = Program.read(new ParserReader(
             "ancestor(X,Y) :- parent(X,Y). ancestor(X,Z) :- ancestor(X,Y), ancestor(Y,Z)."
     ));
@@ -52,7 +63,8 @@ public class IntegrationTests {
     Assert.assertEquals(6, result.getByRelation("ancestor/2").count());
   }
 
-  public static void testSize2Loop(Evaluator eval) throws Exception {
+  @Test
+  public void testSize2Loop() throws Exception {
     Program program = Program.read(new ParserReader(
             "bar(X,Y) :- foo(X,Y). baz(X,Z) :- bar(X,Y), foo(Y,Z). bar(X,Z) :- baz(X,Y), foo(Y,Z)."
     ));
@@ -66,7 +78,8 @@ public class IntegrationTests {
     Assert.assertEquals(4, result.getByRelation("baz/2").count());
   }
 
-  public static void testInnerLoop(Evaluator eval) throws Exception {
+  @Test
+  public void testInnerLoop() throws Exception {
     Program program = Program.read(new ParserReader(
             "a(X,Y) :- in(X,Y). a(X,Z) :- b(X,Y), in(Y,Z). b(X,Z) :- in(X,Y), b(Y,Z). b(X,Z) :- in(X,Y), c(Y,Z). c(X,Z) :- a(X,Y), in(Y,Z)."
     ));
@@ -80,7 +93,8 @@ public class IntegrationTests {
     Assert.assertEquals(3, result.getByRelation("a/2").count());
   }
 
-  public static void testReadFile(Evaluator eval) throws Exception {
+  @Test
+  public void testReadFile() throws Exception {
     Program program = Program.loadFile("data/bashlog/recursion/datalog.txt");
     FactsSet result = eval.evaluate(program, new SimpleFactsSet(), Sets.newHashSet("tc/2"));
     Assert.assertEquals(28, result.getByRelation("tc/2").count());
