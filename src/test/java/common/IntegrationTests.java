@@ -68,9 +68,10 @@ public class IntegrationTests {
             "bar(X,Y) :- foo(X,Y). baz(X,Z) :- bar(X,Y), foo(Y,Z). bar(X,Z) :- baz(X,Y), foo(Y,Z)."
     ));
     SimpleFactsSet facts = new SimpleFactsSet();
-    facts.add("foo/2", "bob", "alice");
-    facts.add("foo/2", "alice", "charly");
-    facts.add("foo/2", "charly", "david");
+    facts.add("foo/2", "alice", "bob");
+    facts.add("foo/2", "bob", "charly");
+    facts.add("foo/2", "charly", "dave");
+    facts.add("foo/2", "dave", "eve");
 
     FactsSet result = eval.evaluate(program, facts, Tools.set("baz/2"));
 
