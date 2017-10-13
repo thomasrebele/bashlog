@@ -14,7 +14,7 @@ public class SortJoinNode extends JoinNode {
 
   @Override
   public String operatorString() {
-    return "sort_" + super.operatorString();
+    return super.operatorString().replaceFirst("_", "_sort_");
   }
 
   @Override
