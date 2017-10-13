@@ -17,6 +17,29 @@ public class IntegrationTests {
   }
 
   @Test
+  public void testSuperSimple() throws Exception {
+    Program program = Program.read(new ParserReader("out(X,Y) :- in(X,Y)."));
+    SimpleFactsSet facts = new SimpleFactsSet();
+    facts.add("in/2", "A", "B");
+
+    FactsSet result = eval.evaluate(program, facts, Tools.set("out/2"));
+    Assert.assertEquals(1, result.getByRelation("out/2").count());
+    Assert.assertEquals(1, result.getRelations().size());
+  }
+
+  @Test
+  public void testBad() throws Exception {
+    Program program = Program.read(new ParserReader("bad(X,X) :- parent(X,X)."));
+    SimpleFactsSet facts = new SimpleFactsSet();
+    facts.add("dummy/2", "bob", "alice");
+    facts.add("dummy/2", "charly", "alice");
+
+    FactsSet result = eval.evaluate(program, facts, Tools.set("bad/2"));
+
+    Assert.assertEquals(0, result.getByRelation("bad/2").count());
+  }
+
+  @Test
   public void testSimple() throws Exception {
     Program program = Program.read(new ParserReader(
             "sibling(X,Y) :- parent(X,Z), parent(Y,Z). bad(X,X) :- parent(X,X). bobParent(X) :- parent(\"bob\", X)."
