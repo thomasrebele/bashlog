@@ -1,6 +1,5 @@
 package common;
 
-import org.apache.commons.compress.utils.Sets;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -26,7 +25,7 @@ public class IntegrationTests {
     facts.add("parent/2", "bob", "alice");
     facts.add("parent/2", "charly", "alice");
 
-    FactsSet result = eval.evaluate(program, facts, Sets.newHashSet("bad/2", "sibling/2", "bobParent/1"));
+    FactsSet result = eval.evaluate(program, facts, Tools.set("bad/2", "sibling/2", "bobParent/1"));
 
     Assert.assertEquals(0, result.getByRelation("bad/2").count());
     Assert.assertEquals(4, result.getByRelation("sibling/2").count());
@@ -43,7 +42,7 @@ public class IntegrationTests {
     facts.add("parent/2", "alice", "charly");
     facts.add("parent/2", "charly", "david");
 
-    FactsSet result = eval.evaluate(program, facts, Sets.newHashSet("ancestor/2"));
+    FactsSet result = eval.evaluate(program, facts, Tools.set("ancestor/2"));
 
     Assert.assertEquals(6, result.getByRelation("ancestor/2").count());
   }
@@ -58,7 +57,7 @@ public class IntegrationTests {
     facts.add("parent/2", "alice", "charly");
     facts.add("parent/2", "charly", "david");
 
-    FactsSet result = eval.evaluate(program, facts, Sets.newHashSet("ancestor/2"));
+    FactsSet result = eval.evaluate(program, facts, Tools.set("ancestor/2"));
 
     Assert.assertEquals(6, result.getByRelation("ancestor/2").count());
   }
@@ -73,7 +72,7 @@ public class IntegrationTests {
     facts.add("foo/2", "alice", "charly");
     facts.add("foo/2", "charly", "david");
 
-    FactsSet result = eval.evaluate(program, facts, Sets.newHashSet("baz/2"));
+    FactsSet result = eval.evaluate(program, facts, Tools.set("baz/2"));
 
     Assert.assertEquals(4, result.getByRelation("baz/2").count());
   }
@@ -88,7 +87,7 @@ public class IntegrationTests {
     facts.add("in/2", "alice", "charly");
     facts.add("in/2", "charly", "david");
 
-    FactsSet result = eval.evaluate(program, facts, Sets.newHashSet("a/2"));
+    FactsSet result = eval.evaluate(program, facts, Tools.set("a/2"));
 
     Assert.assertEquals(3, result.getByRelation("a/2").count());
   }
@@ -96,7 +95,7 @@ public class IntegrationTests {
   @Test
   public void testReadFile() throws Exception {
     Program program = Program.loadFile("data/bashlog/recursion/datalog.txt");
-    FactsSet result = eval.evaluate(program, new SimpleFactsSet(), Sets.newHashSet("tc/2"));
+    FactsSet result = eval.evaluate(program, new SimpleFactsSet(), Tools.set("tc/2"));
     Assert.assertEquals(28, result.getByRelation("tc/2").count());
   }
 }
