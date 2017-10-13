@@ -62,8 +62,8 @@ public class PlanNodeTest {
             simplifier.apply(new JoinNode(foo, bar, new int[]{0}, new int[]{0}))
     );
 
-    RecursionNode recursionNode = new RecursionNode(PlanNode.empty(2));
-    recursionNode.addRecursivePlan(new UnionNode(recursionNode.getDelta(), foo));
+    RecursionNode recursionNode = new RecursionNode(foo);
+    recursionNode.addRecursivePlan(recursionNode.getDelta().join(bar, new int[]{0}, new int[]{0}).project(new int[]{0, 1}));
     Assert.assertTrue(simplifier.apply(recursionNode) instanceof RecursionNode);
 
     RecursionNode recursionNode2 = new RecursionNode(PlanNode.empty(2));
@@ -73,6 +73,10 @@ public class PlanNodeTest {
     RecursionNode recursionNode3 = new RecursionNode(foo);
     recursionNode3.addRecursivePlan(bar);
     Assert.assertEquals(foo.union(bar), simplifier.apply(recursionNode3));
+
+    RecursionNode recursionNode4 = new RecursionNode(PlanNode.empty(2));
+    recursionNode4.addRecursivePlan(foo.union(recursionNode4.getDelta()));
+    Assert.assertEquals(foo, simplifier.apply(recursionNode4));
   }
 
   @Test
