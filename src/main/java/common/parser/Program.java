@@ -1,11 +1,11 @@
 package common.parser;
 
-import javatools.filehandlers.FileUtils;
-
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
+
+import javatools.filehandlers.FileUtils;
 
 /**
  * Parses datalog
@@ -28,7 +28,7 @@ public class Program implements Parseable {
   private Map<String, List<Rule>> relationToRules = new HashMap<>();
 
   public static Program loadFile(String path) throws IOException {
-    File f = new File(path);
+    File f = new File(path).getAbsoluteFile();
     String content = FileUtils.getFileContent(f);
     return read(new ParserReader(content));
   }
