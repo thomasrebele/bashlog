@@ -122,4 +122,31 @@ public class IntegrationTests {
     FactsSet result = eval.evaluate(program, new SimpleFactsSet(), Tools.set("tc/2"));
     Assert.assertEquals(28, result.getByRelation("tc/2").count());
   }
+
+  @Test
+  public void endless() throws Exception {
+    Program program = Program.read(new ParserReader(//
+        "a(X,Y) :- b(X,Y)." + //
+            "b(X,Y) :- a(X,Y)." //
+    ));
+    SimpleFactsSet facts = new SimpleFactsSet();
+    facts.add("a/2", "1", "2");
+
+    FactsSet result = eval.evaluate(program, facts, Tools.set("a/2"));
+    Assert.assertEquals(1, result.getByRelation("a/2").count());
+  }
+
+  @Test
+  public void endless2() throws Exception {
+    Program program = Program.read(new ParserReader(//
+        "a(X,Y) :- b(X,Y)." + //
+            "b(X,Y) :- c(X,Y)." + //
+            "c(X,Y) :- a(X,Y)." //
+    ));
+    SimpleFactsSet facts = new SimpleFactsSet();
+    facts.add("a/2", "1", "2");
+
+    FactsSet result = eval.evaluate(program, facts, Tools.set("a/2"));
+    Assert.assertEquals(1, result.getByRelation("a/2").count());
+  }
 }
