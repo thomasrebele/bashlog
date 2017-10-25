@@ -22,7 +22,7 @@ public class Variable extends Term implements Parseable {
     if (pr.peek() == null) return null;
     String name = pr.readName();
     if ("_".equals(name)) {
-      name = "var_" + varMap.size();
+      name = "Var_" + varMap.size();
     }
     if (name != null) {
       return varMap.computeIfAbsent(name, Variable::new);
