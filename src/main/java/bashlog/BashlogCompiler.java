@@ -56,11 +56,12 @@ public class BashlogCompiler {
   }
 
   public String compile() {
-    return compile("");
+    return compile("", true);
   }
 
-  public String compile(String indent) {
+  public String compile(String indent, boolean comments) {
     Context ctx = new Context();
+    ctx.comments = false;
     ctx.append("#!/bin/bash\n");
     ctx.append("export LC_ALL=C\n");
     ctx.append("mkdir -p tmp\n");

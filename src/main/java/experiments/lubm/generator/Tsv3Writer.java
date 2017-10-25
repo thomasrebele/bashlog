@@ -17,7 +17,7 @@ public class Tsv3Writer implements Writer {
   public Tsv3Writer(String path) throws FileNotFoundException {
     new File(path).mkdirs();
     this.path = path;
-    writer = new PrintWriter(path + "all.tsv");
+    writer = new PrintWriter(path + "all");
   }
 
   @Override

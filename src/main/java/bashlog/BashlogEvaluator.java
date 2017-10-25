@@ -33,8 +33,9 @@ public class BashlogEvaluator implements Evaluator {
     PlanNode pn = plan.get(query);
     BashlogCompiler bc = new BashlogCompiler(pn);
     try {
-      String bash = bc.compile();
-      return bash + "\n\n" + bc.debugInfo();
+      String bash = bc.compile("", false);
+      System.out.println(bash);
+      return bash + "\n\n"; //+ bc.debugInfo();
     } catch (Exception e) {
       System.out.println(bc.debugInfo());
       throw (e);

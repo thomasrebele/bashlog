@@ -68,6 +68,7 @@ public class Rule implements Parseable {
       b.append(a).append(", ");
     }
     if (!body.isEmpty()) b.setLength(b.length() - 2);
+    b.append(".");
     return (b.toString());
   }
 

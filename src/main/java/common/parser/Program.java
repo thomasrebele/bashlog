@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import javatools.filehandlers.FileUtils;
 
@@ -73,6 +74,14 @@ public class Program implements Parseable {
 
   public List<Rule> rules() {
     return rules;
+  }
+
+  public Set<String> outputRelations() {
+    return relationToRules.keySet();
+  }
+
+  public Set<String> allRelations() {
+    return Stream.concat(outputRelations().stream(), rules.stream().flatMap(r -> r.getDependencies().stream())).collect(Collectors.toSet());
   }
 
   public List<Rule> rulesForRelation(String relation) {

@@ -51,6 +51,7 @@ public class Check implements AutoCloseable {
   @Override
   public void close() throws Exception {
     boolean fail[] = { false };
+    int[] correct = { 0 };
 
     try {
       int count[] = { 0 };
@@ -65,6 +66,9 @@ public class Check implements AutoCloseable {
           fail[0] = true;
           if (count[0]++ > 10) return;
         }
+        if (c == 0) {
+          correct[0]++;
+        }
       };
 
       expected.forEach(f);
@@ -78,6 +82,7 @@ public class Check implements AutoCloseable {
       }
     } finally {
       if (fail[0]) {
+        System.out.println("found at least " + correct[0] + " correct entries");
         Assert.fail("unexpected output, check console output");
       }
     }
