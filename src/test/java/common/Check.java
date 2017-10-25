@@ -14,7 +14,7 @@ public class Check implements AutoCloseable {
 
   boolean debug = false;
 
-  boolean ignoreUnexpected = false;
+  boolean ignoreUnexpected = true;
 
   public void ignoreUnexpected() {
     this.ignoreUnexpected = true;
