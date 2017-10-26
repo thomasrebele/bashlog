@@ -113,6 +113,14 @@ public class Program implements Parseable {
     return parents.stream().anyMatch(rel -> hasAncestor(rel, ancestor, newIgnoredRelations));
   }
 
+  public static Program program(String[] files) throws IOException {
+    Program p = new Program();
+    for (String f : files) {
+      p.addRules(loadFile(f));
+    }
+    return p;
+  }
+
   public static Program merge(Program p1, Program p2) {
     Program result = new Program();
     p1.rules().forEach(result::addRule);

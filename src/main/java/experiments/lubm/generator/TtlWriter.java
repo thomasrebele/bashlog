@@ -4,7 +4,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.PrintWriter;
 
-public class Tsv3Writer implements Writer {
+public class TtlWriter implements Writer {
 
   final static String PATH = "/home/tr/extern/data/bashlog/lubm/";
 
@@ -14,10 +14,13 @@ public class Tsv3Writer implements Writer {
 
   PrintWriter writer;
 
-  public Tsv3Writer(String path) throws FileNotFoundException {
+  public TtlWriter(String path) throws FileNotFoundException {
     new File(path).mkdirs();
     this.path = path;
-    writer = new PrintWriter(path + "all");
+    writer = new PrintWriter(path + "all.ttl");
+    writer.write("@base <http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#> .\n");
+    writer.write("@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>.\n");
+    writer.write("@prefix ub: <http://www.lehigh.edu/~zhp2/2004/0401/univ-bench.owl#>.\n");
   }
 
   @Override
@@ -42,13 +45,12 @@ public class Tsv3Writer implements Writer {
   @Override
   public void startSection(int classType, String id) {
     currentInstance = id;
-    writer.append(id).append("\trdf:type\t").append(Generator.CLASS_TOKEN[classType]).println();
+    writer.append("<").append(id).append(">\trdf:type\tub:").append(Generator.CLASS_TOKEN[classType]).append(".").println();
   }
 
   @Override
   public void startAboutSection(int classType, String id) {
-    currentInstance = id;
-    writer.append(id).append("\trdf:type\t").append(Generator.CLASS_TOKEN[classType]).println();
+    startSection(classType, id);
   }
 
   @Override
@@ -58,18 +60,23 @@ public class Tsv3Writer implements Writer {
 
   @Override
   public void addProperty(int property, String value, boolean isResource) {
-    writer//
-        .append(currentInstance).append("\t").append(Generator.PROP_TOKEN[property]).append("\t").append(value).println();
+    writer.append("<").append(currentInstance).append(">\tub:") //
+        .append(Generator.PROP_TOKEN[property]).append("\t");
+    if (isResource) {
+      writer.append("<").append(value).append(">\t.").println();
+    } else {
+      writer.append("\"").append(value).append("\"\t.").println();
+    }
   }
 
   @Override
   public void addProperty(int property, int valueClass, String valueId) {
-    writer//
-        .append(currentInstance).append("\t").append(Generator.PROP_TOKEN[property]).append("\t").append(valueId).println();
+    writer.append("<").append(currentInstance).append(">\tub:") //
+        .append(Generator.PROP_TOKEN[property]).append("\t\"").append(valueId).append("\".").println();
   }
 
   public static void generate(int univNum, int startIndex, int seed, String path) throws FileNotFoundException {
-    new Generator().start(univNum, startIndex, seed, new Tsv3Writer(path), "dummy");   
+    new Generator().start(univNum, startIndex, seed, new TtlWriter(path), "dummy");   
   }
 
   public static void main(String[] args) throws FileNotFoundException {

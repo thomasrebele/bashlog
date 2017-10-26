@@ -10,8 +10,8 @@ import java.util.stream.Stream;
 import org.junit.Before;
 import org.junit.Test;
 
-import bashlog.MainThomas;
 import common.parser.Program;
+import experiments.lubm.BashlogLUBM;
 import experiments.lubm.generator.Tsv3Writer;
 import flinklog.SimpleFactsSet;
 import javatools.filehandlers.TSVFile;
@@ -54,7 +54,7 @@ public abstract class LUBMTest {
       Tsv3Writer.generate(1, 0, 0, dir);
     }
 
-    lubmProgram = MainThomas.lubmProgram3(dir, lubm);
+    lubmProgram = BashlogLUBM.lubmProgram3(dir, lubm);
 
     System.out.println(lubmProgram.toString());
   }

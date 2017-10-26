@@ -4,7 +4,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.PrintWriter;
 
-public class Tsv3Writer implements Writer {
+public class DatalogWriter implements Writer {
 
   final static String PATH = "/home/tr/extern/data/bashlog/lubm/";
 
@@ -14,10 +14,10 @@ public class Tsv3Writer implements Writer {
 
   PrintWriter writer;
 
-  public Tsv3Writer(String path) throws FileNotFoundException {
+  public DatalogWriter(String path) throws FileNotFoundException {
     new File(path).mkdirs();
     this.path = path;
-    writer = new PrintWriter(path + "all");
+    writer = new PrintWriter(path + "all.datalog");
   }
 
   @Override
@@ -42,13 +42,13 @@ public class Tsv3Writer implements Writer {
   @Override
   public void startSection(int classType, String id) {
     currentInstance = id;
-    writer.append(id).append("\trdf:type\t").append(Generator.CLASS_TOKEN[classType]).println();
+    writer.append(Generator.CLASS_TOKEN[classType]).append("(\"").append(id).append("\").").println();
   }
 
   @Override
   public void startAboutSection(int classType, String id) {
     currentInstance = id;
-    writer.append(id).append("\trdf:type\t").append(Generator.CLASS_TOKEN[classType]).println();
+    writer.append(Generator.CLASS_TOKEN[classType]).append("(\"").append(id).append("\").").println();
   }
 
   @Override
@@ -59,17 +59,17 @@ public class Tsv3Writer implements Writer {
   @Override
   public void addProperty(int property, String value, boolean isResource) {
     writer//
-        .append(currentInstance).append("\t").append(Generator.PROP_TOKEN[property]).append("\t").append(value).println();
+        .append(Generator.PROP_TOKEN[property]).append("(\"").append(currentInstance).append("\", \"").append(value).append("\").").println();
   }
 
   @Override
   public void addProperty(int property, int valueClass, String valueId) {
     writer//
-        .append(currentInstance).append("\t").append(Generator.PROP_TOKEN[property]).append("\t").append(valueId).println();
+        .append(Generator.PROP_TOKEN[property]).append("(\"").append(currentInstance).append("\", \"").append(valueId).append("\").").println();
   }
 
   public static void generate(int univNum, int startIndex, int seed, String path) throws FileNotFoundException {
-    new Generator().start(univNum, startIndex, seed, new Tsv3Writer(path), "dummy");   
+    new Generator().start(univNum, startIndex, seed, new DatalogWriter(path), "dummy");   
   }
 
   public static void main(String[] args) throws FileNotFoundException {
