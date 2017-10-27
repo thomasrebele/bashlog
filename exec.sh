@@ -18,7 +18,7 @@ remove-color() {
 }
 
 CPDIR=exec/
-CP=$(echo -e "$(cat $CPDIR/classpath-additional.info):$(cat $CPDIR/classpath.info-$HOSTNAME)" | tr "\\n" ":")
+CP=$(echo -e "$([ -e $CPDIR/classpath-additional.info ] && cat $CPDIR/classpath-additional.info):$(cat $CPDIR/classpath.info-$HOSTNAME)" | tr "\\n" ":")
 CP=$(eval echo $CP)
 
 if [ "$1" == "update-classpath" ]; then
@@ -34,5 +34,7 @@ else
 		OPT="$OPT"
 	fi
 	#echo "java -cp $(. cp.sh) $*"
-	$JAVA $OPT -cp $CP:target/classes $*
+	cls=$1
+	shift 1
+	$JAVA $OPT -cp $CP:target/classes $cls "${@}"
 fi
