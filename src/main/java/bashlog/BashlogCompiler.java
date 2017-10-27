@@ -38,6 +38,7 @@ public class BashlogCompiler {
     root = new JoinReorderOptimizer().apply(root);
     root = new PushDownFilterOptimizer().apply(root);
     root = new PlanSimplifier().apply(root);
+    //root = new MultiFilterOptimizer().apply(root);
 
     debug += "optimized\n";
     debug += root.toPrettyString() + "\n";
@@ -255,6 +256,23 @@ public class BashlogCompiler {
     ctx.endPipe();
   }
 
+  private void equality(EqualityFilterNode planNode, Context ctx) {
+    if (planNode instanceof ConstantEqualityFilterNode) {
+    ConstantEqualityFilterNode n = (ConstantEqualityFilterNode) planNode;
+    ctx.append("$");
+    ctx.append(n.getField() + 1);
+    ctx.append(" == \"");
+    ctx.append(escape(n.getValue().toString()));
+    ctx.append("\"");
+    } else if (planNode instanceof VariableEqualityFilterNode) {
+    VariableEqualityFilterNode n = (VariableEqualityFilterNode) planNode;
+    ctx.append("$");
+    ctx.append(n.getField1() + 1);
+    ctx.append(" == $");
+    ctx.append(n.getField2() + 1);
+    }
+  }
+
   private void recursionInMemory(RecursionNode rn, Context ctx, String fullFile, String deltaFile, String newDeltaFile) {
     ctx.startPipe();
     compile(rn.getRecursivePlan(), ctx.pipe());
@@ -268,7 +286,6 @@ public class BashlogCompiler {
   }
 
   private void compile(PlanNode planNode, Context ctx) {
-
     if (planNode instanceof MaterializationNode) {
       ctx.startPipe();
       MaterializationNode m = (MaterializationNode) planNode;
@@ -368,25 +385,33 @@ public class BashlogCompiler {
       }
       ctx.append("}'");
       ctx.endPipe();
-    } else if (planNode instanceof ConstantEqualityFilterNode) {
+    } else if (planNode instanceof EqualityFilterNode) {
       ctx.startPipe();
-      ConstantEqualityFilterNode n = (ConstantEqualityFilterNode) planNode;
-      ctx.append(AWK + "$");
-      ctx.append(n.getField() + 1);
-      ctx.append(" == \"");
-      ctx.append(escape(n.getValue().toString()));
-      ctx.append("\" { print $0 }' ");
-      compile(n.getTable(), ctx.file());
-      ctx.endPipe();
-    } else if (planNode instanceof VariableEqualityFilterNode) {
-      ctx.startPipe();
-      VariableEqualityFilterNode n = (VariableEqualityFilterNode) planNode;
-      ctx.append(AWK + "$");
-      ctx.append(n.getField1() + 1);
-      ctx.append(" == $");
-      ctx.append(n.getField2() + 1);
+      ctx.append(AWK);
+      equality((EqualityFilterNode) planNode, ctx);
       ctx.append(" { print $0 }' ");
-      compile(n.getTable(), ctx.file());
+      compile(((EqualityFilterNode) planNode).getTable(), ctx.file());
+      ctx.endPipe();
+    } else if(planNode instanceof MultiFilterNode) {
+      MultiFilterNode m = (MultiFilterNode) planNode;
+      ctx.startPipe();
+      ctx.append(AWK);
+
+      for (PlanNode c : m.args()) {
+        // do we need this actually?
+        c = new PushDownFilterOptimizer().apply(c);
+        ProjectNode p = new ProjectNode(null, Tools.sequence(c.getArity()));
+        do {
+          if (c instanceof ProjectNode) {
+            p = PlanSimplifier.mergeProjections(p, (ProjectNode) c);
+          }
+          else if (c instanceof EqualityFilterNode) {
+
+          }
+        } while (true);
+      }
+
+      compile(m.getInnerTable(), ctx.file());
       ctx.endPipe();
     } else if (planNode instanceof BuiltinNode) {
       CompoundTerm ct = ((BuiltinNode) planNode).compoundTerm;
