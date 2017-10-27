@@ -1,16 +1,22 @@
 package common.plan;
 
-import common.parser.CompoundTerm;
-import common.parser.TermList;
-import common.parser.Variable;
 import org.junit.Assert;
 import org.junit.Test;
 
+import common.parser.CompoundTerm;
+import common.parser.TermList;
+import common.parser.Variable;
+
 public class PlanNodeTest {
+
+  TermList args2 = new TermList(new Variable("X"), new Variable("Y"));
+
+  TermList args3 = new TermList(new Variable("X"), new Variable("Y"), new Variable("Z"));
+
+  TermList args4 = new TermList(new Variable("X"), new Variable("Y"), new Variable("Z"), new Variable("W"));
 
   @Test
   public void testPlanNode() {
-    TermList args2 = new TermList(new Variable("X"), new Variable("Y"));
     PlanNode foo = new BuiltinNode(new CompoundTerm("foo", args2));
     PlanNode bar = new BuiltinNode(new CompoundTerm("bar", args2));
     Assert.assertTrue((new VariableEqualityFilterNode(foo, 1, 1)).contains(foo));
@@ -24,8 +30,6 @@ public class PlanNodeTest {
   @Test
   public void testSimplifier() {
     PlanSimplifier simplifier = new PlanSimplifier();
-    TermList args2 = new TermList(new Variable("X"), new Variable("Y"));
-    TermList args4 = new TermList(new Variable("X"), new Variable("Y"), new Variable("Z"), new Variable("W"));
     PlanNode foo = new BuiltinNode(new CompoundTerm("foo", args2));
     PlanNode bar = new BuiltinNode(new CompoundTerm("bar", args2));
     PlanNode baz = new BuiltinNode(new CompoundTerm("bar", args4));
@@ -82,9 +86,8 @@ public class PlanNodeTest {
   @Test
   public void testPushDownFilterOptimizer() {
     Optimizer optimizer = new PushDownFilterOptimizer();
-    TermList args = new TermList(new Variable("X"), new Variable("Y"));
-    PlanNode foo = new BuiltinNode(new CompoundTerm("foo", args));
-    PlanNode bar = new BuiltinNode(new CompoundTerm("bar", args));
+    PlanNode foo = new BuiltinNode(new CompoundTerm("foo", args2));
+    PlanNode bar = new BuiltinNode(new CompoundTerm("bar", args2));
     PlanNode fooFilter = new ConstantEqualityFilterNode(foo, 0, "foo");
     PlanNode barFilter = new ConstantEqualityFilterNode(bar, 0, "foo");
 
@@ -121,6 +124,24 @@ public class PlanNodeTest {
     Assert.assertEquals(
             new JoinNode(fooFilter, barFilter, new int[]{0}, new int[]{0}),
             optimizer.apply(new ConstantEqualityFilterNode(new JoinNode(foo, bar, new int[]{0}, new int[]{0}), 2, "foo"))
+    );
+  }
+
+  @Test
+  public void testPushDownFilterOptimizer2() {
+    Optimizer optimizer = new PushDownFilterOptimizer();
+
+    PlanNode baz = new BuiltinNode(new CompoundTerm("baz", args3));
+    PlanNode bazFilter1 = new ConstantEqualityFilterNode(baz, 1, "foo1");
+    PlanNode bazFilter2 = new ConstantEqualityFilterNode(baz, 1, "foo2");
+    Assert.assertEquals(new UnionNode(//
+        new ProjectNode(bazFilter1, new int[] { 0 }), //
+        new ProjectNode(bazFilter2, new int[] { 0 }) //
+    ), //
+        optimizer.apply(new ProjectNode(new UnionNode(//
+        new ProjectNode(bazFilter1, new int[] { 2, 0 }), //
+        new ProjectNode(bazFilter2, new int[] { 2, 0 }) //
+    ), new int[] { 1 }))
     );
   }
 }

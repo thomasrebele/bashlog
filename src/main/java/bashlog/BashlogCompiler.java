@@ -41,7 +41,10 @@ public class BashlogCompiler {
 
     root = new JoinReorderOptimizer().apply(root);
     root = new PushDownFilterOptimizer().apply(root);
+
     root = new PlanSimplifier().apply(root);
+    root = new PushDownFilterOptimizer().apply(root);
+
     root = new MultiFilterOptimizer().apply(root);
 
     debug += "optimized\n";
