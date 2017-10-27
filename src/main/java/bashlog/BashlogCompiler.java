@@ -1,6 +1,9 @@
 package bashlog;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
@@ -131,11 +134,13 @@ public class BashlogCompiler {
       List<PlanNode> children = u.args();
       if (children.size() == 0) return u;
       if (children.size() == 1) return children.get(0);
-      PlanNode current = new SortNode(children.get(0), null);
+      // comm sort
+      /*PlanNode current = new SortNode(children.get(0), null);
       for (int i = 1; i < children.size(); i++) {
         current = new SortUnionNode(new HashSet<>(Arrays.asList(current, new SortNode(children.get(i), null))), u.getArity());
       }
-      return current;
+      return current;*/
+      return new SortUnionNode(children.stream().map(i -> new SortNode(i, null)).collect(Collectors.toSet()), u.getArity());
     }
 
     return p;
@@ -442,13 +447,18 @@ public class BashlogCompiler {
       }
     } else if (planNode instanceof SortUnionNode) {
       ctx.startPipe();
-      // delimit columns by null character
+      /*// delimit columns by null character
       ctx.append("comm --output-delimiter=$'\\002' ");
       for (PlanNode child : ((UnionNode) planNode).getChildren()) {
         compile(child, ctx.file());
       }
       // remove null character
-      ctx.append(" | sed -E 's/^\\o002\\o002?//g' | uniq "); // 
+      ctx.append(" | sed -E 's/^\\o002\\o002?//g' | uniq "); // */
+
+      ctx.append("sort -u -m ");
+      for (PlanNode child : ((UnionNode) planNode).getChildren()) {
+        compile(child, ctx.file());
+      }
       ctx.endPipe();
     } else if (planNode instanceof SortRecursionNode) {
       ctx.startPipe();
