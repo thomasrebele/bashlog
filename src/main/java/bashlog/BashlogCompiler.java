@@ -247,11 +247,12 @@ public class BashlogCompiler {
 
     for (int i = 0; i < j.getOutputProjection().length; i++) {
       if (i > 0) ctx.append(",");
-      if (i < j.getLeft().getArity()) {
-        ctx.append("1." + (i + 1));
+      int dst = j.getOutputProjection()[i];
+      if (dst < j.getLeft().getArity()) {
+        ctx.append("1." + (dst + 1));
       }
       else {
-        ctx.append("2." + (i + 1 - j.getLeft().getArity()));
+        ctx.append("2." + (dst - j.getLeft().getArity() + 1));
       }
     }
     ctx.append(" ");
