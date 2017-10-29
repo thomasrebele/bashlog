@@ -8,6 +8,7 @@ import bashlog.plan.*;
 import common.Tools;
 import common.parser.CompoundTerm;
 import common.parser.Constant;
+import common.parser.ParserReader;
 import common.plan.*;
 import common.plan.MaterializationNode.ReuseNode;
 import common.plan.RecursionNode.DeltaNode;
@@ -135,13 +136,25 @@ public class BashlogCompiler {
       List<PlanNode> children = u.args();
       if (children.size() == 0) return u;
       if (children.size() == 1) return children.get(0);
-      // comm sort
-      /*PlanNode current = new SortNode(children.get(0), null);
-      for (int i = 1; i < children.size(); i++) {
-        current = new SortUnionNode(new HashSet<>(Arrays.asList(current, new SortNode(children.get(i), null))), u.getArity());
-      }
-      return current;*/
       return new SortUnionNode(children.stream().map(i -> new SortNode(i, null)).collect(Collectors.toSet()), u.getArity());
+    } else if (p instanceof BuiltinNode) {
+      BuiltinNode b = (BuiltinNode) p;
+      if ("bash_command".equals(b.compoundTerm.name)) {
+        String cmd = (String) ((Constant) b.compoundTerm.args[0]).getValue();
+        if (cmd.startsWith("cat ")) {
+          // TODO: check whether it's only one argument
+          ParserReader pr = new ParserReader(cmd);
+          pr.expect("cat ");
+          pr.skipWhitespace();
+          String file;
+          if (pr.peek() == '\"' || pr.peek() == '\'') file = pr.readString();
+          else file = pr.readWhile((c, s) -> !Character.isWhitespace(c));
+          pr.skipWhitespace();
+          if (pr.peek() == null) {
+            return new TSVFileNode(file, p.getArity());
+          }
+        }
+      }
     }
 
     return p;
@@ -456,6 +469,9 @@ public class BashlogCompiler {
       } else {
         throw new UnsupportedOperationException("predicate not supported: " + ct.getRelation());
       }
+    } else if (planNode instanceof TSVFileNode) {
+      TSVFileNode file = (TSVFileNode) planNode;
+      ctx.append(file.getPath());
     } else if (planNode instanceof SortUnionNode) {
       ctx.startPipe();
       /*// delimit columns by null character

@@ -1,9 +1,9 @@
 package common.parser;
 
-import javatools.administrative.CallStack;
-
 import java.util.Arrays;
 import java.util.function.BiFunction;
+
+import javatools.administrative.CallStack;
 
 public class ParserReader {
 
@@ -61,7 +61,7 @@ public class ParserReader {
     //System.out.println(method + ": " + input.substring(0, pos) + "__>" + input.substring(pos));
   }
 
-  private void skipWhitespace() {
+  public void skipWhitespace() {
     debug();
     while (pos < input.length() && Character.isWhitespace(input.charAt(pos))) {
       pos++;
@@ -90,7 +90,7 @@ public class ParserReader {
   }
 
   /** Read characters while fn returns true. The StringBuilder contains the accepted characters. */
-  private String readWhile(BiFunction<Character, StringBuilder, Boolean> fn) {
+  public String readWhile(BiFunction<Character, StringBuilder, Boolean> fn) {
     StringBuilder sb = new StringBuilder();
     Character c;
     while ((c = peek()) != null) {
