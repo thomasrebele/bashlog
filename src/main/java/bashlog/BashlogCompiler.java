@@ -70,6 +70,8 @@ public class BashlogCompiler {
     ctx.append("#!/bin/bash\n");
     ctx.append("export LC_ALL=C\n");
     ctx.append("mkdir -p tmp\n");
+    ctx.append("if [ \"$awk\" == \"\" ]; then if type mawk > /dev/null; then awk=\"mawk\"; else awk=\"awk\"; fi fi\n");
+    ctx.append("sort=\"sort -S64M --parallel=2 \"\n");
 
     compile(root, ctx);
     return ctx.generate();
@@ -164,7 +166,7 @@ public class BashlogCompiler {
 
   final static String INDENT = "    ";
 
-  final static String AWK = "awk -v FS=$'\\t' '";
+  final static String AWK = "$awk -v FS=$'\\t' '";
 
   /** Awk command which caches the left subtree, and joins it with the right subtree */
   private void leftHashJoin(JoinNode j, StringBuilder sb, String indent, Context ctx) {
@@ -196,7 +198,7 @@ public class BashlogCompiler {
     compile(s.args().get(0), ctx.pipe());
     ctx.append(" \\\n");
     ctx.info(s);
-    ctx.append(" | sort -t $'\\t' ");
+    ctx.append(" | $sort -t $'\\t' ");
     boolean supportsUniq = cols == null;
     if (cols != null) {
       int used[] = new int[s.getTable().getArity()];
@@ -266,7 +268,7 @@ public class BashlogCompiler {
 
     ctx.info(rn, "continued");
     ctx.append(INDENT + "mv " + newDeltaFile + " " + deltaFile + "; \n");
-    ctx.append(INDENT + "sort -u --merge -o " + fullFile + " " + fullFile + " <(sort " + deltaFile + ")\n");
+    ctx.append(INDENT + "$sort -u --merge -o " + fullFile + " " + fullFile + " <($sort " + deltaFile + ")\n");
     ctx.endPipe();
   }
 
@@ -464,7 +466,7 @@ public class BashlogCompiler {
       // remove null character
       ctx.append(" | sed -E 's/^\\o002\\o002?//g' | uniq "); // */
 
-      ctx.append("sort -u -m ");
+      ctx.append("$sort -u -m ");
       for (PlanNode child : ((UnionNode) planNode).getChildren()) {
         compile(child, ctx.file());
       }
