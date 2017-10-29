@@ -72,7 +72,9 @@ public class TtlWriter implements Writer {
   @Override
   public void addProperty(int property, int valueClass, String valueId) {
     writer.append("<").append(currentInstance).append(">\tub:") //
-        .append(Generator.PROP_TOKEN[property]).append("\t\"").append(valueId).append("\".").println();
+        .append(Generator.PROP_TOKEN[property]).append("\t");
+    //writer.append("\"").append(valueId).append("\".").println();
+    writer.append("<").append(valueId).append(">.").println();
   }
 
   public static void generate(int univNum, int startIndex, int seed, String path) throws FileNotFoundException {
