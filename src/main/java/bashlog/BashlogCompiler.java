@@ -244,16 +244,18 @@ public class BashlogCompiler {
     ctx.append(" -2 ");
     ctx.append(colRight);
     ctx.append(" -o ");
-    for (int i = 0; i < j.getLeft().getArity(); i++) {
+
+    for (int i = 0; i < j.getOutputProjection().length; i++) {
       if (i > 0) ctx.append(",");
-      ctx.append("1." + (i + 1));
-    }
-    ctx.append(",");
-    for (int i = 0; i < j.getRight().getArity(); i++) {
-      if (i > 0) ctx.append(",");
-      ctx.append("2." + (i + 1));
+      if (i < j.getLeft().getArity()) {
+        ctx.append("1." + (i + 1));
+      }
+      else {
+        ctx.append("2." + (i + 1 - j.getLeft().getArity()));
+      }
     }
     ctx.append(" ");
+
     compile(j.getLeft(), ctx.file());
     compile(j.getRight(), ctx.file());
     ctx.append("");
