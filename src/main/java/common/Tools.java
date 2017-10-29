@@ -28,4 +28,41 @@ public class Tools {
     return new HashSet<>(Arrays.asList(items));
   }
 
+  public static int count(boolean[] array, boolean val) {
+    int c = 0;
+    for (int i = 0; i < array.length; i++) {
+      if (array[i] == val) c++;
+    }
+    return c;
+  }
+
+  public static int[] inverse(int[] array) {
+    return inverse(array, array.length);
+  }
+
+  public static int[] inverse(int[] array, int length) {
+    int[] r = new int[length];
+    for (int i = 0; i < array.length; i++) {
+      if (array[i] < length) r[array[i]] = i;
+    }
+    return r;
+  }
+
+  public static int[] apply(int[] a, int[] aToB) {
+    int[] b = new int[a.length];
+    for (int i = 0; i < a.length; i++) {
+      b[i] = aToB[a[i]];
+    }
+    return b;
+  }
+
+  public static boolean isIdentityProjection(int[] projection) {
+    for (int i = 0; i < projection.length; i++) {
+      if (projection[i] != i) {
+        return false;
+      }
+    }
+    return true;
+  }
+
 }

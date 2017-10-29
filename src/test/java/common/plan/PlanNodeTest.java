@@ -1,5 +1,7 @@
 package common.plan;
 
+import java.util.Objects;
+
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -14,6 +16,8 @@ public class PlanNodeTest {
   TermList args3 = new TermList(new Variable("X"), new Variable("Y"), new Variable("Z"));
 
   TermList args4 = new TermList(new Variable("X"), new Variable("Y"), new Variable("Z"), new Variable("W"));
+
+  TermList args5 = new TermList(new Variable("X"), new Variable("Y"), new Variable("Z"), new Variable("W"), new Variable("V"));
 
   @Test
   public void testPlanNode() {
@@ -144,4 +148,31 @@ public class PlanNodeTest {
     ), new int[] { 1 }))
     );
   }
+
+  @Test
+  public void testPushDownProject() {
+    Optimizer optimizer = new PushDownProject();
+
+    PlanNode baz = new BuiltinNode(new CompoundTerm("baz", args5));
+
+    assertEquals(new JoinNode(//
+            baz.project(new int[] { 1, 2, 3, 4 }), //
+            baz.project(new int[] { 1, 2, 3 }), //
+            new int[] { 3, 1 }, new int[] { 0, 2 })//
+                .project(new int[] { 0, 2, 5 }), //
+            optimizer.apply(new JoinNode(baz, baz, //
+                new int[] { 4, 2 }, new int[] { 1, 3 })//
+                    .project(new int[] { 1, 3, 7 })));
+  }
+
+  private void assertEquals(PlanNode expected, PlanNode actual) {
+    if (!Objects.equals(expected, actual)) {
+      System.out.println("expected:");
+      System.out.println(expected.toPrettyString());
+      System.out.println("\nactual:");
+      System.out.println(actual.toPrettyString());
+    }
+    Assert.assertEquals(expected, actual);
+  }
+
 }

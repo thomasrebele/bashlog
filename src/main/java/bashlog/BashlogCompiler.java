@@ -32,12 +32,18 @@ public class BashlogCompiler {
     if (planNode == null) {
       throw new IllegalArgumentException("cannot compile an empty plan");
     }
-    root = new PlanSimplifier().apply(new SortNode(planNode, null));
+    root = planNode;
+    debug += "orig\n";
+    debug += root.toPrettyString() + "\n";
+
+    root = new PlanSimplifier().apply(new SortNode(root, null));
 
     debug += "simplified\n";
     debug += root.toPrettyString() + "\n";
 
     root = new JoinReorderOptimizer().apply(root);
+    root = new PlanSimplifier().apply(root);
+    root = new PushDownProject().apply(root);
     root = new PushDownFilterOptimizer().apply(root);
 
     root = new PlanSimplifier().apply(root);
