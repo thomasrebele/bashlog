@@ -88,8 +88,12 @@ public class BashlogLUBM {
     for (int i = 0; i < 14; i++) {
       Program p = lubmProgram3("~/extern/data/bashlog/lubm/$1/", "data/lubm");
       String relation = queries[i];
+      try {
       String script = BashlogEvaluator.compileQuery(p, relation);
       Files.write(Paths.get(scriptDir + "query" + (i + 1) + ".sh"), script.getBytes());
+      } catch (Exception e) {
+        throw new RuntimeException("in query " + (i + 1), e);
+      }
     }
   }
 

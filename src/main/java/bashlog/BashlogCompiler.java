@@ -1,9 +1,6 @@
 package bashlog;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
@@ -34,7 +31,7 @@ public class BashlogCompiler {
     if (planNode == null) {
       throw new IllegalArgumentException("cannot compile an empty plan");
     }
-    root = new PlanSimplifier().apply(planNode);
+    root = new PlanSimplifier().apply(new SortNode(planNode, null));
 
     debug += "simplified\n";
     debug += root.toPrettyString() + "\n";
@@ -75,7 +72,6 @@ public class BashlogCompiler {
     ctx.append("mkdir -p tmp\n");
 
     compile(root, ctx);
-    ctx.append(" | sort -u"); // TODO: only sort if necessary?
     return ctx.generate();
   }
 
@@ -201,12 +197,22 @@ public class BashlogCompiler {
     ctx.append(" \\\n");
     ctx.info(s);
     ctx.append(" | sort -t $'\\t' ");
+    boolean supportsUniq = cols == null;
     if (cols != null) {
+      int used[] = new int[s.getTable().getArity()];
+      Arrays.fill(used, 0);
       for (int col : cols) {
         ctx.append("-k ");
         ctx.append(col + 1);
         ctx.append(" ");
+        used[col] = 1;
       }
+      if (Arrays.stream(used).allMatch(k -> k == 1)) {
+        supportsUniq = true;
+      }
+    }
+    if (supportsUniq) {
+      ctx.append("-u ");
     }
     ctx.endPipe();
   }
