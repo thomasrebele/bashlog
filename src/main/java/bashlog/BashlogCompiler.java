@@ -49,7 +49,7 @@ public class BashlogCompiler {
     root = new PlanSimplifier().apply(root);
     root = new PushDownFilterOptimizer().apply(root);
 
-    root = new MultiFilterOptimizer().apply(root);
+    root = new MultiFilterOptimizer(false).apply(root);
 
     debug += "optimized\n";
     debug += root.toPrettyString() + "\n";
@@ -61,6 +61,7 @@ public class BashlogCompiler {
 
     root = new BashlogOptimizer().apply(root);
     root = new MaterializationOptimizer().apply(root);
+    //root = new MultiFilterOptimizer(true).apply(root);
 
     debug += "optimized bashlog plan\n";
     debug += root.toPrettyString();
