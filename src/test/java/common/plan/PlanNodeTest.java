@@ -165,7 +165,26 @@ public class PlanNodeTest {
                     .project(new int[] { 1, 3, 7 })));
   }
 
-  private void assertEquals(PlanNode expected, PlanNode actual) {
+  @Test
+  public void testMaterialization() {
+    Optimizer optimizer = new MaterializationOptimizer();
+    PlanNode baz = new BuiltinNode(new CompoundTerm("bar", args3));
+
+    MaterializationNode.Builder b = new MaterializationNode.Builder(2);
+    assertEquals(
+        b.build(new UnionNode(//
+            b.getReuseNode(), //
+            b.getReuseNode().equalityFilter(0, 1)), //
+            baz.project(new int[] { 1, 2 }), 2)
+        ,
+        optimizer.apply(new UnionNode(//
+            baz.project(new int[] { 1, 2 }), //
+            baz.project(new int[] { 1, 2 }).equalityFilter(0, 1)))
+        );
+    
+  }
+
+  public static void assertEquals(PlanNode expected, PlanNode actual) {
     if (!Objects.equals(expected, actual)) {
       System.out.println("expected:");
       System.out.println(expected.toPrettyString());
