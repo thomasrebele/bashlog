@@ -10,9 +10,9 @@ import java.util.stream.Stream;
 import org.junit.Before;
 import org.junit.Test;
 
-import bashlog.MainThomas;
 import common.parser.Program;
-import experiments.lubm.generator.TsvWriter;
+import experiments.lubm.BashlogLUBM;
+import experiments.lubm.generator.Tsv3Writer;
 import flinklog.SimpleFactsSet;
 import javatools.filehandlers.TSVFile;
 import yago4.Tools;
@@ -50,11 +50,11 @@ public abstract class LUBMTest {
       // TODO: fix answers for query 8 (replace ".ed" and ".e" at end of line with ".edu"
     }
     dir = lubm + "/1/";
-    if (!new File(dir).exists()) {
-      TsvWriter.generate(1, 0, 0, dir + "/1/");
+    if (!new File(dir).exists() || !new File(dir + "all").exists()) {
+      Tsv3Writer.generate(1, 0, 0, dir);
     }
 
-    lubmProgram = MainThomas.lubmProgram(dir, lubm);
+    lubmProgram = BashlogLUBM.lubmProgram3(dir, lubm);
 
     System.out.println(lubmProgram.toString());
   }

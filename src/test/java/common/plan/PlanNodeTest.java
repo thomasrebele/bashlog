@@ -1,16 +1,26 @@
 package common.plan;
 
-import common.parser.CompoundTerm;
-import common.parser.TermList;
-import common.parser.Variable;
+import java.util.Objects;
+
 import org.junit.Assert;
 import org.junit.Test;
 
+import common.parser.CompoundTerm;
+import common.parser.TermList;
+import common.parser.Variable;
+
 public class PlanNodeTest {
+
+  TermList args2 = new TermList(new Variable("X"), new Variable("Y"));
+
+  TermList args3 = new TermList(new Variable("X"), new Variable("Y"), new Variable("Z"));
+
+  TermList args4 = new TermList(new Variable("X"), new Variable("Y"), new Variable("Z"), new Variable("W"));
+
+  TermList args5 = new TermList(new Variable("X"), new Variable("Y"), new Variable("Z"), new Variable("W"), new Variable("V"));
 
   @Test
   public void testPlanNode() {
-    TermList args2 = new TermList(new Variable("X"), new Variable("Y"));
     PlanNode foo = new BuiltinNode(new CompoundTerm("foo", args2));
     PlanNode bar = new BuiltinNode(new CompoundTerm("bar", args2));
     Assert.assertTrue((new VariableEqualityFilterNode(foo, 1, 1)).contains(foo));
@@ -24,8 +34,6 @@ public class PlanNodeTest {
   @Test
   public void testSimplifier() {
     PlanSimplifier simplifier = new PlanSimplifier();
-    TermList args2 = new TermList(new Variable("X"), new Variable("Y"));
-    TermList args4 = new TermList(new Variable("X"), new Variable("Y"), new Variable("Z"), new Variable("W"));
     PlanNode foo = new BuiltinNode(new CompoundTerm("foo", args2));
     PlanNode bar = new BuiltinNode(new CompoundTerm("bar", args2));
     PlanNode baz = new BuiltinNode(new CompoundTerm("bar", args4));
@@ -82,9 +90,8 @@ public class PlanNodeTest {
   @Test
   public void testPushDownFilterOptimizer() {
     Optimizer optimizer = new PushDownFilterOptimizer();
-    TermList args = new TermList(new Variable("X"), new Variable("Y"));
-    PlanNode foo = new BuiltinNode(new CompoundTerm("foo", args));
-    PlanNode bar = new BuiltinNode(new CompoundTerm("bar", args));
+    PlanNode foo = new BuiltinNode(new CompoundTerm("foo", args2));
+    PlanNode bar = new BuiltinNode(new CompoundTerm("bar", args2));
     PlanNode fooFilter = new ConstantEqualityFilterNode(foo, 0, "foo");
     PlanNode barFilter = new ConstantEqualityFilterNode(bar, 0, "foo");
 
@@ -123,4 +130,68 @@ public class PlanNodeTest {
             optimizer.apply(new ConstantEqualityFilterNode(new JoinNode(foo, bar, new int[]{0}, new int[]{0}), 2, "foo"))
     );
   }
+
+  @Test
+  public void testPushDownFilterOptimizer2() {
+    Optimizer optimizer = new PushDownFilterOptimizer();
+
+    PlanNode baz = new BuiltinNode(new CompoundTerm("baz", args3));
+    PlanNode bazFilter1 = new ConstantEqualityFilterNode(baz, 1, "foo1");
+    PlanNode bazFilter2 = new ConstantEqualityFilterNode(baz, 1, "foo2");
+    Assert.assertEquals(new UnionNode(//
+        new ProjectNode(bazFilter1, new int[] { 0 }), //
+        new ProjectNode(bazFilter2, new int[] { 0 }) //
+    ), //
+        optimizer.apply(new ProjectNode(new UnionNode(//
+        new ProjectNode(bazFilter1, new int[] { 2, 0 }), //
+        new ProjectNode(bazFilter2, new int[] { 2, 0 }) //
+    ), new int[] { 1 }))
+    );
+  }
+
+  @Test
+  public void testPushDownProject() {
+    Optimizer optimizer = new PushDownProject();
+
+    PlanNode baz = new BuiltinNode(new CompoundTerm("baz", args5));
+
+    assertEquals(new JoinNode(//
+            baz.project(new int[] { 1, 2, 3, 4 }), //
+            baz.project(new int[] { 1, 2, 3 }), //
+            new int[] { 3, 1 }, new int[] { 0, 2 })//
+                .project(new int[] { 0, 2, 5 }), //
+            optimizer.apply(new JoinNode(baz, baz, //
+                new int[] { 4, 2 }, new int[] { 1, 3 })//
+                    .project(new int[] { 1, 3, 7 })));
+  }
+
+  @Test
+  public void testMaterialization() {
+    Optimizer optimizer = new MaterializationOptimizer();
+    PlanNode baz = new BuiltinNode(new CompoundTerm("bar", args3));
+
+    MaterializationNode.Builder b = new MaterializationNode.Builder(2);
+    assertEquals(
+        b.build(new UnionNode(//
+            b.getReuseNode(), //
+            b.getReuseNode().equalityFilter(0, 1)), //
+            baz.project(new int[] { 1, 2 }), 2)
+        ,
+        optimizer.apply(new UnionNode(//
+            baz.project(new int[] { 1, 2 }), //
+            baz.project(new int[] { 1, 2 }).equalityFilter(0, 1)))
+        );
+    
+  }
+
+  public static void assertEquals(PlanNode expected, PlanNode actual) {
+    if (!Objects.equals(expected, actual)) {
+      System.out.println("expected:");
+      System.out.println(expected.toPrettyString());
+      System.out.println("\nactual:");
+      System.out.println(actual.toPrettyString());
+    }
+    Assert.assertEquals(expected, actual);
+  }
+
 }

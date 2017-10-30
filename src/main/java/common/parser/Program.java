@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import javatools.filehandlers.FileUtils;
 
@@ -75,6 +76,14 @@ public class Program implements Parseable {
     return rules;
   }
 
+  public Set<String> outputRelations() {
+    return relationToRules.keySet();
+  }
+
+  public Set<String> allRelations() {
+    return Stream.concat(outputRelations().stream(), rules.stream().flatMap(r -> r.getDependencies().stream())).collect(Collectors.toSet());
+  }
+
   public List<Rule> rulesForRelation(String relation) {
     return relationToRules.getOrDefault(relation, Collections.emptyList());
   }
@@ -102,6 +111,14 @@ public class Program implements Parseable {
     Set<String> newIgnoredRelations = new HashSet<>(ignoredRelation);
     newIgnoredRelations.addAll(parents);
     return parents.stream().anyMatch(rel -> hasAncestor(rel, ancestor, newIgnoredRelations));
+  }
+
+  public static Program program(String[] files) throws IOException {
+    Program p = new Program();
+    for (String f : files) {
+      p.addRules(loadFile(f));
+    }
+    return p;
   }
 
   public static Program merge(Program p1, Program p2) {

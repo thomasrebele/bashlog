@@ -374,7 +374,7 @@ public class Generator {
   /**
    * main method
    */
-  /*public static void main(String[] args) {
+  public static void main(String[] args) {
     //default values
     int univNum = 1, startIndex = 0, seed = 0;
     boolean daml = false;
@@ -449,9 +449,9 @@ public class Generator {
                          "\t-onto <univ-bench ontology url>");
       System.exit(0);
     }
-  
-    new Generator().start(univNum, startIndex, seed, daml, ontology);
-  }*/
+
+    new Generator().startOld(univNum, startIndex, seed, daml, ontology);
+  }
 
   /**
    * constructor
@@ -487,12 +487,7 @@ public class Generator {
     this.ontology = ontology;
 
     writer_ = writer;
-    /*isDaml_ = daml;
-    if (daml)
-      writer_ = new DamlWriter(this);
-    else
-      writer_ = new OwlWriter(this);*/
-
+    
     startIndex_ = startIndex;
     baseSeed_ = seed;
     instances_[CS_C_UNIV].num = univNum;
@@ -501,6 +496,31 @@ public class Generator {
     //System.out.println("See log.txt for more details.");
   }
 
+  /**
+   * Begins the data generation.
+   * @param univNum Number of universities to generate.
+   * @param startIndex Starting index of the universities.
+   * @param seed Seed for data generation.
+   * @param daml Generates DAML+OIL data if true, OWL data otherwise.
+   * @param ontology Ontology url.
+   */
+  public void startOld(int univNum, int startIndex, int seed, boolean daml, String ontology) {
+    this.ontology = ontology;
+
+    isDaml_ = daml;
+    if (daml) {
+      writer_ = new DamlWriter(this);
+    } else {
+      writer_ = new OwlWriter(this);
+    }
+
+    startIndex_ = startIndex;
+    baseSeed_ = seed;
+    instances_[CS_C_UNIV].num = univNum;
+    instances_[CS_C_UNIV].count = startIndex;
+    _generate();
+    //System.out.println("See log.txt for more details.");
+  }
   ///////////////////////////////////////////////////////////////////////////
   //writer callbacks
 

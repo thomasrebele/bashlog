@@ -25,16 +25,22 @@ public class BashlogEvaluator implements Evaluator {
     this.workingDir = workingDir;
   }
 
-  public static String compileQuery(Program p, String query) throws IOException {
+  public static BashlogCompiler prepareQuery(Program p, String query) {
     Set<String> builtin = new HashSet<>();
     builtin.add("bash_command");
     Map<String, PlanNode> plan = new LogicalPlanBuilder(builtin).getPlanForProgram(p);
 
     PlanNode pn = plan.get(query);
     BashlogCompiler bc = new BashlogCompiler(pn);
+    return bc;
+  }
+
+  public static String compileQuery(Program p, String query) throws IOException {
+    BashlogCompiler bc = prepareQuery(p, query);
     try {
-      String bash = bc.compile();
-      return bash + "\n\n" + bc.debugInfo();
+      String bash = bc.compile("", false);
+      System.out.println(bash);
+      return bash + "\n\n"; //+ bc.debugInfo();
     } catch (Exception e) {
       System.out.println(bc.debugInfo());
       throw (e);

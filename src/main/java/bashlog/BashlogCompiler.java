@@ -2,11 +2,13 @@ package bashlog;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 import bashlog.plan.*;
 import common.Tools;
 import common.parser.CompoundTerm;
 import common.parser.Constant;
+import common.parser.ParserReader;
 import common.plan.*;
 import common.plan.MaterializationNode.ReuseNode;
 import common.plan.RecursionNode.DeltaNode;
@@ -30,14 +32,24 @@ public class BashlogCompiler {
     if (planNode == null) {
       throw new IllegalArgumentException("cannot compile an empty plan");
     }
-    root = new PlanSimplifier().apply(planNode);
+    root = planNode;
+    debug += "orig\n";
+    debug += root.toPrettyString() + "\n";
+
+    root = new PlanSimplifier().apply(new SortNode(root, null));
 
     debug += "simplified\n";
     debug += root.toPrettyString() + "\n";
 
     root = new JoinReorderOptimizer().apply(root);
-    root = new PushDownFilterOptimizer().apply(root);
     root = new PlanSimplifier().apply(root);
+    root = new PushDownProject().apply(root);
+    root = new PushDownFilterOptimizer().apply(root);
+
+    root = new PlanSimplifier().apply(root);
+    root = new PushDownFilterOptimizer().apply(root);
+
+    root = new MultiFilterOptimizer(false).apply(root);
 
     debug += "optimized\n";
     debug += root.toPrettyString() + "\n";
@@ -49,6 +61,7 @@ public class BashlogCompiler {
 
     root = new BashlogOptimizer().apply(root);
     root = new MaterializationOptimizer().apply(root);
+    //root = new MultiFilterOptimizer(true).apply(root);
 
     debug += "optimized bashlog plan\n";
     debug += root.toPrettyString();
@@ -56,14 +69,17 @@ public class BashlogCompiler {
   }
 
   public String compile() {
-    return compile("");
+    return compile("", true);
   }
 
-  public String compile(String indent) {
+  public String compile(String indent, boolean comments) {
     Context ctx = new Context();
+    ctx.comments = false;
     ctx.append("#!/bin/bash\n");
     ctx.append("export LC_ALL=C\n");
     ctx.append("mkdir -p tmp\n");
+    ctx.append("if [ \"$awk\" == \"\" ]; then if type mawk > /dev/null; then awk=\"mawk\"; else awk=\"awk\"; fi fi\n");
+    ctx.append("sort=\"sort -S64M --parallel=2 \"\n");
 
     compile(root, ctx);
     return ctx.generate();
@@ -86,7 +102,7 @@ public class BashlogCompiler {
   }
 
   private PlanNode prepareSortJoin(PlanNode p, int[] columns) {
-    if(columns.length == 1) {
+    if (columns.length == 1) {
       return new SortNode(p, columns);
     }
     CombinedColumnNode c = new CombinedColumnNode(p, columns);
@@ -103,9 +119,9 @@ public class BashlogCompiler {
         PlanNode crossProduct = new SortJoinNode(left, right, new int[] { 0 }, new int[] { 0 });
         int[] proj = new int[left.getArity() + right.getArity() - 2];
         for (int i = 1; i < left.getArity(); i++) {
-          proj[i-1] = i;
+          proj[i - 1] = i;
         }
-        for(int i=1; i<right.getArity(); i++) {
+        for (int i = 1; i < right.getArity(); i++) {
           proj[left.getArity() - 2 + i] = left.getArity() + i;
         }
         return crossProduct.project(proj);
@@ -126,18 +142,30 @@ public class BashlogCompiler {
       UnionNode u = (UnionNode) p;
       List<PlanNode> children = u.args();
       if (children.size() == 0) return u;
-      if(children.size() == 1) return children.get(0);
-      PlanNode current = new SortNode(children.get(0), null);
-      for(int i=1; i<children.size(); i++) {
-        current = new SortUnionNode(new HashSet<>(Arrays.asList(current, new SortNode(children.get(i), null))), u.getArity());
+      if (children.size() == 1) return children.get(0);
+      return new SortUnionNode(children.stream().map(i -> new SortNode(i, null)).collect(Collectors.toSet()), u.getArity());
+    } else if (p instanceof BuiltinNode) {
+      BuiltinNode b = (BuiltinNode) p;
+      if ("bash_command".equals(b.compoundTerm.name)) {
+        String cmd = (String) ((Constant) b.compoundTerm.args[0]).getValue();
+        if (cmd.startsWith("cat ")) {
+          // TODO: check whether it's only one argument
+          ParserReader pr = new ParserReader(cmd);
+          pr.expect("cat ");
+          pr.skipWhitespace();
+          String file;
+          if (pr.peek() == '\"' || pr.peek() == '\'') file = pr.readString();
+          else file = pr.readWhile((c, s) -> !Character.isWhitespace(c));
+          pr.skipWhitespace();
+          if (pr.peek() == null) {
+            return new TSVFileNode(file, p.getArity());
+          }
+        }
       }
-      return current;
     }
 
     return p;
   }
-
-
 
   /** Awk colums used as key for join */
   private static String keyMask(int[] columns) {
@@ -158,7 +186,7 @@ public class BashlogCompiler {
 
   final static String INDENT = "    ";
 
-  final static String AWK = "awk -v FS=$'\\t' '";
+  final static String AWK = "$awk -v FS=$'\\t' '";
 
   /** Awk command which caches the left subtree, and joins it with the right subtree */
   private void leftHashJoin(JoinNode j, StringBuilder sb, String indent, Context ctx) {
@@ -190,13 +218,23 @@ public class BashlogCompiler {
     compile(s.args().get(0), ctx.pipe());
     ctx.append(" \\\n");
     ctx.info(s);
-    ctx.append(" | sort -t $'\\t' ");
+    ctx.append(" | $sort -t $'\\t' ");
+    boolean supportsUniq = cols == null;
     if (cols != null) {
+      int used[] = new int[s.getTable().getArity()];
+      Arrays.fill(used, 0);
       for (int col : cols) {
         ctx.append("-k ");
         ctx.append(col + 1);
         ctx.append(" ");
+        used[col] = 1;
       }
+      if (Arrays.stream(used).allMatch(k -> k == 1)) {
+        supportsUniq = true;
+      }
+    }
+    if (supportsUniq) {
+      ctx.append("-u ");
     }
     ctx.endPipe();
   }
@@ -213,16 +251,19 @@ public class BashlogCompiler {
     ctx.append(" -2 ");
     ctx.append(colRight);
     ctx.append(" -o ");
-    for (int i = 0; i < j.getLeft().getArity(); i++) {
+
+    for (int i = 0; i < j.getOutputProjection().length; i++) {
       if (i > 0) ctx.append(",");
-      ctx.append("1." + (i + 1));
-    }
-    ctx.append(",");
-    for (int i = 0; i < j.getRight().getArity(); i++) {
-      if (i > 0) ctx.append(",");
-      ctx.append("2." + (i + 1));
+      int dst = j.getOutputProjection()[i];
+      if (dst < j.getLeft().getArity()) {
+        ctx.append("1." + (dst + 1));
+      }
+      else {
+        ctx.append("2." + (dst - j.getLeft().getArity() + 1));
+      }
     }
     ctx.append(" ");
+
     compile(j.getLeft(), ctx.file());
     compile(j.getRight(), ctx.file());
     ctx.append("");
@@ -250,8 +291,41 @@ public class BashlogCompiler {
 
     ctx.info(rn, "continued");
     ctx.append(INDENT + "mv " + newDeltaFile + " " + deltaFile + "; \n");
-    ctx.append(INDENT + "sort -u --merge -o " + fullFile + " " + fullFile + " <(sort " + deltaFile + ")\n");
+    ctx.append(INDENT + "$sort -u --merge -o " + fullFile + " " + fullFile + " <($sort " + deltaFile + ")\n");
     ctx.endPipe();
+  }
+
+  private String awkEquality(EqualityFilterNode planNode) {
+    StringBuilder sb = new StringBuilder();
+    if (planNode instanceof ConstantEqualityFilterNode) {
+      ConstantEqualityFilterNode n = (ConstantEqualityFilterNode) planNode;
+      sb.append("$");
+      sb.append(n.getField() + 1);
+      sb.append(" == \"");
+      sb.append(escape(n.getValue().toString()));
+      sb.append("\"");
+    } else if (planNode instanceof VariableEqualityFilterNode) {
+      VariableEqualityFilterNode n = (VariableEqualityFilterNode) planNode;
+      sb.append("$");
+      sb.append(n.getField1() + 1);
+      sb.append(" == $");
+      sb.append(n.getField2() + 1);
+    }
+    return sb.toString();
+  }
+
+  private String awkProject(ProjectNode p) {
+    StringBuilder sb = new StringBuilder();
+    for (int i = 0; i < p.getProjection().length; i++) {
+      if (i != 0) sb.append(" FS ");
+      if (p.getProjection()[i] >= 0) {
+        sb.append("$");
+        sb.append(p.getProjection()[i] + 1);
+      } else {
+        p.getConstant(i).ifPresent(cnst -> sb.append("\"" + escape(cnst.toString()) + "\""));
+      }
+    }
+    return sb.toString();
   }
 
   private void recursionInMemory(RecursionNode rn, Context ctx, String fullFile, String deltaFile, String newDeltaFile) {
@@ -267,7 +341,6 @@ public class BashlogCompiler {
   }
 
   private void compile(PlanNode planNode, Context ctx) {
-
     if (planNode instanceof MaterializationNode) {
       ctx.startPipe();
       MaterializationNode m = (MaterializationNode) planNode;
@@ -278,7 +351,7 @@ public class BashlogCompiler {
       asFile = true;
       ctx.append("\n");
       ctx.info(planNode);
-      
+
       if (!asFile) {
         matNodeToCount.put(m, new AtomicInteger(0));
         ctx.append("mkfifo");
@@ -300,7 +373,7 @@ public class BashlogCompiler {
         ctx.append(" &");
       }
       ctx.append("\n");
-      
+
       if (!(m.getMainPlan() instanceof MaterializationNode)) {
         ctx.append("# plan\n");
       }
@@ -356,36 +429,46 @@ public class BashlogCompiler {
       ctx.append(" \\\n");
       ctx.info(planNode);
       ctx.append(" | " + AWK + "{ print ");
-      for (int i = 0; i < p.getProjection().length; i++) {
-        if (i != 0) ctx.append(" FS ");
-        if (p.getProjection()[i] >= 0) {
-          ctx.append("$");
-          ctx.append(p.getProjection()[i] + 1);
-        } else {
-          p.getConstant(i).ifPresent(cnst -> ctx.append("\"" + escape(cnst.toString()) + "\""));
-        }
-      }
+      ctx.append(awkProject(p));
       ctx.append("}'");
       ctx.endPipe();
-    } else if (planNode instanceof ConstantEqualityFilterNode) {
+    } else if (planNode instanceof EqualityFilterNode) {
       ctx.startPipe();
-      ConstantEqualityFilterNode n = (ConstantEqualityFilterNode) planNode;
-      ctx.append(AWK + "$");
-      ctx.append(n.getField() + 1);
-      ctx.append(" == \"");
-      ctx.append(escape(n.getValue().toString()));
-      ctx.append("\" { print $0 }' ");
-      compile(n.getTable(), ctx.file());
-      ctx.endPipe();
-    } else if (planNode instanceof VariableEqualityFilterNode) {
-      ctx.startPipe();
-      VariableEqualityFilterNode n = (VariableEqualityFilterNode) planNode;
-      ctx.append(AWK + "$");
-      ctx.append(n.getField1() + 1);
-      ctx.append(" == $");
-      ctx.append(n.getField2() + 1);
+      ctx.append(AWK);
+      ctx.append(awkEquality((EqualityFilterNode) planNode));
       ctx.append(" { print $0 }' ");
-      compile(n.getTable(), ctx.file());
+      compile(((EqualityFilterNode) planNode).getTable(), ctx.file());
+      ctx.endPipe();
+    } else if (planNode instanceof MultiFilterNode) {
+      MultiFilterNode m = (MultiFilterNode) planNode;
+      ctx.startPipe();
+      ctx.append(AWK);
+
+      for (PlanNode c : m.getFilter()) {
+        // do we need this actually?
+        c = new PushDownFilterOptimizer().apply(c);
+        ProjectNode p = null;
+        List<String> conditions = new ArrayList<>();
+        do {
+          if (c instanceof ProjectNode) {
+            if (p != null) throw new IllegalStateException("currently only one projection supported");
+            p = (ProjectNode) c;
+          } else if (c instanceof EqualityFilterNode) {
+            conditions.add(awkEquality((EqualityFilterNode) c));
+          } else {
+            break;
+          }
+          c = c.args().get(0);
+        } while (true);
+        ctx.append(conditions.stream().collect(Collectors.joining(" && ")));
+        ctx.append(" { print ");
+        if (p == null) ctx.append("$0");
+        else ctx.append(awkProject(p));
+        ctx.append("} ");
+      }
+
+      ctx.append("' ");
+      compile(m.getInnerTable(), ctx.file());
       ctx.endPipe();
     } else if (planNode instanceof BuiltinNode) {
       CompoundTerm ct = ((BuiltinNode) planNode).compoundTerm;
@@ -393,19 +476,26 @@ public class BashlogCompiler {
         ctx.startPipe();
         ctx.append(((Constant) ct.args[0]).getValue());
         ctx.endPipe();
-      }
-      else {
+      } else {
         throw new UnsupportedOperationException("predicate not supported: " + ct.getRelation());
       }
+    } else if (planNode instanceof TSVFileNode) {
+      TSVFileNode file = (TSVFileNode) planNode;
+      ctx.append(file.getPath());
     } else if (planNode instanceof SortUnionNode) {
       ctx.startPipe();
-      // delimit columns by null character
+      /*// delimit columns by null character
       ctx.append("comm --output-delimiter=$'\\002' ");
       for (PlanNode child : ((UnionNode) planNode).getChildren()) {
         compile(child, ctx.file());
       }
       // remove null character
-      ctx.append(" | sed -E 's/^\\o002\\o002?//g' | uniq "); // 
+      ctx.append(" | sed -E 's/^\\o002\\o002?//g' | uniq "); // */
+
+      ctx.append("$sort -u -m ");
+      for (PlanNode child : ((UnionNode) planNode).getChildren()) {
+        compile(child, ctx.file());
+      }
       ctx.endPipe();
     } else if (planNode instanceof SortRecursionNode) {
       ctx.startPipe();
@@ -432,8 +522,7 @@ public class BashlogCompiler {
       String deltaFile = "tmp/delta" + recursionNodeToIdx.get(((DeltaNode) planNode).getRecursionNode());
       if (ctx.isFile()) {
         ctx.append(deltaFile);
-      }
-      else {
+      } else {
         ctx.startPipe();
         ctx.append("cat " + deltaFile);
         ctx.endPipe();
