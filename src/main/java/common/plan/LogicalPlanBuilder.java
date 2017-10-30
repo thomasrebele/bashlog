@@ -1,11 +1,11 @@
 package common.plan;
 
+import common.Tools;
+import common.parser.*;
+
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
-import common.Tools;
-import common.parser.*;
 
 /**
  * TODO: support recursion f(x,z) <- f(x,y), f(y,z). (join with full)
@@ -200,7 +200,7 @@ public class LogicalPlanBuilder {
       colRight = Arrays.copyOfRange(colRight, 0, count);
       PlanNode jn = nm1.node.join(nm2.node, colLeft, colRight);
       return new NodeWithMask(jn, Tools.concat(nm1.colToVar, nm2.colToVar), nm1.varToCol);
-    }).orElseThrow(() -> new UnsupportedOperationException("rule without body"));
+    }).orElseThrow(() -> new UnsupportedOperationException("rule without body: " + rule.toString()));
 
     if (builtin.contains(rule.head.name)) {
       return body.node;
