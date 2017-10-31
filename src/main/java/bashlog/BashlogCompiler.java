@@ -144,6 +144,7 @@ public class BashlogCompiler {
       if (children.size() == 0) return u;
       if (children.size() == 1) return children.get(0);
       return new SortUnionNode(children.stream().map(i -> new SortNode(i, null)).collect(Collectors.toSet()), u.getArity());
+      //return new CatUnionNode(new HashSet<>(children), u.getArity()); // this seems to be slower than SortUnionNode
     } else if (p instanceof BuiltinNode) {
       BuiltinNode b = (BuiltinNode) p;
       if ("bash_command".equals(b.compoundTerm.name)) {
@@ -484,18 +485,18 @@ public class BashlogCompiler {
       ctx.append(file.getPath());
     } else if (planNode instanceof SortUnionNode) {
       ctx.startPipe();
-      /*// delimit columns by null character
-      ctx.append("comm --output-delimiter=$'\\002' ");
-      for (PlanNode child : ((UnionNode) planNode).getChildren()) {
-        compile(child, ctx.file());
-      }
-      // remove null character
-      ctx.append(" | sed -E 's/^\\o002\\o002?//g' | uniq "); // */
-
       ctx.append("$sort -u -m ");
       for (PlanNode child : ((UnionNode) planNode).getChildren()) {
         compile(child, ctx.file());
       }
+      ctx.endPipe();
+    } else if (planNode instanceof CatUnionNode) {
+      ctx.startPipe();
+      ctx.append("cat ");
+      for (PlanNode child : ((UnionNode) planNode).getChildren()) {
+        compile(child, ctx.file());
+      }
+      ctx.append(" | uniq ");
       ctx.endPipe();
     } else if (planNode instanceof SortRecursionNode) {
       ctx.startPipe();
