@@ -3,7 +3,7 @@ import gzip
 import plac  # pip3 install plac
 
 
-# Is going to return this data as a big file {subject}\t{property}\t{object}
+# Is going to return this data as folder per relation
 # You need first to download Wikidata truthy dump: https://dumps.wikimedia.org/other/wikibase/wikidatawiki/latest-truthy.nt.gz and pass its path as first argument of this script
 
 def parse_triples(file_name):

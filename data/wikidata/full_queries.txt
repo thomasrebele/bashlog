@@ -1,0 +1,3 @@
+query1(X) :- hasFather(X, "<http://www.wikidata.org/entity/Q7742>") .
+query2(X) :- hasAncestor(X, "<http://www.wikidata.org/entity/Q7742>") .
+query3(X) :- hasBirthPlace(X, Y), hasCountry(Y, "<http://www.wikidata.org/entity/Q228>") .

@@ -1,0 +1,19 @@
+hasChild(X, Y) :- hasFather(Y, X) .
+hasChild(X, Y) :- hasMother(Y, X) .
+hasSibling(X,Y) :- hasChild(Z, X), hasChild(Z, Y) .
+hasSibling(X,Y) :- hasSibling(Y,X) .
+hasSpouse(X,Y) :- hasSpouse(Y,X) .
+
+hasAncestor(X,Y) :- hasFather(X,Y) .
+hasAncestor(X,Y) :- hasMother(X,Y) .
+hasAncestor(X,Z) :- hasAncestor(X,Y), hasAncestor(Y,Z) .
+
+isLocatedIn(X,Z) :- isLocatedIn(X,Y), isLocatedIn(Y,Z) .
+containsLocation(X,Z) :- containsLocation(X,Y), containsLocation(Y,Z) .
+isLocatedIn(X,Y) :- containsLocation(Y,X) .
+containsLocation(X,Y) :- isLocatedIn(Y,X) .
+isLocatedIn(X,Y) :- hasCountry(X,Y) .
+hasCountry(X,Z) :- isLocatedIn(X,Y), hasCountry(Y,Z) .
+
+hasBirthPlace(X,Z) :- hasBirthPlace(X,Y), isLocatedIn(Y,Z) .
+hasDeathPlace(X,Z) :- hasDeathPlace(X,Y), isLocatedIn(Y,Z) .
