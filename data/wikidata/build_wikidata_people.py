@@ -11,8 +11,11 @@ def parse_triples(file_name):
         for line in file:
             parts = [e.strip(' \r<>')
                          .replace('http://www.wikidata.org/prop/direct/', '')
-                         .replace('http://www.wikidata.org/entity/', '') for e in line.strip(' \r\n.').split('\t')]
-            yield parts
+                         .replace('http://www.wikidata.org/entity/', '') for e in line.strip(' \t\r\n.').split(' ', 2)]
+            if len(parts) == 3:
+                yield parts
+            else:
+                print(parts)
 
 
 predicates_map = {
@@ -33,7 +36,7 @@ predicates_map = {
 
 
 def main(input_file):
-    files = {prop: open('people/' + prop) for prop in predicates_map.values()}
+    files = {prop: open('people/' + prop, 'wt') for prop in predicates_map.values()}
     for (s, p, o) in parse_triples(input_file):
         if p in predicates_map:
             files[predicates_map[p]].write('{}\t{}\n'.format(s, o))
