@@ -3,7 +3,7 @@ import gzip
 import plac  # pip3 install plac
 
 
-# Is going to return this data as a big file {subject}\t{property}\t{object}
+# Is going to return this data as folder per relation
 # You need first to download Wikidata truthy dump: https://dumps.wikimedia.org/other/wikibase/wikidatawiki/latest-truthy.nt.gz and pass its path as first argument of this script
 
 def parse_triples(file_name):
@@ -11,8 +11,11 @@ def parse_triples(file_name):
         for line in file:
             parts = [e.strip(' \r<>')
                          .replace('http://www.wikidata.org/prop/direct/', '')
-                         .replace('http://www.wikidata.org/entity/', '') for e in line.strip(' \r\n.').split('\t')]
-            yield parts
+                         .replace('http://www.wikidata.org/entity/', '') for e in line.strip(' \t\r\n.').split(' ', 2)]
+            if len(parts) == 3:
+                yield parts
+            else:
+                print(parts)
 
 
 predicates_map = {
@@ -33,7 +36,7 @@ predicates_map = {
 
 
 def main(input_file):
-    files = {prop: open('people/' + prop) for prop in predicates_map.values()}
+    files = {prop: open('people/' + prop, 'wt') for prop in predicates_map.values()}
     for (s, p, o) in parse_triples(input_file):
         if p in predicates_map:
             files[predicates_map[p]].write('{}\t{}\n'.format(s, o))

@@ -1,0 +1,3 @@
+query1(X) :- hasFather(X, "Q7742") .
+query2(X) :- hasAncestor(X, "Q7742") .
+query3(X) :- hasBirthPlace(X), hasCountry(X, "Q228") .
