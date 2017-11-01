@@ -6,10 +6,9 @@ hasSpouse(X,Y) :- hasSpouse(Y,X) .
 
 hasAncestor(X,Y) :- hasFather(X,Y) .
 hasAncestor(X,Y) :- hasMother(X,Y) .
-hasAncestor(X,Z) :- hasAncestor(X,Y), hasAncestor(Y,Z) .
+hasAncestor(X,Z) :- hasAncestor(X,Y), hasParent(Y,Z) .
 
 isLocatedIn(X,Z) :- isLocatedIn(X,Y), isLocatedIn(Y,Z) .
-containsLocation(X,Z) :- containsLocation(X,Y), containsLocation(Y,Z) .
 isLocatedIn(X,Y) :- containsLocation(Y,X) .
 containsLocation(X,Y) :- isLocatedIn(Y,X) .
 isLocatedIn(X,Y) :- hasCountry(X,Y) .

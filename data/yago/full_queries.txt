@@ -1,0 +1,3 @@
+query1(X) :- hasParent(X, "<Louis_XIV_of_France>") .
+query2(X) :- hasAncestor(X, "<Louis_XIV_of_France>") .
+query3(X) :- hasBirthPlace(X, Y), isLocatedIn(Y, "<Andorra>") .

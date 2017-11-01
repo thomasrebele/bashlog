@@ -1,0 +1,12 @@
+PREFIX wd: <http://www.wikidata.org/entity/>
+PREFIX wdt: <http://www.wikidata.org/prop/direct/>
+
+wdt:P31(X,Z) :- wdt:P31(X,Y), wdt:P279(Y,Z) .
+wdt:hasParent(X,Y) :- wdt:P22(X,Y) .
+wdt:hasParent(X,Y) :- wdt:P25(X,Y) .
+wdt:hasAncestor(X,Y) :- wdt:hasParent(X,Y) .
+wdt:hasAncestor(X,Z) :- wdt:hasAncestor(X,Y), wdt:hasParent(Y,Z) .
+wdt:P17(X,Z) :- wdt:P131(X,Y), wdt:P17(Y,Z) .
+wdt:P131(X,Y) :- wdt:P150(Y,X) .
+wdt:P150(X,Y) :- wdt:P131(Y,X) .
+wdt:P131(X,Y) :- wdt:P131(X,Y), wdt:P131(Y,Z) .
