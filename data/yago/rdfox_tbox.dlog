@@ -1,8 +1,10 @@
-PREFIX a1: <http://yago-knowledge.org/resource/>
+<hasParent>(?X,?Y) :- <hasChild>(?Y,?X) .
+<hasAncestor>(?X,?Y) :- <hasParent>(?X,?Y) .
+<hasAncestor>(?X,?Z) :- <hasAncestor>(?X,?Y), <hasParent>(?Y,?Z) .
+<isLocatedIn>(?X,?Y) :- <containsLocation>(?Y,?X) .
+<containsLocation>(?X,?Y) :- <isLocatedIn>(?Y,?X) .
+<isLocatedIn>(?X,?Y) :- <isLocatedIn>(?X,?Y), <isLocatedIn>(?Y,?Z) .
 
-a1:hasParent(?X,?Y) :- a1:hasChild(?Y,?X) .
-a1:hasAncestor(?X,?Y) :- a1:hasParent(?Y,?X) .
-a1:hasAncestor(?X,?Z) :- a1:hasAncestor(?X,?Y), a1:hasParent(?Y,?Z) .
-a1:isLocatedIn(?X,?Y) :- a1:containsLocation(?Y,?X) .
-a1:containsLocation(?X,?Y) :- a1:isLocatedIn(?Y,?X) .
-a1:isLocatedIn(?X,?Y) :- a1:isLocatedIn(?X,?Y), a1:isLocatedIn(?Y,?Z) .
+<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>(?X,?Z) :- <http://www.w3.org/1999/02/22-rdf-syntax-ns#type>(?X,?Y), <http://www.w3.org/2000/01/rdf-schema#subClassOf>(?Y,?Z) .
+<allSubClasses>(?X,?Z) :- <http://www.w3.org/2000/01/rdf-schema#subClassOf>(?X,?Z) .
+<allSubClasses>(?X,?Z) :- <allSubClasses>(?X,?Y), <http://www.w3.org/2000/01/rdf-schema#subClassOf>(?Y,?Z) .

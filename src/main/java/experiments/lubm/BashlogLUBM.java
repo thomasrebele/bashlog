@@ -1,16 +1,16 @@
 package experiments.lubm;
 
+import bashlog.BashlogEvaluator;
+import common.parser.ParserReader;
+import common.parser.Program;
+import sqllog.SqllogCompiler;
+
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.HashSet;
-
-import bashlog.BashlogEvaluator;
-import common.parser.ParserReader;
-import common.parser.Program;
-import sqllog.SqllogCompiler;
 
 public class BashlogLUBM {
 

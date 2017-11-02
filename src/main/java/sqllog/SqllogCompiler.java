@@ -1,14 +1,13 @@
 package sqllog;
 
-import java.util.*;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
-
+import common.parser.*;
+import common.plan.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import common.parser.*;
-import common.plan.*;
+import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 public class SqllogCompiler {
 
@@ -212,7 +211,7 @@ public class SqllogCompiler {
       }
       String selectColumns = IntStream.range(0, select.size()).mapToObj(i -> select.get(i) + " AS C" + i).collect(Collectors.joining(", "));
       builder.append(" SELECT ").append(selectColumns)
-          .append(" FROM ").append(String.join(", ", from));
+              .append(" FROM ").append(String.join(", ", from));
       if (!where.isEmpty()) {
         builder.append(" WHERE ").append(String.join(" and ", where));
       }

@@ -1,9 +1,5 @@
 package bashlog;
 
-import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
-
 import bashlog.plan.*;
 import common.Tools;
 import common.parser.CompoundTerm;
@@ -13,6 +9,10 @@ import common.plan.*;
 import common.plan.MaterializationNode.ReuseNode;
 import common.plan.RecursionNode.DeltaNode;
 import common.plan.RecursionNode.FullNode;
+
+import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 public class BashlogCompiler {
 

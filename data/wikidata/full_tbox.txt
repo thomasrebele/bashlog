@@ -1,5 +1,4 @@
 triple(S,P,O) :~ cat "data/wikidata/all-triples.txt"
-type(X,Y) :- triple(X, "<http://www.wikidata.org/prop/direct/P31>", Y) .
 inCountry(X,Y) :- triple(X, "<http://www.wikidata.org/prop/direct/P17>", Y) .
 hasBirthPlace(X,Y) :- triple(X, "<http://www.wikidata.org/prop/direct/P19>", Y) .
 hasDeathPlace(X,Y) :- triple(X, "<http://www.wikidata.org/prop/direct/P20>", Y) .
@@ -9,7 +8,7 @@ hasFather(X,Y) :- triple(X, "<http://www.wikidata.org/prop/direct/P22>", Y) .
 hasMother(X,Y) :- triple(X, "<http://www.wikidata.org/prop/direct/P25>", Y) .
 hasSpouse(X,Y) :- triple(X, "<http://www.wikidata.org/prop/direct/P26>", Y) .
 hasNationality(X,Y) :- triple(X, "<http://www.wikidata.org/prop/direct/P27>", Y) .
-type(S,O) :- triple(X, "<http://www.wikidata.org/prop/direct/P31>", Y) .
+type(X,Y) :- triple(X, "<http://www.wikidata.org/prop/direct/P31>", Y) .
 hasChild(X,Y) :- triple(X, "<http://www.wikidata.org/prop/direct/P40>", Y) .
 isLocatedIn(X,Y) :- triple(X, "<http://www.wikidata.org/prop/direct/P131>", Y) .
 containsLocation(X,Y) :- triple(X, "<http://www.wikidata.org/prop/direct/P150>", Y) .

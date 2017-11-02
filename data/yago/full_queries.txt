@@ -1,3 +1,6 @@
-query1(X) :- hasParent(X, "<Louis_XIV_of_France>") .
-query2(X) :- hasAncestor(X, "<Louis_XIV_of_France>") .
-query3(X) :- hasBirthPlace(X, Y), isLocatedIn(Y, "<Andorra>") .
+query1(X) :- subClassOf(X, "<wordnet_person_100007846>") .
+query1(X) :- subClassOf(X, Y), query1(Y) .
+query2(X) :- type(X, "<wordnet_person_100007846>") .
+query3(X) :- hasParent(X, "<Louis_XIV_of_France>") .
+query4(X) :- hasAncestor(X, "<Louis_XIV_of_France>") .
+query5(X) :- hasBirthPlace(X, Y), isLocatedIn(Y, "<Andorra>") .

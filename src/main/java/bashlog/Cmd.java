@@ -1,37 +1,14 @@
 package bashlog;
 
+import com.beust.jcommander.JCommander;
+import com.beust.jcommander.Parameter;
+import common.parser.Program;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.beust.jcommander.JCommander;
-import com.beust.jcommander.Parameter;
-
-import common.parser.Program;
-
 public class Cmd {
-
-  public static class Args {
-
-    @Parameter
-    private List<String> parameters = new ArrayList<>();
-
-    // @Parameter(names = { "-log", "-verbose" }, description = "Level of
-    // verbosity")
-    // private Integer verbose = 1;
-
-    @Parameter(names = "--query-file", description = "Bashdatalog query file")
-    private String queryFile;
-
-    @Parameter(names = "--query-pred", description = "query predicate")
-    private String queryPredicate;
-
-    @Parameter(names = { "--help", "-h" }, description = "help")
-    public boolean help;
-
-    @Parameter(names = { "--plan" }, description = "print plan")
-    public boolean debug;
-  }
 
   public static void main(String[] argv) throws IOException {
     Args args = new Args();
@@ -57,5 +34,23 @@ public class Cmd {
       System.out.println(bc.debugInfo());
       throw (e);
     }
+  }
+
+  public static class Args {
+
+    @Parameter(names = {"--help", "-h"}, description = "help")
+    public boolean help;
+
+    // @Parameter(names = { "-log", "-verbose" }, description = "Level of
+    // verbosity")
+    // private Integer verbose = 1;
+    @Parameter(names = {"--plan"}, description = "print plan")
+    public boolean debug;
+    @Parameter
+    private List<String> parameters = new ArrayList<>();
+    @Parameter(names = "--query-file", description = "Bashdatalog query file")
+    private String queryFile;
+    @Parameter(names = "--query-pred", description = "query predicate")
+    private String queryPredicate;
   }
 }
