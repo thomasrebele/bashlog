@@ -1,9 +1,5 @@
 package bashlog;
 
-import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
-
 import bashlog.plan.*;
 import common.Tools;
 import common.parser.CompoundTerm;
@@ -13,6 +9,10 @@ import common.plan.*;
 import common.plan.MaterializationNode.ReuseNode;
 import common.plan.RecursionNode.DeltaNode;
 import common.plan.RecursionNode.FullNode;
+
+import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 public class BashlogCompiler {
 
@@ -37,6 +37,7 @@ public class BashlogCompiler {
     debug += root.toPrettyString() + "\n";
 
     root = new PlanSimplifier().apply(new SortNode(root, null));
+    root = new PushDownFilterOptimizer().apply(root);
 
     debug += "simplified\n";
     debug += root.toPrettyString() + "\n";
@@ -46,6 +47,8 @@ public class BashlogCompiler {
     root = new PushDownProject().apply(root);
     root = new PushDownFilterOptimizer().apply(root);
 
+    root = new PlanSimplifier().apply(root);
+    root = new PushDownFilterOptimizer().apply(root);
     root = new PlanSimplifier().apply(root);
     root = new PushDownFilterOptimizer().apply(root);
 
@@ -482,6 +485,9 @@ public class BashlogCompiler {
       }
     } else if (planNode instanceof TSVFileNode) {
       TSVFileNode file = (TSVFileNode) planNode;
+      if (!ctx.isFile()) {
+        ctx.append("cat ");
+      }
       ctx.append(file.getPath());
     } else if (planNode instanceof SortUnionNode) {
       ctx.startPipe();

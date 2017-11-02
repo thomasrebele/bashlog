@@ -209,10 +209,11 @@ public class SqllogCompiler {
       if (!recursions.isEmpty()) {
         builder.append("WITH ").append(String.join(", ", recursions));
       }
-      builder.append(" SELECT ").append(String.join(", ", select))
+      String selectColumns = IntStream.range(0, select.size()).mapToObj(i -> select.get(i) + " AS C" + i).collect(Collectors.joining(", "));
+      builder.append(" SELECT ").append(selectColumns)
               .append(" FROM ").append(String.join(", ", from));
       if (!where.isEmpty()) {
-        builder.append(" WHERE ").append(String.join(", ", where));
+        builder.append(" WHERE ").append(String.join(" and ", where));
       }
       return builder.toString().trim();
     }

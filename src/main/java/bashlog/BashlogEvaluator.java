@@ -1,11 +1,5 @@
 package bashlog;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.util.*;
-
 import common.Evaluator;
 import common.parser.ParserReader;
 import common.parser.Program;
@@ -15,6 +9,12 @@ import common.plan.PlanNode;
 import flinklog.FactsSet;
 import flinklog.SimpleFactsSet;
 import javatools.filehandlers.TSVWriter;
+
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.*;
 
 public class BashlogEvaluator implements Evaluator {
 
@@ -39,7 +39,7 @@ public class BashlogEvaluator implements Evaluator {
     BashlogCompiler bc = prepareQuery(p, query);
     try {
       String bash = bc.compile("", false);
-      System.out.println(bash);
+      //System.out.println(bash);
       return bash + "\n\n"; //+ bc.debugInfo();
     } catch (Exception e) {
       System.out.println(bc.debugInfo());

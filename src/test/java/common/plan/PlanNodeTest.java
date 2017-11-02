@@ -1,13 +1,12 @@
 package common.plan;
 
-import java.util.Objects;
-
-import org.junit.Assert;
-import org.junit.Test;
-
 import common.parser.CompoundTerm;
 import common.parser.TermList;
 import common.parser.Variable;
+import org.junit.Assert;
+import org.junit.Test;
+
+import java.util.Objects;
 
 public class PlanNodeTest {
 
@@ -147,6 +146,42 @@ public class PlanNodeTest {
         new ProjectNode(bazFilter2, new int[] { 2, 0 }) //
     ), new int[] { 1 }))
     );
+  }
+
+  @Test
+  public void testPushDownFilterOptimizer3() {
+    /*
+    # 1793 sort_{[0]} arity 1
+    # 1327 +-π_{0} arity 1
+    # 9779   +-σ_{1 = "person"} arity 2
+    # 1729     +-rec_1729 arity 2
+    # 1235       +-π_{0, 1 = 2} arity 2
+    # 1020       | +-σ_{1 = "type"} arity 3
+    # 1522       |   +-$ cat facts.tsv arity 3
+    # 6182       +-π_{0, 1 = 3} arity 2
+    # 1370         +-⋈_{1=0} arity 4
+    # 1870           +-δ_1870 arity 2
+    # 1053           +-π_{0, 1 = 2} arity 2
+    # 1269             +-σ_{1 = "subclassof"} arity 3
+    # 1522               +-$ cat facts.tsv arity 3
+    */
+
+    Optimizer optimizer = new PushDownFilterOptimizer();
+
+    PlanNode baz = new BuiltinNode(new CompoundTerm("baz", args3));
+
+    RecursionNode input = new RecursionNode(baz.project(new int[]{0, 2}));
+    input.addRecursivePlan(input.getDelta().join(baz, new int[]{0}, new int[]{0}).project(new int[]{0, 1}));
+
+    RecursionNode expected = new RecursionNode(baz.equalityFilter(2, "xyz").project(new int[]{0, 2}));
+    expected.addRecursivePlan(expected.getDelta().join(baz, new int[]{0}, new int[]{0}).project(new int[]{0, 1}));
+
+    assertEquals(
+            expected
+            ,
+            optimizer.apply(input.equalityFilter(1, "xyz"))
+    );
+
   }
 
   @Test

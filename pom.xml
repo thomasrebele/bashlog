@@ -77,5 +77,10 @@
             <artifactId>owlapi-distribution</artifactId>
             <version>5.1.0</version>
         </dependency>
+        <dependency>
+            <groupId>com.beust</groupId>
+            <artifactId>jcommander</artifactId>
+            <version>1.72</version>
+        </dependency>
     </dependencies>
 </project>
