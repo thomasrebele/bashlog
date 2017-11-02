@@ -1,0 +1,16 @@
+quad(C,S,P,O) :~ cat "data/yago/yagoFacts.tsv"
+hasBirthPlace(X,Y) :- quad(C, X, "<wasBornIn>", Y) .
+hasDeathPlace(X,Y) :- quad(C, X, "<diedIn>", Y) .
+Male(X) :- quad(C, X, "<hasGender>", "<male>") .
+Female(X) :- quad(C, X, "<hasGender>", "<female>") .
+hasSpouse(X,Y) :- quad(C, X, "<isMarriedTo>", Y) .
+hasNationality(X,Y) :- quad(C, X, "<isCitizenOf>", Y) .
+hasChild(X,Y) :- quad(C, X, "<hasChild>", Y) .
+isLocatedIn(X,Y) :- quad(C, X, "<isLocatedIn>", Y) .
+
+hasParent(X,Y) :- hasChild(Y,X) .
+hasAncestor(X,Y) :- hasParent(Y,X) .
+hasAncestor(X,Z) :- hasAncestor(X,Y), hasParent(Y,Z) .
+isLocatedIn(X,Y) :- containsLocation(Y,X) .
+containsLocation(X,Y) :- isLocatedIn(Y,X) .
+isLocatedIn(X,Y) :- isLocatedIn(X,Y), isLocatedIn(Y,Z) .

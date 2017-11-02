@@ -1,5 +1,6 @@
 triple(S,P,O) :~ cat "data/wikidata/all-triples.txt"
-hasCountry(X,Y) :- triple(X, "<http://www.wikidata.org/prop/direct/P17>", Y) .
+type(X,Y) :- triple(X, "<http://www.wikidata.org/prop/direct/P31>", Y) .
+inCountry(X,Y) :- triple(X, "<http://www.wikidata.org/prop/direct/P17>", Y) .
 hasBirthPlace(X,Y) :- triple(X, "<http://www.wikidata.org/prop/direct/P19>", Y) .
 hasDeathPlace(X,Y) :- triple(X, "<http://www.wikidata.org/prop/direct/P20>", Y) .
 Male(X) :- triple(X, "<http://www.wikidata.org/prop/direct/P21>", "<http://www.wikidata.org/entity/Q6581097>") .
@@ -8,16 +9,20 @@ hasFather(X,Y) :- triple(X, "<http://www.wikidata.org/prop/direct/P22>", Y) .
 hasMother(X,Y) :- triple(X, "<http://www.wikidata.org/prop/direct/P25>", Y) .
 hasSpouse(X,Y) :- triple(X, "<http://www.wikidata.org/prop/direct/P26>", Y) .
 hasNationality(X,Y) :- triple(X, "<http://www.wikidata.org/prop/direct/P27>", Y) .
+type(S,O) :- triple(X, "<http://www.wikidata.org/prop/direct/P31>", Y) .
 hasChild(X,Y) :- triple(X, "<http://www.wikidata.org/prop/direct/P40>", Y) .
 isLocatedIn(X,Y) :- triple(X, "<http://www.wikidata.org/prop/direct/P131>", Y) .
 containsLocation(X,Y) :- triple(X, "<http://www.wikidata.org/prop/direct/P150>", Y) .
+subClassOf(X,Y) :- triple(X, "<http://www.wikidata.org/prop/direct/P279>", Y) .
 hasSibling(X,Y) :- triple(X, "<http://www.wikidata.org/prop/direct/P3373>", Y) .
 hasStepParent(X,Y) :- triple(X, "<http://www.wikidata.org/prop/direct/P3448>", Y) .
 
-hasAncestor(X,Y) :- hasFather(X,Y) .
-hasAncestor(X,Y) :- hasMother(X,Y) .
-hasAncestor(X,Z) :- hasAncestor(X,Y), hasAncestor(Y,Z) .
-hasCountry(X,Z) :- isLocatedIn(X,Y), hasCountry(Y,Z) .
+type(X,Z) :- type(X,Y), subClassOf(Y,Z) .
+hasParent(X,Y) :- hasFather(X,Y) .
+hasParent(X,Y) :- hasMother(X,Y) .
+hasAncestor(X,Y) :- hasParent(X,Y) .
+hasAncestor(X,Z) :- hasAncestor(X,Y), hasParent(Y,Z) .
+inCountry(X,Z) :- isLocatedIn(X,Y), inCountry(Y,Z) .
 isLocatedIn(X,Y) :- containsLocation(Y,X) .
 containsLocation(X,Y) :- isLocatedIn(Y,X) .
 isLocatedIn(X,Y) :- isLocatedIn(X,Y), isLocatedIn(Y,Z) .

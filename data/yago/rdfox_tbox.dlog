@@ -1,0 +1,8 @@
+PREFIX a1: <http://yago-knowledge.org/resource/>
+
+a1:hasParent(?X,?Y) :- a1:hasChild(?Y,?X) .
+a1:hasAncestor(?X,?Y) :- a1:hasParent(?Y,?X) .
+a1:hasAncestor(?X,?Z) :- a1:hasAncestor(?X,?Y), a1:hasParent(?Y,?Z) .
+a1:isLocatedIn(?X,?Y) :- a1:containsLocation(?Y,?X) .
+a1:containsLocation(?X,?Y) :- a1:isLocatedIn(?Y,?X) .
+a1:isLocatedIn(?X,?Y) :- a1:isLocatedIn(?X,?Y), a1:isLocatedIn(?Y,?Z) .
