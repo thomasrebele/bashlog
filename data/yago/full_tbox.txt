@@ -1,3 +1,9 @@
+typeFile(C,X,Y,Z) :~ cat "data/yago/yagoSimpleTypes.tsv"
+type(X,Z) :- typeFile(C,X,"rdf:type",Z) .
+taxonomy(C,X,Y,Z) :~ cat "data/yago/yagoSimpleTaxonomy.tsv"
+subClassOf(X,Z) :- taxonomy(C,X,"rdfs:subClassOf",Z) .
+type(X,Z) :- type(X,Y), subClassOf(Y,Z) .
+
 quad(C,S,P,O) :~ cat "data/yago/yagoFacts.tsv"
 hasBirthPlace(X,Y) :- quad(C, X, "<wasBornIn>", Y) .
 hasDeathPlace(X,Y) :- quad(C, X, "<diedIn>", Y) .

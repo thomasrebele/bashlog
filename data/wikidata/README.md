@@ -15,6 +15,6 @@ The TBox is in people_tbox.txt and the queries in people_queries.txt
 This experiments works on the full dump. You have to run "python3 build_simple_wikidata_dump.py latest-truthy.nt.gz" to get the preprocessed dump as a TSV file.
 
 The TBox contained in full_tbox.txt is much simpler and we provide 3 queries in full_queries.txt:
-* query1: simple filter
-* query2: required to compute a closure
-* query3: join and more complex closure
+* query3: simple filter
+* query4: required to compute a closure
+* query5: join and more complex closure
