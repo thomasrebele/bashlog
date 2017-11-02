@@ -1,13 +1,14 @@
 package sqllog;
 
-import common.parser.*;
-import common.plan.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import common.parser.*;
+import common.plan.*;
 
 public class SqllogCompiler {
 
@@ -210,9 +211,9 @@ public class SqllogCompiler {
         builder.append("WITH ").append(String.join(", ", recursions));
       }
       builder.append(" SELECT ").append(String.join(", ", select))
-              .append(" FROM ").append(String.join(", ", from));
+          .append(" FROM ").append(String.join(", ", from));
       if (!where.isEmpty()) {
-        builder.append(" WHERE ").append(String.join(", ", where));
+        builder.append(" WHERE ").append(String.join(" and ", where));
       }
       return builder.toString().trim();
     }

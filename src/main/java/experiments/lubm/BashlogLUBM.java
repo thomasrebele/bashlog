@@ -4,10 +4,13 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.Arrays;
+import java.util.HashSet;
 
 import bashlog.BashlogEvaluator;
 import common.parser.ParserReader;
 import common.parser.Program;
+import sqllog.SqllogCompiler;
 
 public class BashlogLUBM {
 
@@ -43,24 +46,24 @@ public class BashlogLUBM {
       }
       sb.append(") :~ cat ").append(lubmDir).append(f.getName()).append("\n");
     }
-  
+
     return sb.toString();
   }
 
   /** LUBM queries for 3-column TSV */
   public static String lubmScript3(String lubmDir, Program p) {
     StringBuilder sb = new StringBuilder();
-    sb.append("all(X,Y,Z) :~ cat ").append(lubmDir).append("/all\n");
+    sb.append("allFacts(X,Y,Z) :~ cat ").append(lubmDir).append("/all\n");
     for (String rel : p.allRelations()) {
       if (rel.startsWith("query")) continue;
       String[] tmp = rel.split("/");
       if ("1".equals(tmp[1])) {
-        sb.append(tmp[0] + "(X) :- all(X,\"rdf:type\", \"").append(tmp[0]).append("\").\n");
+        sb.append(tmp[0] + "(X) :- allFacts(X,\"rdf:type\", \"").append(tmp[0]).append("\").\n");
       } else if ("2".equals(tmp[1])) {
-        sb.append(tmp[0] + "(X, Y) :- all(X,\"").append(tmp[0]).append("\", Y).\n");
+        sb.append(tmp[0] + "(X, Y) :- allFacts(X,\"").append(tmp[0]).append("\", Y).\n");
       }
     }
-  
+
     return sb.toString();
   }
 
@@ -81,16 +84,29 @@ public class BashlogLUBM {
   }
 
   public static void main(String[] args) throws IOException {
-    
 
     String scriptDir = "experiments/edbt2017/lubm/bashlog/";
+    String sqlDir = "experiments/edbt2017/lubm/sql/";
     new File(scriptDir).mkdirs();
+    new File(sqlDir).mkdirs();
     for (int i = 0; i < 14; i++) {
       Program p = lubmProgram3("~/extern/data/bashlog/lubm/$1/", "data/lubm");
       String relation = queries[i];
       try {
-      String script = BashlogEvaluator.compileQuery(p, relation);
-      Files.write(Paths.get(scriptDir + "query" + (i + 1) + ".sh"), script.getBytes());
+        String script = BashlogEvaluator.compileQuery(p, relation);
+
+        Program sqlProg = new Program();
+        p.rules().forEach(r -> {
+          if (r.body.size() == 1 && "bash_command".equals(r.body.get(0).name)) {
+            // ignore this rule
+          } else {
+            sqlProg.addRule(r);
+          }
+        });
+
+        String sql = new SqllogCompiler().compile(sqlProg, new HashSet<>(Arrays.asList("allFacts/3")), relation);
+        Files.write(Paths.get(scriptDir + "query" + (i + 1) + ".sh"), script.getBytes());
+        Files.write(Paths.get(sqlDir + "query" + (i + 1) + ".sql"), sql.getBytes());
       } catch (Exception e) {
         throw new RuntimeException("in query " + (i + 1), e);
       }

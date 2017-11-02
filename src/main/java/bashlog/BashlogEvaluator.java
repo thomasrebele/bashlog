@@ -39,7 +39,7 @@ public class BashlogEvaluator implements Evaluator {
     BashlogCompiler bc = prepareQuery(p, query);
     try {
       String bash = bc.compile("", false);
-      System.out.println(bash);
+      //System.out.println(bash);
       return bash + "\n\n"; //+ bc.debugInfo();
     } catch (Exception e) {
       System.out.println(bc.debugInfo());
