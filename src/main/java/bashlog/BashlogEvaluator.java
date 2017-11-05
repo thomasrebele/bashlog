@@ -4,8 +4,6 @@ import common.Evaluator;
 import common.parser.ParserReader;
 import common.parser.Program;
 import common.parser.Rule;
-import common.plan.LogicalPlanBuilder;
-import common.plan.PlanNode;
 import flinklog.FactsSet;
 import flinklog.SimpleFactsSet;
 import javatools.filehandlers.TSVWriter;
@@ -23,28 +21,6 @@ public class BashlogEvaluator implements Evaluator {
   public BashlogEvaluator(String workingDir) {
     new File(workingDir).mkdirs();
     this.workingDir = workingDir;
-  }
-
-  public static BashlogCompiler prepareQuery(Program p, String query) {
-    Set<String> builtin = new HashSet<>();
-    builtin.add("bash_command");
-    Map<String, PlanNode> plan = new LogicalPlanBuilder(builtin).getPlanForProgram(p);
-
-    PlanNode pn = plan.get(query);
-    BashlogCompiler bc = new BashlogCompiler(pn);
-    return bc;
-  }
-
-  public static String compileQuery(Program p, String query) throws IOException {
-    BashlogCompiler bc = prepareQuery(p, query);
-    try {
-      String bash = bc.compile("", false);
-      //System.out.println(bash);
-      return bash + "\n\n"; //+ bc.debugInfo();
-    } catch (Exception e) {
-      System.out.println(bc.debugInfo());
-      throw (e);
-    }
   }
 
   @Override
@@ -77,7 +53,7 @@ public class BashlogEvaluator implements Evaluator {
     SimpleFactsSet result = new SimpleFactsSet();
     for (String relation : relationsToOutput) {
       Runtime run = Runtime.getRuntime();
-      String query = compileQuery(program, relation);
+      String query = BashlogCompiler.compileQuery(program, relation);
       if (debug) {
         System.out.println(query);
       }
@@ -134,7 +110,7 @@ public class BashlogEvaluator implements Evaluator {
     String src = "rule(X) :- rel1(X), rel2(Y), rel3(X,Y).\n cp(X,Y) :- rel1(X), rel2(Y). ";
     src += "rule2(X) :- rel3(X, Y), rel3(Z, W), rel1(X), rel2(W).";
     Program p = Program.read(new ParserReader(src));
-    String query = compileQuery(p, "rule/1");
+    String query = BashlogCompiler.compileQuery(p, "rule/1");
     //System.out.println(query);
 
     SimpleFactsSet facts = new SimpleFactsSet();

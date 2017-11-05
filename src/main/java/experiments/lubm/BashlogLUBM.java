@@ -1,6 +1,5 @@
 package experiments.lubm;
 
-import bashlog.BashlogEvaluator;
 import common.parser.ParserReader;
 import common.parser.Program;
 import sqllog.SqllogCompiler;
@@ -11,6 +10,8 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.HashSet;
+
+import bashlog.BashlogCompiler;
 
 public class BashlogLUBM {
 
@@ -93,7 +94,7 @@ public class BashlogLUBM {
       Program p = lubmProgram3("~/extern/data/bashlog/lubm/$1/", "data/lubm");
       String relation = queries[i];
       try {
-        String script = BashlogEvaluator.compileQuery(p, relation);
+        String script = BashlogCompiler.compileQuery(p, relation);
 
         Program sqlProg = new Program();
         p.rules().forEach(r -> {

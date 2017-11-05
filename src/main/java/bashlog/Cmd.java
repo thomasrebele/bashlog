@@ -23,7 +23,7 @@ public class Cmd {
     }
 
     Program p = Program.loadFile(args.queryFile);
-    BashlogCompiler bc = BashlogEvaluator.prepareQuery(p, args.queryPredicate);
+    BashlogCompiler bc = BashlogCompiler.prepareQuery(p, args.queryPredicate);
     try {
       String bash = bc.compile("", false);
       if (args.debug) {

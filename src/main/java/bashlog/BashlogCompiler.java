@@ -5,11 +5,13 @@ import common.Tools;
 import common.parser.CompoundTerm;
 import common.parser.Constant;
 import common.parser.ParserReader;
+import common.parser.Program;
 import common.plan.*;
 import common.plan.MaterializationNode.ReuseNode;
 import common.plan.RecursionNode.DeltaNode;
 import common.plan.RecursionNode.FullNode;
 
+import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
@@ -553,6 +555,28 @@ public class BashlogCompiler {
     } else {
       System.err.println("compilation of " + planNode.getClass() + " not yet supported");
     }
+  }
+
+  public static String compileQuery(Program p, String query) throws IOException {
+    BashlogCompiler bc = prepareQuery(p, query);
+    try {
+      String bash = bc.compile("", false);
+      //System.out.println(bash);
+      return bash + "\n\n"; //+ bc.debugInfo();
+    } catch (Exception e) {
+      System.out.println(bc.debugInfo());
+      throw (e);
+    }
+  }
+
+  public static BashlogCompiler prepareQuery(Program p, String query) {
+    Set<String> builtin = new HashSet<>();
+    builtin.add("bash_command");
+    Map<String, PlanNode> plan = new LogicalPlanBuilder(builtin).getPlanForProgram(p);
+  
+    PlanNode pn = plan.get(query);
+    BashlogCompiler bc = new BashlogCompiler(pn);
+    return bc;
   }
 
 }
