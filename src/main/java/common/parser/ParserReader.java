@@ -40,7 +40,6 @@ public class ParserReader {
       return found;
     }
     String method = CallStack.toString(new CallStack().ret().top());
-    String error = "error in " + method + ": expected \"" + (expect.length == 1 ? expect[0] : Arrays.toString(expect)) + "\" at";
 
     int act = 0, line = 1;
     while (true) {
@@ -52,8 +51,9 @@ public class ParserReader {
     int until = input.indexOf('\n', pos);
     if (until < 0) until = input.length();
 
-    error += "line " + line + ": " + input.substring(act, pos) + "__>" + input.substring(pos, until);
-    throw new UnsupportedOperationException(error);
+    String error = "error in " + method + ": expected \"" + (expect.length == 1 ? expect[0] : Arrays.toString(expect)) + "\"";
+    error += " at line " + line + ": " + input.substring(act, pos) + "__>" + input.substring(pos, until);
+    throw new ParseException(error);
   }
 
   public void debug() {
@@ -69,7 +69,7 @@ public class ParserReader {
   }
 
   public Character peek() {
-    if (pos >= input.length()) return null;
+    if (pos >= input.length()) return '\0';
     return input.charAt(pos);
   }
 
