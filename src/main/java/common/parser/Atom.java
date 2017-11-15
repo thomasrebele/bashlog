@@ -27,4 +27,8 @@ public class Atom extends Term implements Parseable {
   public int hashCode() {
     return name.hashCode();
   }
+
+  public String getName() {
+    return name;
+  }
 }
