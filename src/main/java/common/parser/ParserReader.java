@@ -93,7 +93,7 @@ public class ParserReader {
   public String readWhile(BiFunction<Character, StringBuilder, Boolean> fn) {
     StringBuilder sb = new StringBuilder();
     Character c;
-    while ((c = peek()) != null) {
+    while ((c = peek()) != '\0') {
       // TODO: don't start with numbers
       if (fn.apply(c, sb)) {
         sb.append(read());
