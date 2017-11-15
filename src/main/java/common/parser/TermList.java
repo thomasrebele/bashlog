@@ -60,4 +60,8 @@ public class TermList extends Term {
   public boolean equals(Object obj) {
     return obj instanceof TermList && Objects.equals(terms, ((TermList) obj).terms);
   }
+
+  public List<Term> terms() {
+    return terms;
+  }
 }
