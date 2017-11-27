@@ -10,12 +10,6 @@ public abstract class Term implements Parseable, Comparable {
     pr.skipComments();
     if (pr.peek() == null) return null;
 
-    if (Character.isLowerCase(pr.peek())) {
-      Atom a = new Atom();
-      a.name = pr.readName();
-      return a;
-    }
-
     if (pr.peek() == '_' || Character.isUpperCase(pr.peek())) {
       return Variable.read(pr, varMap);
     }
@@ -30,6 +24,18 @@ public abstract class Term implements Parseable, Comparable {
 
     if (Character.isDigit(pr.peek())) {
       return new Constant<Comparable>((Comparable) pr.readNumber());
+    }
+
+    if (Character.isLowerCase(pr.peek())) {
+      Atom a = new Atom();
+      a.name = pr.readName();
+
+      pr.skipComments();
+      if (pr.peek() == '(') {
+        return CompoundTerm.read(a.name, pr, varMap);
+      }
+
+      return a;
     }
 
     return null;

@@ -29,6 +29,10 @@ public class CompoundTerm extends Term implements Parseable {
     pr.skipComments();
     String name = pr.readName();
     if (name == null) return null;
+    return read(name, pr, varMap);
+  }
+
+  public static CompoundTerm read(String name, ParserReader pr, Map<String, Variable> varMap) {
     CompoundTerm a = new CompoundTerm(name);
     pr.debug();
     Term v;
