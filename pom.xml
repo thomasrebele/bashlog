@@ -82,5 +82,17 @@
             <artifactId>jcommander</artifactId>
             <version>1.72</version>
         </dependency>
+
+        <!-- reflection (finding classes, calling methods) -->
+        <dependency>
+            <groupId>org.reflections</groupId>
+            <artifactId>reflections</artifactId>
+            <version>0.9.11</version>
+        </dependency>
+        <dependency>
+            <groupId>com.esotericsoftware</groupId>
+            <artifactId>reflectasm</artifactId>
+            <version>1.11.3</version>
+        </dependency>
     </dependencies>
 </project>
