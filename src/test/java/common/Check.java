@@ -12,9 +12,9 @@ public class Check implements AutoCloseable {
 
   Map<List<Object>, Integer> unexpected = new HashMap<>();
 
-  boolean debug = false;
+  boolean debug = true;
 
-  boolean ignoreUnexpected = true;
+  boolean ignoreUnexpected = false;
 
   public void ignoreUnexpected() {
     this.ignoreUnexpected = true;
@@ -50,6 +50,9 @@ public class Check implements AutoCloseable {
 
   @Override
   public void close() throws Exception {
+    if (debug) {
+      System.out.println("closing worker, unexpected " + unexpected.size());
+    }
     boolean fail[] = { false };
     int[] correct = { 0 };
 
