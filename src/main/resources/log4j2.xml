@@ -27,10 +27,12 @@
 			<AppenderRef ref="Console"/>
 			<AppenderRef ref="ErrConsole"/>
 		</Root>
+		<!-- change level for one class
 		<Logger name="package.Class" level="debug" additivity="false">
 			<AppenderRef ref="Regexes"/>
 			<AppenderRef ref="Console"/>
 			<AppenderRef ref="ErrConsole" />
 		</Logger>
+		-->
 	</Loggers>
 </Configuration>

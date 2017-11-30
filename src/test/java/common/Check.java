@@ -5,8 +5,12 @@ import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 
 import org.junit.Assert;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class Check implements AutoCloseable {
+
+  public final static Logger log = LoggerFactory.getLogger(Check.class);
 
   Map<List<Object>, Integer> expected = new HashMap<>(), expectedParts = new HashMap<>();
 
@@ -25,9 +29,7 @@ public class Check implements AutoCloseable {
   }
 
   public boolean apply(List<Object> vals) {
-    if (debug) {
-      System.out.println("got " + vals);
-    }
+    log.debug("got " + vals);
     Integer count = expected.computeIfPresent(vals, (l, c) -> --c);
     if (count == null) {
       next_exp: for (List<Object> os : expectedParts.keySet()) {
@@ -50,9 +52,7 @@ public class Check implements AutoCloseable {
 
   @Override
   public void close() throws Exception {
-    if (debug) {
-      System.out.println("closing worker, unexpected " + unexpected.size());
-    }
+    log.debug("closing worker, unexpected " + unexpected.size());
     boolean fail[] = { false };
     int[] correct = { 0 };
 
@@ -60,12 +60,12 @@ public class Check implements AutoCloseable {
       int count[] = { 0 };
       BiConsumer<List<Object>, Integer> f = (l, c) -> {
         if (c > 0) {
-          System.out.println("missing (" + c + "x): " + l);
+          log.error("missing (" + c + "x): " + l);
           fail[0] = true;
           if (count[0]++ > 10) return;
         }
         if (c < 0) {
-          System.out.println("too often (" + c + "x): " + l);
+          log.error("too often (" + c + "x): " + l);
           fail[0] = true;
           if (count[0]++ > 10) return;
         }
@@ -78,14 +78,14 @@ public class Check implements AutoCloseable {
       expectedParts.forEach(f);
       if (!ignoreUnexpected) {
         unexpected.forEach((l, c) -> {
-          System.out.println("unexpected (" + c + "x): " + l);
+          log.error("unexpected (" + c + "x): " + l);
           fail[0] = true;
           if (count[0]++ > 10) return;
         });
       }
     } finally {
       if (fail[0]) {
-        System.out.println("found at least " + correct[0] + " correct entries");
+        log.info("found at least " + correct[0] + " correct entries");
         Assert.fail("unexpected output, check console output");
       }
     }
