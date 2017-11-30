@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="WARN" monitorInterval="2">
+	<Appenders>
+		<Console name="Console" target="SYSTEM_OUT">
+			<!-- 
+				Example for pattern
+				- time stamp: 
+			-->
+			<PatternLayout pattern="%d{HH:mm:ss.SSS} %level{length=1} %-40logger{2} %msg%n" />
+			<Filters>
+				<ThresholdFilter level="warn" onMatch="DENY" onMismatch="ACCEPT" />
+			</Filters>
+		</Console>
+		<Console name="ErrConsole" target="SYSTEM_ERR">
+			<PatternLayout pattern="%d{HH:mm:ss.SSS} %-5level %-40logger{2} %msg%n" />
+			<Filters>
+				<ThresholdFilter level="warn" onMatch="ACCEPT"/>
+			</Filters>
+		</Console>
+		
+		<!-- <File name="Regexes" fileName="output/regexes.log" immediateFlush="false" append="false">
+			<PatternLayout pattern="%d{yyy-MM-dd HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
+		</File> -->
+	</Appenders>
+	<Loggers>
+		<Root level="info">
+			<AppenderRef ref="Console"/>
+			<AppenderRef ref="ErrConsole"/>
+		</Root>
+		<Logger name="package.Class" level="debug" additivity="false">
+			<AppenderRef ref="Regexes"/>
+			<AppenderRef ref="Console"/>
+			<AppenderRef ref="ErrConsole" />
+		</Logger>
+	</Loggers>
+</Configuration>
