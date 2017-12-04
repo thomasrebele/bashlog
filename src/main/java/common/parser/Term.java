@@ -3,7 +3,7 @@ package common.parser;
 import java.util.Map;
 import java.util.stream.Stream;
 
-public abstract class Term implements Parseable, Comparable {
+public abstract class Term implements Parseable, Comparable<Object> {
 
   public static Term read(ParserReader pr, Map<String, Variable> varMap) {
     pr.debug();
@@ -23,7 +23,7 @@ public abstract class Term implements Parseable, Comparable {
     }
 
     if (Character.isDigit(pr.peek())) {
-      return new Constant<Comparable>((Comparable) pr.readNumber());
+      return new Constant<Comparable<?>>((Comparable<?>) pr.readNumber());
     }
 
     if (Character.isLowerCase(pr.peek())) {

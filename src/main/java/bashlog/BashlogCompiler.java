@@ -5,6 +5,9 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import bashlog.plan.*;
 import common.Tools;
 import common.parser.CompoundTerm;
@@ -21,6 +24,8 @@ import common.plan.RecursionNode.FullNode;
  * @author Thomas Rebele
  */
 public class BashlogCompiler {
+
+  private static final Logger LOG = LoggerFactory.getLogger(BashlogCompiler.class);
 
   /** Current index for temporary files. Increment when using it! */
   int tmpFileIndex = 0;
@@ -171,12 +176,12 @@ public class BashlogCompiler {
       return new SortRecursionNode(new SortNode(r.getExitPlan(), null), new SortNode(r.getRecursivePlan(), null), r.getDelta(), r.getFull());
 
     } else if (p instanceof UnionNode) {
-      // use sort union
       UnionNode u = (UnionNode) p;
       List<PlanNode> children = u.args();
       if (children.size() == 0) return u;
       if (children.size() == 1) return children.get(0);
-      return new SortUnionNode(children.stream().map(i -> new SortNode(i, null)).collect(Collectors.toSet()), u.getArity());
+      // use sort union, so sort all inputs
+      return new UnionNode(children.stream().map(i -> new SortNode(i, null)).collect(Collectors.toSet()), u.getArity());
 
     } else if (p instanceof BuiltinNode) {
       // instead of "<(cat file)", use file directly
@@ -520,20 +525,12 @@ public class BashlogCompiler {
         ctx.append("cat ");
       }
       ctx.append(file.getPath());
-    } else if (planNode instanceof SortUnionNode) {
+    } else if (planNode instanceof UnionNode) {
       ctx.startPipe();
       ctx.append("$sort -u -m ");
       for (PlanNode child : ((UnionNode) planNode).getChildren()) {
         compile(child, ctx.file());
       }
-      ctx.endPipe();
-    } else if (planNode instanceof CatUnionNode) {
-      ctx.startPipe();
-      ctx.append("cat ");
-      for (PlanNode child : ((UnionNode) planNode).getChildren()) {
-        compile(child, ctx.file());
-      }
-      ctx.append(" | uniq ");
       ctx.endPipe();
     } else if (planNode instanceof SortRecursionNode) {
       ctx.startPipe();
@@ -575,15 +572,8 @@ public class BashlogCompiler {
         ctx.append("cat " + fullFile);
         ctx.endPipe();
       }
-    } else if (planNode instanceof UnionNode) {
-      if (planNode.args().size() > 0) {
-        throw new UnsupportedOperationException();
-      }
-      ctx.startPipe();
-      ctx.append("true");
-      ctx.endPipe();
     } else {
-      System.err.println("compilation of " + planNode.getClass() + " not yet supported");
+      LOG.error("compilation of " + planNode.getClass() + " not yet supported");
     }
   }
 
@@ -592,10 +582,9 @@ public class BashlogCompiler {
     BashlogCompiler bc = prepareQuery(p, query);
     try {
       String bash = bc.compile("", false);
-      //System.out.println(bash);
       return bash + "\n\n"; //+ bc.debugInfo();
     } catch (Exception e) {
-      System.out.println(bc.debugInfo());
+      LOG.error(bc.debugInfo());
       throw (e);
     }
   }

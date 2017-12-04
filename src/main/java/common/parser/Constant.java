@@ -15,7 +15,7 @@ public class Constant<T extends Comparable> extends Term implements Parseable {
 
   @Override
   public boolean equals(Object obj) {
-    return obj instanceof Constant && value.equals(((Constant) obj).value);
+    return obj instanceof Constant && value.equals(((Constant<?>) obj).value);
   }
 
   @Override

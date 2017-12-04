@@ -1,5 +1,11 @@
 package bashlog;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.*;
+
 import common.Evaluator;
 import common.parser.ParserReader;
 import common.parser.Program;
@@ -8,12 +14,7 @@ import flinklog.FactsSet;
 import flinklog.SimpleFactsSet;
 import javatools.filehandlers.TSVWriter;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.util.*;
-
+/** Execute bashlog from java */
 public class BashlogEvaluator implements Evaluator {
 
   String workingDir;
@@ -36,7 +37,7 @@ public class BashlogEvaluator implements Evaluator {
       TSVWriter writer = new TSVWriter(path);
       facts.getByRelation(relation).forEach(row -> {
         List<String> vals = new ArrayList<>();
-        for (Comparable i : row) {
+        for (Comparable<?> i : row) {
           vals.add(Objects.toString(i));
         }
         try {
@@ -110,8 +111,6 @@ public class BashlogEvaluator implements Evaluator {
     String src = "rule(X) :- rel1(X), rel2(Y), rel3(X,Y).\n cp(X,Y) :- rel1(X), rel2(Y). ";
     src += "rule2(X) :- rel3(X, Y), rel3(Z, W), rel1(X), rel2(W).";
     Program p = Program.read(new ParserReader(src));
-    String query = BashlogCompiler.compileQuery(p, "rule/1");
-    //System.out.println(query);
 
     SimpleFactsSet facts = new SimpleFactsSet();
     facts.add("rel1/1", "a");

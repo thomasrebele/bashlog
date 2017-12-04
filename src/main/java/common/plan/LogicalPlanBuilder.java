@@ -1,11 +1,11 @@
 package common.plan;
 
-import common.Tools;
-import common.parser.*;
-
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
+import common.Tools;
+import common.parser.*;
 
 /**
  * TODO: support recursion f(x,z) <- f(x,y), f(y,z). (join with full)
@@ -150,7 +150,7 @@ public class LogicalPlanBuilder {
             colToVar[i] = variablesEncoding.get(arg);
             varToCol[colToVar[i]] = i;
           } else if (arg instanceof Constant) {
-            termNode = termNode.equalityFilter(i, ((Constant) arg).getValue());
+            termNode = termNode.equalityFilter(i, ((Constant<?>) arg).getValue());
           } else {
             throw new UnsupportedOperationException("cannot handle " + term);
           }
@@ -208,14 +208,14 @@ public class LogicalPlanBuilder {
 
     int[] projection = new int[rule.head.args.length];
     Arrays.fill(projection, -1);
-    Comparable[] resultConstants = new Comparable[rule.head.args.length];
+    Comparable<?>[] resultConstants = new Comparable[rule.head.args.length];
     for (int i = 0; i < rule.head.args.length; i++) {
       Term t = rule.head.args[i];
       if (t instanceof Variable) {
         projection[i] = body.varToCol[variablesEncoding.get(t)];
       } else if (t instanceof Constant) {
         // TODO: this is an unchecked constraint!
-        resultConstants[i] = ((Constant) t).getValue();
+        resultConstants[i] = ((Constant<?>) t).getValue();
       } else {
         throw new UnsupportedOperationException();
       }
@@ -233,11 +233,6 @@ public class LogicalPlanBuilder {
       this.node = node;
       this.colToVar = colToVar;
       this.varToCol = varToCol;
-    }
-
-    public NodeWithMask debug(String string) {
-      System.out.println(string + " " + node.operatorString() + " c2V " + Arrays.toString(colToVar) + " v2C " + Arrays.toString(varToCol));
-      return this;
     }
   }
 
