@@ -7,7 +7,7 @@ import org.apache.flink.shaded.org.apache.curator.shaded.com.google.common.base.
 
 import common.plan.PlanNode;
 
-/** Combines several column into one (delimited by \u0001) and appends it at the end */
+/** Combine several column into one (delimited by \u0001) and append it at the end */
 public class CombinedColumnNode implements PlanNode {
 
   protected final PlanNode child;

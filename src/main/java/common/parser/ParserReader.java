@@ -3,14 +3,24 @@ package common.parser;
 import java.util.Arrays;
 import java.util.function.BiFunction;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import flinklog.FlinkEvaluator;
 import javatools.administrative.CallStack;
 
+/** Helper class for parsing. It provides convenience methods for reading characters from a string, for example names, literals (numbers, strings), and character sequences */
 public class ParserReader {
 
+  private static final Logger LOG = LoggerFactory.getLogger(FlinkEvaluator.class);
+
+  /** The complete string we parse */
   private String input;
 
+  /** Index of the character that we read next */
   private int pos;
 
+  /** Parse string "input" */
   public ParserReader(String input) {
     this.input = input;
   }
@@ -19,7 +29,6 @@ public class ParserReader {
    * Skips comments and tries to find the expected string
    * @return the expected string if found, null otherwise
    */
-
   public String consume(String... toConsume) {
     debug();
     skipComments();
@@ -34,6 +43,7 @@ public class ParserReader {
     return null;
   }
 
+  /** Like {@link #consume(String...)}, but prints an error message and throws an exception. */
   public String expect(String... expect) {
     String found = consume(expect);
     if (found != null) {
@@ -41,6 +51,7 @@ public class ParserReader {
     }
     String method = CallStack.toString(new CallStack().ret().top());
 
+    // mark the position with "__>"
     int act = 0, line = 1;
     while (true) {
       int next = input.indexOf('\n', act);
@@ -56,11 +67,15 @@ public class ParserReader {
     throw new ParseException(error);
   }
 
+  /** Prints method and current position */
   public void debug() {
-    //String method = CallStack.toString(new CallStack().ret().top());
-    //System.out.println(method + ": " + input.substring(0, pos) + "__>" + input.substring(pos));
+    if (LOG.isDebugEnabled()) {
+      String method = CallStack.toString(new CallStack().ret().top());
+      LOG.debug(method + ": " + input.substring(0, pos) + "__>" + input.substring(pos));
+    }
   }
 
+  /** Advance position to the next non-whitespace character */
   public void skipWhitespace() {
     debug();
     while (pos < input.length() && Character.isWhitespace(input.charAt(pos))) {
@@ -68,11 +83,13 @@ public class ParserReader {
     }
   }
 
+  /** Look at next character, without changing position */
   public Character peek() {
     if (pos >= input.length()) return '\0';
     return input.charAt(pos);
   }
 
+  /** Look at rest of line, without changing position */
   String peekLine() {
     if (pos >= input.length()) return null;
     int idx = input.indexOf("\n", pos);
@@ -80,21 +97,22 @@ public class ParserReader {
     return input.substring(pos, idx);
   }
 
+  /** Read one character, and update position */
   public Character read() {
     if (pos >= input.length()) return null;
     return input.charAt(pos++);
   }
 
+  /** Read until next linebreak, and update position */
   String readLine() {
     return readWhile((c, s) -> c != '\n');
   }
 
-  /** Read characters while fn returns true. The StringBuilder contains the accepted characters. */
+  /** Read characters while fn returns true. The StringBuilder contains the accepted characters. **/
   public String readWhile(BiFunction<Character, StringBuilder, Boolean> fn) {
     StringBuilder sb = new StringBuilder();
     Character c;
     while ((c = peek()) != '\0') {
-      // TODO: don't start with numbers
       if (fn.apply(c, sb)) {
         sb.append(read());
       } else {
@@ -107,9 +125,13 @@ public class ParserReader {
     return sb.toString();
   }
 
+  /** Read a string. The first character  */
   public String readString() {
     debug();
     char s = read();
+    if (s != '"' && s != '\'') {
+      throw new ParseException("string should start with single quote ' or double quote \"");
+    }
     boolean escaped = false;
     StringBuilder sb = new StringBuilder();
     Character c;
@@ -133,14 +155,15 @@ public class ParserReader {
     return sb.toString();
   }
 
+  /** Read a name consisting of letters, digits, and underscores */
   public String readName() {
     debug();
     skipComments();
 
-    // TODO: don't start with numbers
-    return readWhile((c, sb) -> Character.isAlphabetic(c) || c == '_' || Character.isDigit(c));
+    return readWhile((c, sb) -> Character.isAlphabetic(c) || c == '_' || (sb.length() > 0 && Character.isDigit(c)));
   }
 
+  /** While next character is a '%', advance to first non-space character in next line. */
   public void skipComments() {
     do {
       while (peek() != null && peek() == '%') {
@@ -150,6 +173,7 @@ public class ParserReader {
     } while (peek() != null && peek() == '%');
   }
 
+  /** Read an integer or floating number. */
   public Number readNumber() {
     int i = 0;
     while (Character.isDigit(peek())) {
