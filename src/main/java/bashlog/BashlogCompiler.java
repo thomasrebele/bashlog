@@ -17,8 +17,6 @@ import common.parser.Program;
 import common.plan.LogicalPlanBuilder;
 import common.plan.node.*;
 import common.plan.node.MaterializationNode.ReuseNode;
-import common.plan.node.RecursionNode.DeltaNode;
-import common.plan.node.RecursionNode.FullNode;
 import common.plan.optimizer.*;
 
 /**
@@ -47,7 +45,6 @@ public class BashlogCompiler {
   /** Save debug information (query plans)*/
   private String debug = "";
 
-
   public BashlogCompiler(PlanNode planNode) {
     if (planNode == null) {
       throw new IllegalArgumentException("cannot compile an empty plan");
@@ -55,46 +52,46 @@ public class BashlogCompiler {
     root = planNode;
     debug += "orig\n";
     debug += root.toPrettyString() + "\n";
-  
+
     root = new SimplifyPlan().apply(new SortNode(root, null));
     root = new PushDownFilter().apply(root);
-  
+
     debug += "simplified\n";
     debug += root.toPrettyString() + "\n";
-  
+
     root = new ReorderJoin().apply(root);
     root = new SimplifyPlan().apply(root);
     root = new PushDownProject().apply(root);
     root = new PushDownFilter().apply(root);
-  
+
     root = new SimplifyPlan().apply(root);
     root = new PushDownFilter().apply(root);
     root = new SimplifyPlan().apply(root);
     root = new PushDownFilter().apply(root);
-  
+
     root = new CombineFilter(false).apply(root);
-  
+
     debug += "optimized\n";
     debug += root.toPrettyString() + "\n";
-  
+
     root = root.transform(this::transform);
-  
+
     debug += "bashlog plan" + "\n";
     debug += root.toPrettyString() + "\n";
-  
+
     root = new BashlogOptimizer().apply(root);
     root = new Materialize().apply(root);
     //root = new MultiFilterOptimizer(true).apply(root);
-  
+
     debug += "optimized bashlog plan\n";
     debug += root.toPrettyString();
     debug = "#" + debug.replaceAll("\n", "\n# ");
   }
-  
+
   public String compile() {
     return compile("", true);
   }
-  
+
   public String compile(String indent, boolean comments) {
     Context ctx = new Context();
     ctx.comments = false;
@@ -108,15 +105,15 @@ public class BashlogCompiler {
     ctx.append("if [ \"$awk\" == \"\" ]; then if type mawk > /dev/null; then awk=\"mawk\"; else awk=\"awk\"; fi fi\n");
     // tweak sort
     ctx.append("sort=\"sort -S64M --parallel=2 \"\n");
-  
+
     compile(root, ctx);
     return ctx.generate();
   }
-  
+
   public String debugInfo() {
     return debug;
   }
-  
+
   /** Adds extra column with dummy value */
   private PlanNode prepareSortCrossProduct(PlanNode p) {
     int[] proj = new int[p.getArity() + 1];
@@ -299,8 +296,7 @@ public class BashlogCompiler {
       int dst = j.getOutputProjection()[i];
       if (dst < j.getLeft().getArity()) {
         ctx.append("1." + (dst + 1));
-      }
-      else {
+      } else {
         ctx.append("2." + (dst - j.getLeft().getArity() + 1));
       }
     }
@@ -557,23 +553,24 @@ public class BashlogCompiler {
       ctx.append("rm " + deltaFile + " " + newDeltaFile + "\n");
       ctx.append("cat " + fullFile);
       ctx.endPipe();
-    } else if (planNode instanceof DeltaNode) {
-      String deltaFile = "tmp/delta" + recursionNodeToIdx.get(((DeltaNode) planNode).getParent());
-      if (ctx.isFile()) {
-        ctx.append(deltaFile);
+    } else if (planNode instanceof PlaceholderNode) {
+      if (((PlaceholderNode) planNode).getParent() instanceof RecursionNode) {
+        RecursionNode parent = (RecursionNode) ((PlaceholderNode) planNode).getParent();
+        String file;
+        if (Objects.equals(planNode, parent.getDelta())) {
+          file = "tmp/delta" + recursionNodeToIdx.get(parent);
+        } else if (Objects.equals(planNode, parent.getFull())) {
+          file = "tmp/full" + recursionNodeToIdx.get(parent);
+        } else {
+          throw new UnsupportedOperationException("token of recursion must be either full or delta node");
+        }
+        if (ctx.isFile()) {
+        ctx.append(file);
       } else {
         ctx.startPipe();
-        ctx.append("cat " + deltaFile);
+        ctx.append("cat " + file);
         ctx.endPipe();
-      }
-    } else if (planNode instanceof FullNode) {
-      String fullFile = "tmp/full" + recursionNodeToIdx.get(((FullNode) planNode).getParent());
-      if (ctx.isFile()) {
-        ctx.append(fullFile);
-      } else {
-        ctx.startPipe();
-        ctx.append("cat " + fullFile);
-        ctx.endPipe();
+        }
       }
     } else {
       LOG.error("compilation of " + planNode.getClass() + " not yet supported");
@@ -597,7 +594,7 @@ public class BashlogCompiler {
     Set<String> builtin = new HashSet<>();
     builtin.add("bash_command");
     Map<String, PlanNode> plan = new LogicalPlanBuilder(builtin).getPlanForProgram(p);
-  
+
     PlanNode pn = plan.get(query);
     BashlogCompiler bc = new BashlogCompiler(pn);
     return bc;

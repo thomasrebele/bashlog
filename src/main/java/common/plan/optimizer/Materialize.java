@@ -3,12 +3,8 @@ package common.plan.optimizer;
 import java.util.*;
 
 import bashlog.plan.TSVFileNode;
-import common.plan.node.BuiltinNode;
-import common.plan.node.MaterializationNode;
+import common.plan.node.*;
 import common.plan.node.MaterializationNode.ReuseNode;
-import common.plan.node.PlanNode;
-import common.plan.node.RecursionNode;
-import common.plan.node.RecursionNode.RecursiveCallNode;
 
 /**
  * Create materialization nodes in a plan, in order to reuse common subplans.
@@ -95,8 +91,8 @@ public class Materialize implements Optimizer {
   private void analyzeStructure(PlanNode p, int depth, List<PlanNode> outerRecursions, //
       Set<PlanNode> innerRecursions, Set<PlanNode> calledRecursions) {
 
-    if (p instanceof RecursiveCallNode) {
-      calledRecursions.add(((RecursiveCallNode) p).getParent());
+    if (p instanceof PlaceholderNode && ((PlaceholderNode) p).getParent() instanceof RecursionNode) {
+      calledRecursions.add(((PlaceholderNode) p).getParent());
       return;
     }
 

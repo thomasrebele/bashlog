@@ -14,9 +14,9 @@ public class RecursionNode implements PlanNode {
 
   protected PlanNode recursivePlan;
 
-  protected final DeltaNode deltaNode = new DeltaNode();
+  protected final PlanNode deltaNode = new PlaceholderNode(this, "delta");
 
-  protected final PlanNode fullNode = new FullNode();
+  protected final PlanNode fullNode = new PlaceholderNode(this, "full");
 
   /**
    * Constructs a recursion.
@@ -101,35 +101,4 @@ public class RecursionNode implements PlanNode {
     return new RecursionNode(exit, recursion, deltaNode, fullNode);
   }
 
-  public abstract class RecursiveCallNode extends TokenNode<RecursionNode> {
-
-    public RecursiveCallNode(RecursionNode parent) {
-      super(parent);
-    }
-  }
-  
-  public class DeltaNode extends RecursiveCallNode {
-
-    private DeltaNode() {
-      super(RecursionNode.this);
-    }
-
-    @Override
-    public String operatorString() {
-      return "δ_" + hash();
-    }
-
-  }
-
-  public class FullNode extends RecursiveCallNode {
-
-    private FullNode() {
-      super(RecursionNode.this);
-    }
-
-    @Override
-    public String operatorString() {
-      return "full_" + hash();
-    }
-  }
 }

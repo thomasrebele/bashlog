@@ -58,10 +58,8 @@ public class SqllogCompiler {
       return mapProjectNode((ProjectNode) node);
     } else if (node instanceof RecursionNode) {
       return mapRecursionNode((RecursionNode) node);
-    } else if (node instanceof RecursionNode.DeltaNode) {
-      return mapDeltaNode((RecursionNode.DeltaNode) node);
-    } else if (node instanceof RecursionNode.FullNode) {
-      return mapFullNode((RecursionNode.FullNode) node);
+    } else if (node instanceof PlaceholderNode) {
+      return mapTokenNode((PlaceholderNode) node);
     } else if (node instanceof UnionNode) {
       return mapUnionNode((UnionNode) node);
     } else if (node instanceof VariableEqualityFilterNode) {
@@ -131,11 +129,7 @@ public class SqllogCompiler {
     return end;
   }
 
-  private Select mapDeltaNode(RecursionNode.DeltaNode node) {
-    return newTable(closureTables.get(node.getParent()), node.getArity());
-  }
-
-  private Select mapFullNode(RecursionNode.FullNode node) {
+  private Select mapTokenNode(PlaceholderNode node) {
     return newTable(closureTables.get(node.getParent()), node.getArity());
   }
 

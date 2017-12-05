@@ -21,7 +21,7 @@ public class MultiFilterNode implements PlanNode {
     this.arity = arity;
     this.innerPlan = innerPlan;
 
-    placeholder = new PlaceHolderNode(innerPlan.getArity());
+    placeholder = new PlaceholderNode(this, "inner_plan", innerPlan.getArity());
 
     this.children = children.stream().map(c -> c.replace(innerPlan, placeholder)).collect(Collectors.toSet());
     operatorString = this.children.stream().map(PlanNode::toString).collect(Collectors.joining(", "));
@@ -81,37 +81,6 @@ public class MultiFilterNode implements PlanNode {
 
   protected MultiFilterNode transform(Set<PlanNode> children, PlanNode innerPlan) {
     return new MultiFilterNode(children, innerPlan, placeholder, arity);
-  }
-
-  public class PlaceHolderNode extends TokenNode<MultiFilterNode> {
-
-    public final int arity;
-
-    public PlaceHolderNode(int arity) {
-      super(MultiFilterNode.this);
-      this.arity = arity;
-    }
-
-    @Override
-    public int getArity() {
-      return arity;
-    }
-
-    @Override
-    public int hashCode() {
-      return 1;
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-      if (this.getClass() != PlaceHolderNode.class) return false;
-      return arity == ((PlaceHolderNode) obj).arity;
-    }
-
-    @Override
-    public String operatorString() {
-      return "...";
-    }
   }
 
 }
