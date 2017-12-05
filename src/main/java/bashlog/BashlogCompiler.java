@@ -16,7 +16,6 @@ import common.parser.ParserReader;
 import common.parser.Program;
 import common.plan.LogicalPlanBuilder;
 import common.plan.node.*;
-import common.plan.node.MaterializationNode.ReuseNode;
 import common.plan.optimizer.*;
 
 /**
@@ -418,23 +417,6 @@ public class BashlogCompiler {
       compile(m.getMainPlan(), ctx.pipe());
       ctx.endPipe();
 
-    } else if (planNode instanceof ReuseNode) {
-      ctx.append("\\\n");
-      ctx.info(planNode);
-      MaterializationNode matNode = ((ReuseNode) planNode).getMaterializeNode();
-      String matFile = matNodeToFilename.get(matNode);
-      if (!ctx.isFile()) {
-        ctx.startPipe();
-        ctx.append("cat ");
-      }
-      ctx.append(matFile);
-      AtomicInteger useCount = matNodeToCount.get(matNode);
-      if (useCount != null) {
-        ctx.append("_").append(useCount.getAndIncrement());
-      }
-      if (!ctx.isFile()) {
-        ctx.endPipe();
-      }
     } else if (planNode instanceof SortNode) {
       SortNode s = (SortNode) planNode;
       sort(s, ctx);
@@ -554,22 +536,39 @@ public class BashlogCompiler {
       ctx.append("cat " + fullFile);
       ctx.endPipe();
     } else if (planNode instanceof PlaceholderNode) {
-      if (((PlaceholderNode) planNode).getParent() instanceof RecursionNode) {
-        RecursionNode parent = (RecursionNode) ((PlaceholderNode) planNode).getParent();
+      PlanNode parent = ((PlaceholderNode) planNode).getParent();
+      if (parent instanceof RecursionNode) {
+        RecursionNode rec = (RecursionNode) parent;
         String file;
-        if (Objects.equals(planNode, parent.getDelta())) {
-          file = "tmp/delta" + recursionNodeToIdx.get(parent);
-        } else if (Objects.equals(planNode, parent.getFull())) {
-          file = "tmp/full" + recursionNodeToIdx.get(parent);
+        if (Objects.equals(planNode, rec.getDelta())) {
+          file = "tmp/delta" + recursionNodeToIdx.get(rec);
+        } else if (Objects.equals(planNode, rec.getFull())) {
+          file = "tmp/full" + recursionNodeToIdx.get(rec);
         } else {
           throw new UnsupportedOperationException("token of recursion must be either full or delta node");
         }
         if (ctx.isFile()) {
-        ctx.append(file);
-      } else {
-        ctx.startPipe();
-        ctx.append("cat " + file);
-        ctx.endPipe();
+          ctx.append(file);
+        } else {
+          ctx.startPipe();
+          ctx.append("cat " + file);
+          ctx.endPipe();
+        }
+      } else if (parent instanceof MaterializationNode) {
+        ctx.append("\\\n");
+        ctx.info(planNode);
+        String matFile = matNodeToFilename.get(parent);
+        if (!ctx.isFile()) {
+          ctx.startPipe();
+          ctx.append("cat ");
+        }
+        ctx.append(matFile);
+        AtomicInteger useCount = matNodeToCount.get(parent);
+        if (useCount != null) {
+          ctx.append("_").append(useCount.getAndIncrement());
+        }
+        if (!ctx.isFile()) {
+          ctx.endPipe();
         }
       }
     } else {

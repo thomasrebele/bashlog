@@ -2,7 +2,6 @@ package common.plan.node;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.Objects;
 
 
 public class MaterializationNode implements PlanNode {
@@ -18,39 +17,42 @@ public class MaterializationNode implements PlanNode {
 
   public static class Builder {
   
-    ReuseNode reuseNode;
+    PlaceholderNode.Builder reuseNodeBuilder;
 
     public Builder(int arity) {
-      reuseNode = new ReuseNode(null, arity);
+      reuseNodeBuilder = new PlaceholderNode.Builder("mat_{building}", arity);//new ReuseNode(null, arity);
     }
 
     public PlanNode getReuseNode() {
-      return reuseNode;
+      return reuseNodeBuilder.preview();
     }
   
     public MaterializationNode build(PlanNode mainPlan, PlanNode reusedPlan, int reuseCount) {
-      if (reuseNode == null) throw new IllegalStateException("already built!");
-      MaterializationNode result = new MaterializationNode(mainPlan, reusedPlan, reuseNode, reuseCount, true);
-      reuseNode.matNode = result;
-      reuseNode = null;
+      if (reuseNodeBuilder == null) throw new IllegalStateException("already built!");
+      MaterializationNode result = new MaterializationNode(mainPlan, reusedPlan, reuseNodeBuilder, null, reuseCount);
+      reuseNodeBuilder.build(result, result.operatorString().replaceAll("mat", "reuse") + " (reusing " + result.hash() + ")");
       return result;
     }
     
   }
 
   /** Use builder if possible */
-  protected MaterializationNode(PlanNode mainPlan, PlanNode reusedPlan, PlanNode reuseNode, int reuseCount, boolean building) {
-    if (!(reuseNode instanceof ReuseNode)) {
+  protected MaterializationNode(PlanNode mainPlan, PlanNode reusedPlan, PlaceholderNode.Builder builder, PlanNode reuseNode, int reuseCount) {
+    // first initialize reuse node!
+    if (builder != null) {
+      builder.setParent(this);
+      reuseNode = builder.preview();
+    }
+
+    if (!(reuseNode instanceof PlaceholderNode)) {
       throw new IllegalArgumentException();
     }
-    // first initialize reuse node!
-    if (building) ((ReuseNode) reuseNode).matNode = this;
-    this.reuseNode = building ? reuseNode : new ReuseNode(this, reusedPlan.getArity());
+    this.reuseNode = builder != null ? reuseNode : new PlaceholderNode(this, reuseNode.operatorString(), reusedPlan.getArity());
     this.reusedPlan = reusedPlan;
     if (!mainPlan.contains(reuseNode)) {
       throw new IllegalArgumentException("incorrect reuse node specified:" + reuseNode.toPrettyString() + "\n" + mainPlan.toPrettyString());
     }
-    this.mainPlan = building ? mainPlan : mainPlan.replace(reuseNode, this.reuseNode);
+    this.mainPlan = builder != null ? mainPlan : mainPlan.replace(reuseNode, this.reuseNode);
     this.reuseCount = reuseCount;
   }
 
@@ -93,56 +95,7 @@ public class MaterializationNode implements PlanNode {
   }
 
   public MaterializationNode transform(PlanNode mainPlan, PlanNode reusedPlan) {
-    return new MaterializationNode(mainPlan, reusedPlan, reuseNode, reuseCount, false);
+    return new MaterializationNode(mainPlan, reusedPlan, null, reuseNode, reuseCount);
   }
-
-  public static class ReuseNode implements PlanNode {
-
-    MaterializationNode matNode;
-
-    final int arity;
-
-    public ReuseNode(MaterializationNode materializationNode, int arity) {
-      this.matNode = materializationNode;
-      this.arity = arity;
-    }
-
-    @Override
-    public int getArity() {
-      return arity;
-    }
-
-    @Override
-    public String operatorString() {
-      if (matNode == null) {
-        return "mat_{building}";
-      } else {
-        return matNode.operatorString().replaceAll("mat", "reuse") + " (reusing " + matNode.hash() + ")";
-      }
-    }
-
-    @Override
-    public List<PlanNode> children() {
-      return Arrays.asList();
-    }
-
-    public MaterializationNode getMaterializeNode() {
-      return matNode;
-    }
-
-    @Override
-    public int hashCode() {
-      // during building, equals and hash directly on ReuseNode
-      return 1;
-    }
-    
-    @Override
-    public boolean equals(Object obj) {
-      // during building, equals and hash directly on ReuseNode
-      if (obj.getClass() != ReuseNode.class) return false;
-      return matNode == null ? super.equals(obj) : Objects.equals(matNode, ((ReuseNode) obj).matNode);
-    }
-  }
-
 
 }

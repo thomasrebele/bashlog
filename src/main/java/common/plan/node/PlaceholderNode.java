@@ -7,7 +7,7 @@ public class PlaceholderNode implements PlanNode {
 
   protected PlanNode parent;
 
-  protected final String operatorString;
+  protected String operatorString;
 
   protected final Integer arity;
 
@@ -15,7 +15,7 @@ public class PlaceholderNode implements PlanNode {
 
     private PlaceholderNode node;
 
-    public Builder(String operatorString, int array) {
+    public Builder(String operatorString, Integer array) {
       node = new PlaceholderNode(null, operatorString, array);
     }
 
@@ -23,10 +23,15 @@ public class PlaceholderNode implements PlanNode {
       return node;
     }
 
-    public PlaceholderNode build(PlanNode parent) {
+    public void setParent(PlanNode parent) {
+      node.parent = parent;
+    }
+
+    public PlaceholderNode build(PlanNode parent, String operatorString) {
       if (node == null) throw new IllegalStateException("already built!");
       try {
         node.parent = parent;
+        node.operatorString = operatorString;
         return node;
       } finally {
         node = null;
@@ -40,7 +45,7 @@ public class PlaceholderNode implements PlanNode {
     arity = null;
   }
 
-  public PlaceholderNode(PlanNode parent, String operatorString, int arity) {
+  public PlaceholderNode(PlanNode parent, String operatorString, Integer arity) {
     this.parent = parent;
     this.operatorString = operatorString;
     this.arity = arity;
