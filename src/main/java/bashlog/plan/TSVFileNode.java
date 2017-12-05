@@ -3,7 +3,7 @@ package bashlog.plan;
 import java.util.Collections;
 import java.util.List;
 
-import common.plan.PlanNode;
+import common.plan.node.PlanNode;
 
 public class TSVFileNode implements PlanNode {
 

@@ -6,13 +6,15 @@ import java.util.stream.Stream;
 
 import common.Tools;
 import common.parser.*;
+import common.plan.node.*;
+import common.plan.optimizer.SimplifyPlan;
 
 /**
  * TODO: support recursion f(x,z) <- f(x,y), f(y,z). (join with full)
  */
 public class LogicalPlanBuilder {
 
-  private static final PlanSimplifier SIMPLIFIER = new PlanSimplifier();
+  private static final SimplifyPlan SIMPLIFIER = new SimplifyPlan();
 
   private Set<String> builtin;
   private Set<String> relationsToOutput;

@@ -3,6 +3,12 @@ package flinklog;
 import common.Evaluator;
 import common.parser.*;
 import common.plan.*;
+import common.plan.node.*;
+import common.plan.optimizer.ReorderJoin;
+import common.plan.optimizer.Optimizer;
+import common.plan.optimizer.SimplifyPlan;
+import common.plan.optimizer.PushDownFilter;
+
 import org.apache.commons.compress.utils.Sets;
 import org.apache.flink.api.common.functions.MapFunction;
 import org.apache.flink.api.common.typeinfo.TypeHint;
@@ -30,7 +36,7 @@ public class FlinkEvaluator implements Evaluator {
   private static final Logger LOGGER = LoggerFactory.getLogger(FlinkEvaluator.class);
   private static final int MAX_ITERATION = Integer.MAX_VALUE;
   private static final Set<String> BUILDS_IN = Sets.newHashSet("flink_entry_values", "bash_command");
-  private static final List<Optimizer> OPTIMIZERS = Arrays.asList(new PlanSimplifier(), new PushDownFilterOptimizer(), new JoinReorderOptimizer(), new PlanSimplifier());
+  private static final List<Optimizer> OPTIMIZERS = Arrays.asList(new SimplifyPlan(), new PushDownFilter(), new ReorderJoin(), new SimplifyPlan());
 
   private ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
   private FactsSet factsSet;

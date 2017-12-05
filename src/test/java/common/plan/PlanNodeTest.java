@@ -3,6 +3,9 @@ package common.plan;
 import common.parser.CompoundTerm;
 import common.parser.TermList;
 import common.parser.Variable;
+import common.plan.node.*;
+import common.plan.optimizer.*;
+
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -32,7 +35,7 @@ public class PlanNodeTest {
 
   @Test
   public void testSimplifier() {
-    PlanSimplifier simplifier = new PlanSimplifier();
+    SimplifyPlan simplifier = new SimplifyPlan();
     PlanNode foo = new BuiltinNode(new CompoundTerm("foo", args2));
     PlanNode bar = new BuiltinNode(new CompoundTerm("bar", args2));
     PlanNode baz = new BuiltinNode(new CompoundTerm("bar", args4));
@@ -88,7 +91,7 @@ public class PlanNodeTest {
 
   @Test
   public void testPushDownFilterOptimizer() {
-    Optimizer optimizer = new PushDownFilterOptimizer();
+    Optimizer optimizer = new PushDownFilter();
     PlanNode foo = new BuiltinNode(new CompoundTerm("foo", args2));
     PlanNode bar = new BuiltinNode(new CompoundTerm("bar", args2));
     PlanNode fooFilter = new ConstantEqualityFilterNode(foo, 0, "foo");
@@ -132,7 +135,7 @@ public class PlanNodeTest {
 
   @Test
   public void testPushDownFilterOptimizer2() {
-    Optimizer optimizer = new PushDownFilterOptimizer();
+    Optimizer optimizer = new PushDownFilter();
 
     PlanNode baz = new BuiltinNode(new CompoundTerm("baz", args3));
     PlanNode bazFilter1 = new ConstantEqualityFilterNode(baz, 1, "foo1");
@@ -166,7 +169,7 @@ public class PlanNodeTest {
     # 1522               +-$ cat facts.tsv arity 3
     */
 
-    Optimizer optimizer = new PushDownFilterOptimizer();
+    Optimizer optimizer = new PushDownFilter();
 
     PlanNode baz = new BuiltinNode(new CompoundTerm("baz", args3));
 
@@ -202,7 +205,7 @@ public class PlanNodeTest {
 
   @Test
   public void testMaterialization() {
-    Optimizer optimizer = new MaterializationOptimizer();
+    Optimizer optimizer = new Materialize();
     PlanNode baz = new BuiltinNode(new CompoundTerm("bar", args3));
 
     MaterializationNode.Builder b = new MaterializationNode.Builder(2);

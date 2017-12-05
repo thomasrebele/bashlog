@@ -3,8 +3,8 @@ package bashlog.plan;
 import java.util.Arrays;
 
 import common.Tools;
-import common.plan.JoinNode;
-import common.plan.PlanNode;
+import common.plan.node.JoinNode;
+import common.plan.node.PlanNode;
 
 /** Join two sorted inputs based on ONE column */
 public class SortJoinNode extends JoinNode {

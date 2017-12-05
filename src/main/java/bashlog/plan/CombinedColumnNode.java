@@ -5,7 +5,7 @@ import java.util.List;
 
 import org.apache.flink.shaded.org.apache.curator.shaded.com.google.common.base.Objects;
 
-import common.plan.PlanNode;
+import common.plan.node.PlanNode;
 
 /** Combine several column into one (delimited by \u0001) and append it at the end */
 public class CombinedColumnNode implements PlanNode {

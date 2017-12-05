@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.Objects;
 
 import common.Tools;
-import common.plan.PlanNode;
+import common.plan.node.PlanNode;
 
 public class SortNode implements PlanNode {
 

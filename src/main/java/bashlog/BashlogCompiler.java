@@ -15,9 +15,11 @@ import common.parser.Constant;
 import common.parser.ParserReader;
 import common.parser.Program;
 import common.plan.*;
-import common.plan.MaterializationNode.ReuseNode;
-import common.plan.RecursionNode.DeltaNode;
-import common.plan.RecursionNode.FullNode;
+import common.plan.node.*;
+import common.plan.node.MaterializationNode.ReuseNode;
+import common.plan.node.RecursionNode.DeltaNode;
+import common.plan.node.RecursionNode.FullNode;
+import common.plan.optimizer.*;
 
 /**
  * 
@@ -54,23 +56,23 @@ public class BashlogCompiler {
     debug += "orig\n";
     debug += root.toPrettyString() + "\n";
   
-    root = new PlanSimplifier().apply(new SortNode(root, null));
-    root = new PushDownFilterOptimizer().apply(root);
+    root = new SimplifyPlan().apply(new SortNode(root, null));
+    root = new PushDownFilter().apply(root);
   
     debug += "simplified\n";
     debug += root.toPrettyString() + "\n";
   
-    root = new JoinReorderOptimizer().apply(root);
-    root = new PlanSimplifier().apply(root);
+    root = new ReorderJoin().apply(root);
+    root = new SimplifyPlan().apply(root);
     root = new PushDownProject().apply(root);
-    root = new PushDownFilterOptimizer().apply(root);
+    root = new PushDownFilter().apply(root);
   
-    root = new PlanSimplifier().apply(root);
-    root = new PushDownFilterOptimizer().apply(root);
-    root = new PlanSimplifier().apply(root);
-    root = new PushDownFilterOptimizer().apply(root);
+    root = new SimplifyPlan().apply(root);
+    root = new PushDownFilter().apply(root);
+    root = new SimplifyPlan().apply(root);
+    root = new PushDownFilter().apply(root);
   
-    root = new MultiFilterOptimizer(false).apply(root);
+    root = new CombineFilter(false).apply(root);
   
     debug += "optimized\n";
     debug += root.toPrettyString() + "\n";
@@ -81,7 +83,7 @@ public class BashlogCompiler {
     debug += root.toPrettyString() + "\n";
   
     root = new BashlogOptimizer().apply(root);
-    root = new MaterializationOptimizer().apply(root);
+    root = new Materialize().apply(root);
     //root = new MultiFilterOptimizer(true).apply(root);
   
     debug += "optimized bashlog plan\n";
@@ -486,7 +488,7 @@ public class BashlogCompiler {
 
       for (PlanNode c : m.getFilter()) {
         // do we need this actually?
-        c = new PushDownFilterOptimizer().apply(c);
+        c = new PushDownFilter().apply(c);
         ProjectNode p = null;
         List<String> conditions = new ArrayList<>();
         do {
