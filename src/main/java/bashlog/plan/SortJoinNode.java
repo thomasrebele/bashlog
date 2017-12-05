@@ -28,11 +28,11 @@ public class SortJoinNode extends JoinNode {
   }
 
   @Override
-  public PlanNode transform(Transform fn, PlanNode oldParent) {
+  public PlanNode transform(TransformFn fn, PlanNode originalParent) {
     return fn.apply(this,
         new SortJoinNode(getLeft().transform(fn, this), getRight().transform(fn, this), getLeftJoinProjection(), getRightJoinProjection(),
             outputProjection),
-        oldParent);
+        originalParent);
   }
 
   public int[] getOutputProjection() {

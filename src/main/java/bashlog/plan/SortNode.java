@@ -38,7 +38,7 @@ public class SortNode implements PlanNode {
   }
 
   @Override
-  public List<PlanNode> args() {
+  public List<PlanNode> children() {
     return Arrays.asList(child);
   }
 
@@ -57,8 +57,8 @@ public class SortNode implements PlanNode {
   }
 
   @Override
-  public PlanNode transform(Transform fn, PlanNode oldParent) {
-    return fn.apply(this, new SortNode(child.transform(fn, this), sortColumns), oldParent);
+  public PlanNode transform(TransformFn fn, PlanNode originalParent) {
+    return fn.apply(this, new SortNode(child.transform(fn, this), sortColumns), originalParent);
   }
 
 }

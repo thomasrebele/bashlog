@@ -27,7 +27,7 @@ public class TSVFileNode implements PlanNode {
   }
 
   @Override
-  public List<PlanNode> args() {
+  public List<PlanNode> children() {
     return Collections.emptyList();
   }
 

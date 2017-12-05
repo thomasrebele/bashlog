@@ -36,7 +36,7 @@ public class CombinedColumnNode implements PlanNode {
   }
 
   @Override
-  public List<PlanNode> args() {
+  public List<PlanNode> children() {
     return Arrays.asList(child);
   }
 
@@ -52,8 +52,8 @@ public class CombinedColumnNode implements PlanNode {
   }
 
   @Override
-  public PlanNode transform(Transform fn, PlanNode oldParent) {
-    return fn.apply(this, new CombinedColumnNode(child.transform(fn, this), columns), oldParent);
+  public PlanNode transform(TransformFn fn, PlanNode originalParent) {
+    return fn.apply(this, new CombinedColumnNode(child.transform(fn, this), columns), originalParent);
   }
 
   public PlanNode getTable() {

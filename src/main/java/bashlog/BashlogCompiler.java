@@ -177,7 +177,7 @@ public class BashlogCompiler {
 
     } else if (p instanceof UnionNode) {
       UnionNode u = (UnionNode) p;
-      List<PlanNode> children = u.args();
+      List<PlanNode> children = u.children();
       if (children.size() == 0) return u;
       if (children.size() == 1) return children.get(0);
       // use sort union, so sort all inputs
@@ -255,7 +255,7 @@ public class BashlogCompiler {
   private void sort(SortNode s, Context ctx) {
     int[] cols = s.sortColumns();
     ctx.startPipe();
-    compile(s.args().get(0), ctx.pipe());
+    compile(s.children().get(0), ctx.pipe());
     ctx.append(" \\\n");
     ctx.info(s);
     ctx.append(" | $sort -t $'\\t' ");
@@ -493,12 +493,13 @@ public class BashlogCompiler {
           if (c instanceof ProjectNode) {
             if (p != null) throw new IllegalStateException("currently only one projection supported");
             p = (ProjectNode) c;
+            c = p.getTable();
           } else if (c instanceof EqualityFilterNode) {
             conditions.add(awkEquality((EqualityFilterNode) c));
+            c = ((EqualityFilterNode) c).getTable();
           } else {
             break;
           }
-          c = c.args().get(0);
         } while (true);
         ctx.append(conditions.stream().collect(Collectors.joining(" && ")));
         ctx.append(" { print ");
