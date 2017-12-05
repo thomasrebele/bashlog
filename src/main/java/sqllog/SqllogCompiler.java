@@ -1,18 +1,18 @@
 package sqllog;
 
-import common.parser.*;
-import common.plan.*;
-import common.plan.node.*;
-import common.plan.optimizer.Optimizer;
-import common.plan.optimizer.SimplifyPlan;
-import common.plan.optimizer.PushDownFilter;
+import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
+import common.parser.*;
+import common.plan.LogicalPlanBuilder;
+import common.plan.node.*;
+import common.plan.optimizer.Optimizer;
+import common.plan.optimizer.PushDownFilter;
+import common.plan.optimizer.SimplifyPlan;
 
 public class SqllogCompiler {
 
@@ -132,11 +132,11 @@ public class SqllogCompiler {
   }
 
   private Select mapDeltaNode(RecursionNode.DeltaNode node) {
-    return newTable(closureTables.get(node.getRecursionNode()), node.getArity());
+    return newTable(closureTables.get(node.getParent()), node.getArity());
   }
 
   private Select mapFullNode(RecursionNode.FullNode node) {
-    return newTable(closureTables.get(node.getRecursionNode()), node.getArity());
+    return newTable(closureTables.get(node.getParent()), node.getArity());
   }
 
   private Select mapUnionNode(UnionNode node) {

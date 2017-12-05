@@ -14,7 +14,7 @@ import common.parser.CompoundTerm;
 import common.parser.Constant;
 import common.parser.ParserReader;
 import common.parser.Program;
-import common.plan.*;
+import common.plan.LogicalPlanBuilder;
 import common.plan.node.*;
 import common.plan.node.MaterializationNode.ReuseNode;
 import common.plan.node.RecursionNode.DeltaNode;
@@ -558,7 +558,7 @@ public class BashlogCompiler {
       ctx.append("cat " + fullFile);
       ctx.endPipe();
     } else if (planNode instanceof DeltaNode) {
-      String deltaFile = "tmp/delta" + recursionNodeToIdx.get(((DeltaNode) planNode).getRecursionNode());
+      String deltaFile = "tmp/delta" + recursionNodeToIdx.get(((DeltaNode) planNode).getParent());
       if (ctx.isFile()) {
         ctx.append(deltaFile);
       } else {
@@ -567,7 +567,7 @@ public class BashlogCompiler {
         ctx.endPipe();
       }
     } else if (planNode instanceof FullNode) {
-      String fullFile = "tmp/full" + recursionNodeToIdx.get(((FullNode) planNode).getRecursionNode());
+      String fullFile = "tmp/full" + recursionNodeToIdx.get(((FullNode) planNode).getParent());
       if (ctx.isFile()) {
         ctx.append(fullFile);
       } else {

@@ -1,7 +1,6 @@
 package common.plan.node;
 
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
 /** 
@@ -15,9 +14,9 @@ public class RecursionNode implements PlanNode {
 
   protected PlanNode recursivePlan;
 
-  protected final DeltaNode deltaNode = new DeltaNode(this);
+  protected final DeltaNode deltaNode = new DeltaNode();
 
-  protected final PlanNode fullNode = new FullNode(this);
+  protected final PlanNode fullNode = new FullNode();
 
   /**
    * Constructs a recursion.
@@ -102,39 +101,17 @@ public class RecursionNode implements PlanNode {
     return new RecursionNode(exit, recursion, deltaNode, fullNode);
   }
 
-  public static abstract class RecursiveCallNode implements PlanNode {
+  public abstract class RecursiveCallNode extends TokenNode<RecursionNode> {
 
-    protected RecursionNode recursionNode;
-
-    public RecursiveCallNode(RecursionNode recursionNode) {
-      this.recursionNode = recursionNode;
+    public RecursiveCallNode(RecursionNode parent) {
+      super(parent);
     }
-
-    public RecursionNode getRecursionNode() {
-      return recursionNode;
-    }
-
-    @Override
-    public String toString() {
-      return operatorString(); //TODO: better?
-    }
-
-    @Override
-    public int getArity() {
-      return recursionNode.getArity();
-    }
-
-    @Override
-    public List<PlanNode> children() {
-      return Collections.emptyList();
-    }
-
   }
+  
+  public class DeltaNode extends RecursiveCallNode {
 
-  public static class DeltaNode extends RecursiveCallNode {
-
-    private DeltaNode(RecursionNode recursionNode) {
-      super(recursionNode);
+    private DeltaNode() {
+      super(RecursionNode.this);
     }
 
     @Override
@@ -144,10 +121,10 @@ public class RecursionNode implements PlanNode {
 
   }
 
-  public static class FullNode extends RecursiveCallNode {
+  public class FullNode extends RecursiveCallNode {
 
-    private FullNode(RecursionNode recursionNode) {
-      super(recursionNode);
+    private FullNode() {
+      super(RecursionNode.this);
     }
 
     @Override

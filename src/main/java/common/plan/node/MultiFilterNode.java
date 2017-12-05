@@ -25,7 +25,6 @@ public class MultiFilterNode implements PlanNode {
 
     this.children = children.stream().map(c -> c.replace(innerPlan, placeholder)).collect(Collectors.toSet());
     operatorString = this.children.stream().map(PlanNode::toString).collect(Collectors.joining(", "));
-    //children.forEach(n -> {if(!n.contains(innerPlan)) { throw new  }}) ;
     children.stream().filter(n -> !n.contains(innerPlan)).forEach(child -> {
       throw new IllegalArgumentException("child doesn't contain inner plan: " + child.toPrettyString());
     });
@@ -77,7 +76,6 @@ public class MultiFilterNode implements PlanNode {
   }
 
   public PlanNode transform(TransformFn fn, PlanNode originalParent) {
-    //Set<PlanNode> newChildren = children.stream().map(child -> child.transform(fn, this)).collect(Collectors.toSet());
     return fn.apply(this, transform(children, innerPlan.transform(fn, this)), originalParent);
   }
 
@@ -85,32 +83,18 @@ public class MultiFilterNode implements PlanNode {
     return new MultiFilterNode(children, innerPlan, placeholder, arity);
   }
 
-  public static class PlaceHolderNode implements PlanNode {
+  public class PlaceHolderNode extends TokenNode<MultiFilterNode> {
 
     public final int arity;
 
     public PlaceHolderNode(int arity) {
+      super(MultiFilterNode.this);
       this.arity = arity;
     }
 
     @Override
     public int getArity() {
       return arity;
-    }
-
-    @Override
-    public String toString() {
-      return "...";
-    }
-
-    @Override
-    public String operatorString() {
-      return "...";
-    }
-
-    @Override
-    public List<PlanNode> children() {
-      return Arrays.asList();
     }
 
     @Override
@@ -122,6 +106,11 @@ public class MultiFilterNode implements PlanNode {
     public boolean equals(Object obj) {
       if (this.getClass() != PlaceHolderNode.class) return false;
       return arity == ((PlaceHolderNode) obj).arity;
+    }
+
+    @Override
+    public String operatorString() {
+      return "...";
     }
   }
 

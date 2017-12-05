@@ -5,9 +5,9 @@ import java.util.*;
 import bashlog.plan.TSVFileNode;
 import common.plan.node.BuiltinNode;
 import common.plan.node.MaterializationNode;
+import common.plan.node.MaterializationNode.ReuseNode;
 import common.plan.node.PlanNode;
 import common.plan.node.RecursionNode;
-import common.plan.node.MaterializationNode.ReuseNode;
 import common.plan.node.RecursionNode.RecursiveCallNode;
 
 /**
@@ -96,7 +96,7 @@ public class Materialize implements Optimizer {
       Set<PlanNode> innerRecursions, Set<PlanNode> calledRecursions) {
 
     if (p instanceof RecursiveCallNode) {
-      calledRecursions.add(((RecursiveCallNode) p).getRecursionNode());
+      calledRecursions.add(((RecursiveCallNode) p).getParent());
       return;
     }
 
