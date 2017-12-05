@@ -4,7 +4,6 @@ import java.util.*;
 
 import bashlog.plan.TSVFileNode;
 import common.plan.node.*;
-import common.plan.node.MaterializationNode.ReuseNode;
 
 /**
  * Create materialization nodes in a plan, in order to reuse common subplans.
@@ -23,18 +22,18 @@ public class Materialize implements Optimizer {
     //print(t);
 
     HashMap<PlanNode, List<Info>> nodesToInfo = new HashMap<>();
-    HashMap<PlanNode, ReuseNode> nodesToMat = new HashMap<>();
+    HashMap<PlanNode, PlanNode> nodesToReuseNode = new HashMap<>();
     planToInfo.forEach((p, i) -> {
       if (i.reuse()) {
         PlanNode reuseAt = i.reuseAt() == null ? t : i.reuseAt();
         nodesToInfo.computeIfAbsent(reuseAt, k -> new ArrayList<>()).add(i);
-        nodesToMat.put(i.plan, i.matNodeBuilder.getReuseNode());
+        nodesToReuseNode.put(i.plan, i.matNodeBuilder.getReuseNode());
       }
     });
 
     return t.transform((old, node, parent) -> {
-      if (nodesToMat.containsKey(old)) {
-        return nodesToMat.get(old);
+      if (nodesToReuseNode.containsKey(old)) {
+        return nodesToReuseNode.get(old);
       }
       List<Info> info = nodesToInfo.get(old);
       if (info != null) {
@@ -56,7 +55,7 @@ public class Materialize implements Optimizer {
         for (Info i : info) {
           mat = i.matNodeBuilder.build(mat, i.plan.transform(pn -> {
             if (pn.equals(i.plan)) return pn;
-            PlanNode rn = nodesToMat.get(pn);
+            PlanNode rn = nodesToReuseNode.get(pn);
             return rn == null ? pn : rn;
           }), i.useCount());
         }

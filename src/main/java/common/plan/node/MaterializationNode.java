@@ -11,7 +11,7 @@ public class MaterializationNode implements PlanNode {
 
   final PlanNode reusedPlan;
 
-  final ReuseNode reuseNode;
+  final PlanNode reuseNode;
 
   /** see {@link #getReuseCount()} */
   final int reuseCount;
@@ -24,7 +24,7 @@ public class MaterializationNode implements PlanNode {
       reuseNode = new ReuseNode(null, arity);
     }
 
-    public ReuseNode getReuseNode() {
+    public PlanNode getReuseNode() {
       return reuseNode;
     }
   
@@ -39,9 +39,12 @@ public class MaterializationNode implements PlanNode {
   }
 
   /** Use builder if possible */
-  protected MaterializationNode(PlanNode mainPlan, PlanNode reusedPlan, ReuseNode reuseNode, int reuseCount, boolean building) {
+  protected MaterializationNode(PlanNode mainPlan, PlanNode reusedPlan, PlanNode reuseNode, int reuseCount, boolean building) {
+    if (!(reuseNode instanceof ReuseNode)) {
+      throw new IllegalArgumentException();
+    }
     // first initialize reuse node!
-    if (building) reuseNode.matNode = this;
+    if (building) ((ReuseNode) reuseNode).matNode = this;
     this.reuseNode = building ? reuseNode : new ReuseNode(this, reusedPlan.getArity());
     this.reusedPlan = reusedPlan;
     if (!mainPlan.contains(reuseNode)) {
@@ -59,7 +62,7 @@ public class MaterializationNode implements PlanNode {
     return mainPlan;
   }
 
-  public ReuseNode getReuseNode() {
+  public PlanNode getReuseNode() {
     return reuseNode;
   }
 

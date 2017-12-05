@@ -2,21 +2,43 @@ package common.plan.node;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.Objects;
 
 public class PlaceholderNode implements PlanNode {
 
-  protected final PlanNode parent;
+  protected PlanNode parent;
 
   protected final String operatorString;
 
   protected final Integer arity;
 
+  public static class Builder {
+
+    private PlaceholderNode node;
+
+    public Builder(String operatorString, int array) {
+      node = new PlaceholderNode(null, operatorString, array);
+    }
+
+    public PlaceholderNode preview() {
+      return node;
+    }
+
+    public PlaceholderNode build(PlanNode parent) {
+      if (node == null) throw new IllegalStateException("already built!");
+      try {
+        node.parent = parent;
+        return node;
+      } finally {
+        node = null;
+      }
+    }
+  }
+
   public PlaceholderNode(PlanNode parent, String operatorString) {
     this.parent = parent;
     this.operatorString = operatorString;
     arity = null;
-    }
+  }
 
   public PlaceholderNode(PlanNode parent, String operatorString, int arity) {
     this.parent = parent;
@@ -48,9 +70,4 @@ public class PlaceholderNode implements PlanNode {
     return operatorString;
   }
 
-  @Override
-  public boolean equals(Object obj) {
-    return obj instanceof PlaceholderNode && ((PlaceholderNode) obj).parent == parent && Objects.equals(((PlaceholderNode) obj).operatorString, operatorString)
-        && ((PlaceholderNode) obj).arity == arity;
-  }
 }
