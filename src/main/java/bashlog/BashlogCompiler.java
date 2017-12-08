@@ -194,7 +194,7 @@ public class BashlogCompiler {
           if (pr.peek() == '\"' || pr.peek() == '\'') file = pr.readString();
           else file = pr.readWhile((c, s) -> !Character.isWhitespace(c));
           pr.skipWhitespace();
-          if (pr.peek() == null) {
+          if (pr.peek() == '\0') {
             return new TSVFileNode(file, p.getArity());
           }
         }
