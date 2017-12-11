@@ -2,13 +2,12 @@ package flinklog;
 
 import common.Evaluator;
 import common.parser.*;
-import common.plan.*;
+import common.plan.LogicalPlanBuilder;
 import common.plan.node.*;
-import common.plan.optimizer.ReorderJoin;
 import common.plan.optimizer.Optimizer;
-import common.plan.optimizer.SimplifyPlan;
 import common.plan.optimizer.PushDownFilter;
-
+import common.plan.optimizer.ReorderJoin;
+import common.plan.optimizer.SimplifyPlan;
 import org.apache.commons.compress.utils.Sets;
 import org.apache.flink.api.common.functions.MapFunction;
 import org.apache.flink.api.common.typeinfo.TypeHint;
@@ -228,6 +227,8 @@ public class FlinkEvaluator implements Evaluator {
       return mapConstantEqualityFilterNode((ConstantEqualityFilterNode) node);
     } else if (node instanceof JoinNode) {
       return mapJoinNode((JoinNode) node);
+    } else if (node instanceof MinusNode) {
+      return mapMinusNode((MinusNode) node);
     } else if (node instanceof ProjectNode) {
       return mapProjectNode((ProjectNode) node);
     } else if (node instanceof RecursionNode) {
@@ -285,6 +286,23 @@ public class FlinkEvaluator implements Evaluator {
                             .where(node.getLeftJoinProjection())
                             .equalTo(node.getRightJoinProjection())
                             .with(FlinkEvaluator::concatTuples)
+                            .returns(typeInfo(node.getArity()))
+
+            )
+    );
+  }
+
+  private Optional<DataSet<Tuple>> mapMinusNode(MinusNode node) {
+    return mapPlanNode(node.getLeft()).flatMap(left ->
+            mapPlanNode(node.getRight()).map(right ->
+                    left.coGroup(right)
+                            .where(node.getLeftMinusProjection())
+                            .equalTo("*")
+                            .with((left1, right1, collector) -> {
+                              if(!right1.iterator().hasNext()) {
+                                left1.forEach(collector::collect);
+                              }
+                            })
                             .returns(typeInfo(node.getArity()))
 
             )

@@ -58,7 +58,7 @@ public class JoinNode implements PlanNode {
 
   @Override
   public String toString() {
-    return left.toString() + operatorString() + right.toString(); //TODO: mask
+    return left.toString() + operatorString() + right.toString();
   }
 
   @Override

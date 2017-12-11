@@ -32,7 +32,7 @@ public abstract class Term implements Parseable, Comparable<Object> {
 
       pr.skipComments();
       if (pr.peek() == '(') {
-        return CompoundTerm.read(a.name, pr, varMap);
+        return CompoundTerm.read(a.name, false, pr, varMap);
       }
 
       return a;

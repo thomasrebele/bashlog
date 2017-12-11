@@ -1,12 +1,11 @@
 package common;
 
-import org.junit.Assert;
-import org.junit.Test;
-
 import common.parser.ParserReader;
 import common.parser.Program;
 import flinklog.FactsSet;
 import flinklog.SimpleFactsSet;
+import org.junit.Assert;
+import org.junit.Test;
 
 public class IntegrationTests {
 
@@ -145,6 +144,19 @@ public class IntegrationTests {
     ));
     SimpleFactsSet facts = new SimpleFactsSet();
     facts.add("a/2", "1", "2");
+
+    FactsSet result = eval.evaluate(program, facts, Tools.set("a/2"));
+    Assert.assertEquals(1, result.getByRelation("a/2").count());
+  }
+
+  @Test
+  public void negation() throws Exception {
+    Program program = Program.read(new ParserReader("a(X,Y) :- not c(X), b(X, Y)."));
+    SimpleFactsSet facts = new SimpleFactsSet();
+    facts.add("b/2", "1", "2");
+    facts.add("b/2", "2", "3");
+    facts.add("b/2", "2", "4");
+    facts.add("c/1", "2");
 
     FactsSet result = eval.evaluate(program, facts, Tools.set("a/2"));
     Assert.assertEquals(1, result.getByRelation("a/2").count());

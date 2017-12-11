@@ -5,7 +5,6 @@ import common.parser.TermList;
 import common.parser.Variable;
 import common.plan.node.*;
 import common.plan.optimizer.*;
-
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -70,6 +69,15 @@ public class PlanNodeTest {
     Assert.assertEquals(
             simplifier.apply(new JoinNode(foo, bar, new int[]{0}, new int[]{0})),
             simplifier.apply(new JoinNode(foo, bar, new int[]{0}, new int[]{0}))
+    );
+
+    Assert.assertEquals(
+            foo,
+            simplifier.apply(new MinusNode(foo, PlanNode.empty(1), new int[]{0}))
+    );
+    Assert.assertEquals(
+            PlanNode.empty(2),
+            simplifier.apply(new MinusNode(PlanNode.empty(2), foo, new int[]{0, 1}))
     );
 
     RecursionNode recursionNode = new RecursionNode(foo);

@@ -1,19 +1,22 @@
 package common.plan;
 
-import java.util.*;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
 import common.Tools;
 import common.parser.*;
 import common.plan.node.*;
 import common.plan.optimizer.SimplifyPlan;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * TODO: support recursion f(x,z) <- f(x,y), f(y,z). (join with full)
  */
 public class LogicalPlanBuilder {
 
+  private static final Logger LOGGER = LoggerFactory.getLogger(LogicalPlanBuilder.class);
   private static final SimplifyPlan SIMPLIFIER = new SimplifyPlan();
 
   private Set<String> builtin;
@@ -129,7 +132,9 @@ public class LogicalPlanBuilder {
             variablesEncoding.computeIfAbsent(arg, (key) -> variablesEncoding.size())
     );
 
-    NodeWithMask body = rule.body.stream().map(term -> {
+    NodeWithMask body = rule.body.stream().sorted((a, b) ->
+            a.negated && !b.negated ? 1 : -1
+    ).map(term -> {
       int[] colToVar = new int[term.args.length];
       int[] varToCol = new int[variablesEncoding.size()];
       Arrays.fill(colToVar, -1);
@@ -166,7 +171,7 @@ public class LogicalPlanBuilder {
         }
       }
 
-      return new NodeWithMask(termNode, colToVar, varToCol);
+      return new NodeWithMask(termNode, colToVar, varToCol, term.negated);
     }).reduce((nm1, nm2) -> {
       int size = Math.max(nm1.node.getArity(), nm2.node.getArity());
       int[] colLeft = new int[size];
@@ -189,7 +194,7 @@ public class LogicalPlanBuilder {
         int var = nm2.colToVar[i];
         if (var < 0) continue;
         int col1 = nm1.varToCol[var];
-        if (col1 < 0) {
+        if (col1 < 0 && !nm2.isNegated) {
           nm1.varToCol[var] = nm1.colToVar.length + i;
         }
         if (col1 >= 0) {
@@ -200,8 +205,16 @@ public class LogicalPlanBuilder {
 
       colLeft = Arrays.copyOfRange(colLeft, 0, count);
       colRight = Arrays.copyOfRange(colRight, 0, count);
-      PlanNode jn = nm1.node.join(nm2.node, colLeft, colRight);
-      return new NodeWithMask(jn, Tools.concat(nm1.colToVar, nm2.colToVar), nm1.varToCol);
+      if(nm1.isNegated) {
+        LOGGER.warn("All terms of this rule are negated: " + rule);
+        return new NodeWithMask(PlanNode.empty(0), new int[]{}, new int[]{}, false);
+      } else if(nm2.isNegated) {
+        PlanNode jn = nm1.node.minus(nm2.node.project(colRight), colLeft);
+        return new NodeWithMask(jn, nm1.colToVar, nm1.varToCol, false);
+      } else {
+        PlanNode jn = nm1.node.join(nm2.node, colLeft, colRight);
+        return new NodeWithMask(jn, Tools.concat(nm1.colToVar, nm2.colToVar), nm1.varToCol, false);
+      }
     }).orElseThrow(() -> new UnsupportedOperationException("rule without body: " + rule.toString()));
 
     if (builtin.contains(rule.head.name)) {
@@ -231,10 +244,13 @@ public class LogicalPlanBuilder {
 
     private int[] colToVar, varToCol;
 
-    NodeWithMask(PlanNode node, int[] colToVar, int[] varToCol) {
+    private boolean isNegated;
+
+    NodeWithMask(PlanNode node, int[] colToVar, int[] varToCol, boolean isNegated) {
       this.node = node;
       this.colToVar = colToVar;
       this.varToCol = varToCol;
+      this.isNegated = isNegated;
     }
   }
 

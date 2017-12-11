@@ -38,8 +38,13 @@ public interface PlanNode {
   }
 
   /** Convenience methods to wrap a plan node in another one */
-  default PlanNode join(PlanNode other, int[] colLeft, int[] colRight) {
-    return new JoinNode(this, other, colLeft, colRight);
+  default PlanNode join(PlanNode other, int[] leftProjection, int[] rightProjection) {
+    return new JoinNode(this, other, leftProjection, rightProjection);
+  }
+
+  /** Convenience methods to wrap a plan node in another one */
+  default PlanNode minus(PlanNode other, int[] leftProjection) {
+    return new MinusNode(this, other, leftProjection);
   }
 
   /** Convenience methods to wrap a plan node in another one */

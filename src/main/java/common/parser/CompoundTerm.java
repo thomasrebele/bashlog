@@ -9,31 +9,39 @@ public class CompoundTerm extends Term implements Parseable {
 
   public Term[] args;
 
-  @Override
-  public String toString() {
-    return (name + Arrays.toString(args).replace('[', '(').replace(']', ')'));
-  }
+  public final boolean negated;
 
   public CompoundTerm(String name) {
-    this.name = name;
-    this.args = new Term[]{};
+    this(name, false, new Term[]{});
+  }
+
+  public CompoundTerm(String name, boolean negated) {
+    this(name, negated, new Term[]{});
   }
 
   public CompoundTerm(String name, Term... args) {
+    this(name, false, args);
+  }
+
+  public CompoundTerm(String name, boolean negated, Term... args) {
     this.name = name;
+    this.negated = negated;
     this.args = args;
   }
+
 
   public static CompoundTerm read(ParserReader pr, Map<String, Variable> varMap) {
     pr.debug();
     pr.skipComments();
+    boolean negated = (pr.consume("not") != null);
+    pr.skipComments();
     String name = pr.readName();
     if (name == null) return null;
-    return read(name, pr, varMap);
+    return read(name, negated, pr, varMap);
   }
 
-  public static CompoundTerm read(String name, ParserReader pr, Map<String, Variable> varMap) {
-    CompoundTerm a = new CompoundTerm(name);
+  public static CompoundTerm read(String name, boolean negated, ParserReader pr, Map<String, Variable> varMap) {
+    CompoundTerm a = new CompoundTerm(name, negated);
     pr.debug();
     Term v;
     pr.skipComments();
@@ -57,6 +65,11 @@ public class CompoundTerm extends Term implements Parseable {
   @Override
   public boolean equals(Object obj) {
     return obj instanceof CompoundTerm && name.equals(((CompoundTerm) obj).name) && Arrays.equals(args, ((CompoundTerm) obj).args);
+  }
+
+  @Override
+  public String toString() {
+    return ( negated ? "not " : "") + (name + Arrays.toString(args).replace('[', '(').replace(']', ')'));
   }
 
   @Override
