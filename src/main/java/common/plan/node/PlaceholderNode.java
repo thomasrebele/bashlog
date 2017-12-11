@@ -15,8 +15,8 @@ public class PlaceholderNode implements PlanNode {
 
     private PlaceholderNode node;
 
-    public Builder(String operatorString, Integer array) {
-      node = new PlaceholderNode(null, operatorString, array);
+    public Builder(String operatorString, Integer arity) {
+      node = new PlaceholderNode(null, operatorString, arity);
     }
 
     public PlaceholderNode preview() {

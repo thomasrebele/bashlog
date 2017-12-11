@@ -18,7 +18,7 @@ public class CombineFilter implements Optimizer {
 
   @Override
   public PlanNode apply(PlanNode t) {
-    return t.transform((old, node, parent) -> {
+    return t.transform((node) -> {
       if (node.getClass() == UnionNode.class) {
         UnionNode u = (UnionNode) node;
 

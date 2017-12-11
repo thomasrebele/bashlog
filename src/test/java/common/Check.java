@@ -8,6 +8,11 @@ import org.junit.Assert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import yago4.predicates.FlowControl;
+import yago4.predicates.Predicate;
+import yago4.reasoner.Worker;
+import yago4.reasoner.YVariable;
+
 public class Check implements AutoCloseable {
 
   public final static Logger log = LoggerFactory.getLogger(Check.class);
@@ -112,5 +117,22 @@ public class Check implements AutoCloseable {
 
   public void times(int times, Object... objects) {
     timesList(times, Arrays.asList(objects));
+  }
+
+  public static Worker stringCheck(Check c) {
+    return new Worker() {
+  
+      @Override
+      public FlowControl apply(List<YVariable> args) {
+        List<Object> vals = new ArrayList<Object>(Predicate.stringValues(args));
+        return FlowControl.from(c.apply(vals));
+      }
+  
+      @Override
+      public void close() throws Exception {
+        c.close();
+      }
+  
+    };
   }
 }
