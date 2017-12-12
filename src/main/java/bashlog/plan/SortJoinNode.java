@@ -1,10 +1,10 @@
 package bashlog.plan;
 
-import java.util.Arrays;
-
 import common.Tools;
 import common.plan.node.JoinNode;
 import common.plan.node.PlanNode;
+
+import java.util.Arrays;
 
 /** Join two sorted inputs based on ONE column */
 public class SortJoinNode extends JoinNode {
@@ -30,7 +30,7 @@ public class SortJoinNode extends JoinNode {
   @Override
   public PlanNode transform(TransformFn fn, PlanNode originalParent) {
     return fn.apply(this,
-        new SortJoinNode(getLeft().transform(fn, this), getRight().transform(fn, this), getLeftJoinProjection(), getRightJoinProjection(),
+        new SortJoinNode(getLeft().transform(fn, this), getRight().transform(fn, this), getLeftProjection(), getRightProjection(),
             outputProjection),
         originalParent);
   }

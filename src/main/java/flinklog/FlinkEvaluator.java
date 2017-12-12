@@ -227,8 +227,8 @@ public class FlinkEvaluator implements Evaluator {
       return mapConstantEqualityFilterNode((ConstantEqualityFilterNode) node);
     } else if (node instanceof JoinNode) {
       return mapJoinNode((JoinNode) node);
-    } else if (node instanceof MinusNode) {
-      return mapMinusNode((MinusNode) node);
+    } else if (node instanceof AntiJoinNode) {
+      return mapAntiJoinNode((AntiJoinNode) node);
     } else if (node instanceof ProjectNode) {
       return mapProjectNode((ProjectNode) node);
     } else if (node instanceof RecursionNode) {
@@ -283,8 +283,8 @@ public class FlinkEvaluator implements Evaluator {
     return mapPlanNode(node.getLeft()).flatMap(left ->
             mapPlanNode(node.getRight()).map(right ->
                     left.join(right)
-                            .where(node.getLeftJoinProjection())
-                            .equalTo(node.getRightJoinProjection())
+                            .where(node.getLeftProjection())
+                            .equalTo(node.getRightProjection())
                             .with(FlinkEvaluator::concatTuples)
                             .returns(typeInfo(node.getArity()))
 
@@ -292,11 +292,11 @@ public class FlinkEvaluator implements Evaluator {
     );
   }
 
-  private Optional<DataSet<Tuple>> mapMinusNode(MinusNode node) {
+  private Optional<DataSet<Tuple>> mapAntiJoinNode(AntiJoinNode node) {
     return mapPlanNode(node.getLeft()).flatMap(left ->
             mapPlanNode(node.getRight()).map(right ->
                     left.coGroup(right)
-                            .where(node.getLeftMinusProjection())
+                            .where(node.getLeftProjection())
                             .equalTo("*")
                             .with((left1, right1, collector) -> {
                               if(!right1.iterator().hasNext()) {
