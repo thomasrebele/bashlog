@@ -1,8 +1,6 @@
 package common;
 
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 
 public class Tools {
 
@@ -25,13 +23,15 @@ public class Tools {
   }
 
   public static <T> Set<T> set(@SuppressWarnings("unchecked") T... items) {
-    return new HashSet<>(Arrays.asList(items));
+    Set<T> set = new HashSet<>(items.length);
+    Collections.addAll(set, items);
+    return set;
   }
 
   public static int count(boolean[] array, boolean val) {
     int c = 0;
-    for (int i = 0; i < array.length; i++) {
-      if (array[i] == val) c++;
+    for (boolean element : array) {
+      if (element == val) c++;
     }
     return c;
   }
@@ -64,6 +64,29 @@ public class Tools {
       }
     }
     return true;
+  }
+
+  public static OptionalInt findKey(int[] projection, int value) {
+    for (int i = 0; i < projection.length; i++) {
+      if (projection[i] == value) {
+        return OptionalInt.of(i);
+      }
+    }
+    return OptionalInt.empty();
+  }
+
+  public static <T> boolean isNullArray(T[] array) {
+    for (T val : array) {
+      if (val != null) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  @FunctionalInterface
+  public interface QuadriFunction<T, U, V, W, R> {
+    R apply(T t, U u, V v, W w);
   }
 
 }

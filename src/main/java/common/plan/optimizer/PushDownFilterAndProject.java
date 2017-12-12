@@ -4,6 +4,7 @@ import common.Tools;
 import common.plan.node.*;
 
 import java.util.Arrays;
+import java.util.OptionalInt;
 import java.util.stream.Collectors;
 
 /** Push down filter and projects nodes as much as possible. This might remove rows from intermediate results, and thus reducing their size. */
@@ -33,6 +34,8 @@ public class PushDownFilterAndProject implements Optimizer {
       return swap(node, (UnionNode) child);
     } else if (child instanceof JoinNode) {
       return swap(node, (JoinNode) child);
+    } else if (child instanceof MinusNode) {
+      return swap(node, (MinusNode) child);
     } else if (child instanceof RecursionNode) {
       return swap(node, (RecursionNode) child);
     } else {
@@ -44,6 +47,8 @@ public class PushDownFilterAndProject implements Optimizer {
     PlanNode child = node.getTable();
     if (child instanceof JoinNode) {
       return swap(node, (JoinNode) child);
+    } else if (child instanceof MinusNode) {
+        return swap(node, (MinusNode) child);
     } else if (child instanceof ProjectNode) {
       return SimplifyPlan.mergeProjections(node, (ProjectNode) child);
     } else if (child instanceof UnionNode) {
@@ -117,48 +122,81 @@ public class PushDownFilterAndProject implements Optimizer {
         join.getLeftJoinProjection(), join.getRightJoinProjection());
   }
 
+  private PlanNode swap(ConstantEqualityFilterNode filter, MinusNode minus) {
+    PlanNode right = minus.getRight();
+    OptionalInt rightField = Tools.findKey(minus.getLeftMinusProjection(), filter.getField());
+    if(rightField.isPresent()) {
+      right = newEqualityFilter(right, rightField.getAsInt(), filter.getValue());
+    }
+    return new MinusNode(
+            newEqualityFilter(minus.getLeft(), filter.getField(), filter.getValue()),
+            right,
+            minus.getLeftMinusProjection()
+    );
+  }
+
   private PlanNode swap(ProjectNode node, JoinNode child) {
-    boolean[] neededLeft = new boolean[child.getLeft().getArity()], neededRight = new boolean[child.getRight().getArity()];
+    return swapJoinMinus(
+            node, child.getLeft(), child.getRight(), child.getLeftJoinProjection(), child.getRightJoinProjection(),
+            PlanNode::join
+    );
+  }
+
+  private PlanNode swap(ProjectNode node, MinusNode child) {
+    return swapJoinMinus(
+            node, child.getLeft(), child.getRight(), child.getLeftMinusProjection(), Tools.sequence(child.getRight().getArity()),
+            (left, right, leftProjection, rightProjection) ->
+                    left.minus(newProjection(right, rightProjection), leftProjection)
+    );
+  }
+
+  private PlanNode swapJoinMinus(
+          ProjectNode node, PlanNode left, PlanNode right, int[] leftProjection, int[] rightProjection,
+          Tools.QuadriFunction<PlanNode, PlanNode, int[], int[], PlanNode> buildNew
+          ) {
+    //TODO: could be improved to simplify the actual projections
+    boolean[] neededLeft = new boolean[left.getArity()], neededRight = new boolean[right.getArity()];
     Arrays.fill(neededLeft, false);
     Arrays.fill(neededRight, false);
-    for (int i : child.getLeftJoinProjection()) {
+    for (int i : leftProjection) {
       neededLeft[i] = true;
     }
-    for (int i : child.getRightJoinProjection()) {
+    for (int i : rightProjection) {
       neededRight[i] = true;
     }
     for (int i : node.getProjection()) {
-      if (i < child.getLeft().getArity()) {
+      if (i < left.getArity()) {
         neededLeft[i] = true;
       } else {
-        neededRight[i - child.getLeft().getArity()] = true;
+        neededRight[i - left.getArity()] = true;
       }
     }
 
     int prjLeft[] = boolToIndex(neededLeft);
     int prjRight[] = boolToIndex(neededRight);
-    int oldLeftToNew[] = Tools.inverse(prjLeft, child.getLeft().getArity());
-    int oldRightToNew[] = Tools.inverse(prjRight, child.getRight().getArity());
+    int oldLeftToNew[] = Tools.inverse(prjLeft, left.getArity());
+    int oldRightToNew[] = Tools.inverse(prjRight, right.getArity());
 
     int newPrj[] = new int[node.getArity()];
-    for (int i = 0; i < node.getProjection().length; i++) {
-      int dst = node.getProjection()[i];
-      if (dst < child.getLeft().getArity()) {
-        newPrj[i] = oldLeftToNew[dst];
-      } else {
-        newPrj[i] = prjLeft.length + oldRightToNew[dst - child.getLeft().getArity()];
+    int oldPrj[] = node.getProjection();
+    for (int i = 0; i < oldPrj.length; i++) {
+      int dst = oldPrj[i];
+      if(dst >= 0) {
+        if (dst < left.getArity()) {
+          newPrj[i] = oldLeftToNew[dst];
+        } else {
+          newPrj[i] = prjLeft.length + oldRightToNew[dst - left.getArity()];
+        }
       }
     }
-    PlanNode left = Tools.isIdentityProjection(prjLeft, child.getLeft().getArity()) ? child.getLeft()
-        : child.getLeft().project(prjLeft);
-    PlanNode right = Tools.isIdentityProjection(prjRight, child.getRight().getArity()) ? child.getRight()
-        : child.getRight().project(prjRight);
+    left = newProjection(left, prjLeft);
+    right = newProjection(right, prjRight);
 
-    return new JoinNode(
+    return buildNew.apply(
             left, right,
-            Tools.apply(child.getLeftJoinProjection(), oldLeftToNew),
-            Tools.apply(child.getRightJoinProjection(), oldRightToNew)
-    ).project(newPrj);
+            Tools.apply(leftProjection, oldLeftToNew),
+            Tools.apply(rightProjection, oldRightToNew)
+    ).project(newPrj, node.getConstants());
   }
 
   private int[] boolToIndex(boolean[] used) {
@@ -179,7 +217,17 @@ public class PushDownFilterAndProject implements Optimizer {
   }
 
   private PlanNode newProjection(PlanNode node, int[] fields, Comparable<?>[] constants) {
+    if(Tools.isIdentityProjection(fields, node.getArity()) && Tools.isNullArray(constants)) {
+      return node;
+    }
     return apply(node.project(fields, constants));
+  }
+
+  private PlanNode newProjection(PlanNode node, int[] fields) {
+    if(Tools.isIdentityProjection(fields, node.getArity())) {
+      return node;
+    }
+    return apply(node.project(fields));
   }
 
   private PlanNode newEqualityFilter(PlanNode node, int field, Comparable<?> value) {
