@@ -1,16 +1,16 @@
 package common.plan.optimizer;
 
+import common.plan.node.*;
+
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import common.plan.node.*;
-
 public class CombineFilter implements Optimizer {
 
-  public boolean condenseNonUnionFilter = false;
+  private boolean condenseNonUnionFilter = false;
 
   public CombineFilter(boolean condenseNonUnionFilter) {
     this.condenseNonUnionFilter = condenseNonUnionFilter;

@@ -1,13 +1,5 @@
 package bashlog;
 
-import java.io.IOException;
-import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import bashlog.plan.*;
 import common.Tools;
 import common.parser.CompoundTerm;
@@ -17,6 +9,13 @@ import common.parser.Program;
 import common.plan.LogicalPlanBuilder;
 import common.plan.node.*;
 import common.plan.optimizer.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 /**
  * 
@@ -53,20 +52,19 @@ public class BashlogCompiler {
     debug += root.toPrettyString() + "\n";
 
     root = new SimplifyPlan().apply(new SortNode(root, null));
-    root = new PushDownFilter().apply(root);
+    root = new PushDownFilterAndProject().apply(root);
 
     debug += "simplified\n";
     debug += root.toPrettyString() + "\n";
 
     root = new ReorderJoin().apply(root);
     root = new SimplifyPlan().apply(root);
-    root = new PushDownProject().apply(root);
-    root = new PushDownFilter().apply(root);
+    root = new PushDownFilterAndProject().apply(root);
 
     root = new SimplifyPlan().apply(root);
-    root = new PushDownFilter().apply(root);
+    root = new PushDownFilterAndProject().apply(root);
     root = new SimplifyPlan().apply(root);
-    root = new PushDownFilter().apply(root);
+    root = new PushDownFilterAndProject().apply(root);
 
     root = new CombineFilter(false).apply(root);
 
@@ -466,7 +464,7 @@ public class BashlogCompiler {
 
       for (PlanNode c : m.getFilter()) {
         // do we need this actually?
-        c = new PushDownFilter().apply(c);
+        c = new PushDownFilterAndProject().apply(c);
         ProjectNode p = null;
         List<String> conditions = new ArrayList<>();
         do {

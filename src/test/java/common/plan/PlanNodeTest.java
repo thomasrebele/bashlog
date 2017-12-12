@@ -4,7 +4,10 @@ import common.parser.CompoundTerm;
 import common.parser.TermList;
 import common.parser.Variable;
 import common.plan.node.*;
-import common.plan.optimizer.*;
+import common.plan.optimizer.Materialize;
+import common.plan.optimizer.Optimizer;
+import common.plan.optimizer.PushDownFilterAndProject;
+import common.plan.optimizer.SimplifyPlan;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -99,7 +102,7 @@ public class PlanNodeTest {
 
   @Test
   public void testPushDownFilterOptimizer() {
-    Optimizer optimizer = new PushDownFilter();
+    Optimizer optimizer = new PushDownFilterAndProject();
     PlanNode foo = new BuiltinNode(new CompoundTerm("foo", args2));
     PlanNode bar = new BuiltinNode(new CompoundTerm("bar", args2));
     PlanNode fooFilter = new ConstantEqualityFilterNode(foo, 0, "foo");
@@ -143,7 +146,7 @@ public class PlanNodeTest {
 
   @Test
   public void testPushDownFilterOptimizer2() {
-    Optimizer optimizer = new PushDownFilter();
+    Optimizer optimizer = new PushDownFilterAndProject();
 
     PlanNode baz = new BuiltinNode(new CompoundTerm("baz", args3));
     PlanNode bazFilter1 = new ConstantEqualityFilterNode(baz, 1, "foo1");
@@ -177,7 +180,7 @@ public class PlanNodeTest {
     # 1522               +-$ cat facts.tsv arity 3
     */
 
-    Optimizer optimizer = new PushDownFilter();
+    Optimizer optimizer = new PushDownFilterAndProject();
 
     PlanNode baz = new BuiltinNode(new CompoundTerm("baz", args3));
 
@@ -197,7 +200,7 @@ public class PlanNodeTest {
 
   @Test
   public void testPushDownProject() {
-    Optimizer optimizer = new PushDownProject();
+    Optimizer optimizer = new PushDownFilterAndProject();
 
     PlanNode baz = new BuiltinNode(new CompoundTerm("baz", args5));
 
