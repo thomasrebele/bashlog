@@ -195,23 +195,81 @@ public class PlanNodeTest {
             ,
             optimizer.apply(input.equalityFilter(1, "xyz"))
     );
-
   }
 
   @Test
-  public void testPushDownProject() {
+  public void testPushDownFilterMinusBoth() {
+    Optimizer optimizer = new PushDownFilterAndProject();
+    PlanNode bar = new BuiltinNode(new CompoundTerm("bar", args3));
+    PlanNode baz = new BuiltinNode(new CompoundTerm("baz", args2));
+    assertEquals(
+            new MinusNode(
+                    new ConstantEqualityFilterNode(bar, 0, "foo"),
+                    new ConstantEqualityFilterNode(baz, 1, "foo"),
+                    new int[]{1, 0}
+            ),
+            optimizer.apply(new ConstantEqualityFilterNode(
+                    new MinusNode(bar, baz, new int[]{1, 0}),
+                    0,
+                    "foo"
+            ))
+    );
+  }
+
+  @Test
+  public void testPushDownFilterMinusLeft() {
+    Optimizer optimizer = new PushDownFilterAndProject();
+    PlanNode bar = new BuiltinNode(new CompoundTerm("bar", args3));
+    PlanNode baz = new BuiltinNode(new CompoundTerm("baz", args2));
+    assertEquals(
+            new MinusNode(
+                    new ConstantEqualityFilterNode(bar, 2, "foo"),
+                    baz,
+                    new int[]{1, 0}
+            ),
+            optimizer.apply(new ConstantEqualityFilterNode(
+                    new MinusNode(bar, baz, new int[]{1, 0}),
+                    2,
+                    "foo"
+            ))
+    );
+  }
+
+  @Test
+  public void testPushDownProjectJoin() {
     Optimizer optimizer = new PushDownFilterAndProject();
 
     PlanNode baz = new BuiltinNode(new CompoundTerm("baz", args5));
 
     assertEquals(new JoinNode(//
-            baz.project(new int[] { 1, 2, 3, 4 }), //
-            baz.project(new int[] { 1, 2, 3 }), //
-            new int[] { 3, 1 }, new int[] { 0, 2 })//
-                .project(new int[] { 0, 2, 5 }), //
-            optimizer.apply(new JoinNode(baz, baz, //
-                new int[] { 4, 2 }, new int[] { 1, 3 })//
-                    .project(new int[] { 1, 3, 7 })));
+                    baz.project(new int[]{1, 2, 3, 4}), //
+                    baz.project(new int[]{1, 2, 3}), //
+                    new int[]{3, 1}, new int[]{0, 2}
+            ).project(new int[]{0, 2, 5}), //
+            optimizer.apply(
+                    new JoinNode(baz, baz, new int[]{4, 2}, new int[]{1, 3})
+                            .project(new int[]{1, 3, 7})
+            )
+    );
+  }
+
+
+  @Test
+  public void testPushDownProjectMinus() {
+    Optimizer optimizer = new PushDownFilterAndProject();
+    PlanNode bar = new BuiltinNode(new CompoundTerm("bar", args3));
+    PlanNode baz = new BuiltinNode(new CompoundTerm("baz", args2));
+    assertEquals(
+            new MinusNode(
+                    new ProjectNode(bar, new int[]{1, 0}),
+                    baz,
+                    new int[]{0, 1}
+            ),
+            optimizer.apply(new ProjectNode(
+                    new MinusNode(bar, baz, new int[]{1, 0}),
+                    new int[]{1, 0}
+            ))
+    );
   }
 
   @Test
