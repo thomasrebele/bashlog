@@ -88,8 +88,8 @@ public class SqllogCompiler {
     Select left = mapPlanNode(node.getLeft());
     Select right = mapPlanNode(node.getRight());
     Select result = new Select(merge(left.select, right.select), merge(left.from, right.from), merge(left.where, right.where), merge(left.recursions, right.recursions));
-    for (int i = 0; i < node.getLeftJoinProjection().length; i++) {
-      result.where.add(left.select.get(node.getLeftJoinProjection()[i]) + " = " + right.select.get(node.getRightJoinProjection()[i]));
+    for (int i = 0; i < node.getLeftProjection().length; i++) {
+      result.where.add(left.select.get(node.getLeftProjection()[i]) + " = " + right.select.get(node.getRightProjection()[i]));
     }
     return result;
   }

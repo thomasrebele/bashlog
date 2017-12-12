@@ -112,8 +112,8 @@ public class LogicalPlanBuilder {
         JoinNode join = (JoinNode) n;
         if (join.getLeft().contains(delta) && join.getRight().contains(delta)) {
           return new UnionNode(
-                  join.getLeft().join(join.getRight().replace(delta, full), join.getLeftJoinProjection(), join.getRightJoinProjection()),
-                  join.getLeft().replace(delta, full).join(join.getRight(), join.getLeftJoinProjection(), join.getRightJoinProjection())
+                  join.getLeft().join(join.getRight().replace(delta, full), join.getLeftProjection(), join.getRightProjection()),
+                  join.getLeft().replace(delta, full).join(join.getRight(), join.getLeftProjection(), join.getRightProjection())
           );
         }
       }
@@ -209,7 +209,7 @@ public class LogicalPlanBuilder {
         LOGGER.warn("All terms of this rule are negated: " + rule);
         return new NodeWithMask(PlanNode.empty(0), new int[]{}, new int[]{}, false);
       } else if(nm2.isNegated) {
-        PlanNode jn = nm1.node.minus(nm2.node.project(colRight), colLeft);
+        PlanNode jn = nm1.node.antiJoin(nm2.node.project(colRight), colLeft);
         return new NodeWithMask(jn, nm1.colToVar, nm1.varToCol, false);
       } else {
         PlanNode jn = nm1.node.join(nm2.node, colLeft, colRight);

@@ -136,7 +136,7 @@ public class BashlogCompiler {
     if (p instanceof JoinNode) {
       // replace join node with sort join node
       JoinNode joinNode = (JoinNode) p;
-      if (joinNode.getLeftJoinProjection().length == 0) {
+      if (joinNode.getLeftProjection().length == 0) {
         // no join condition, so do a cross product
         // sort input and add a dummy column
         PlanNode left = prepareSortCrossProduct(joinNode.getLeft());
@@ -154,11 +154,11 @@ public class BashlogCompiler {
         return crossProduct.project(proj);
       } else {
         // sort input and add combined column if necessary
-        PlanNode left = prepareSortJoin(joinNode.getLeft(), joinNode.getLeftJoinProjection());
-        PlanNode right = prepareSortJoin(joinNode.getRight(), joinNode.getRightJoinProjection());
-        if (joinNode.getLeftJoinProjection().length == 1) {
+        PlanNode left = prepareSortJoin(joinNode.getLeft(), joinNode.getLeftProjection());
+        PlanNode right = prepareSortJoin(joinNode.getRight(), joinNode.getRightProjection());
+        if (joinNode.getLeftProjection().length == 1) {
           // no combined column necessary, so we can directly return the join
-          return new SortJoinNode(left, right, joinNode.getLeftJoinProjection(), joinNode.getRightJoinProjection());
+          return new SortJoinNode(left, right, joinNode.getLeftProjection(), joinNode.getRightProjection());
         }
         // remove extra columns
         PlanNode join = new SortJoinNode(left, right, new int[] { left.getArity() - 1 }, new int[] { right.getArity() - 1 });
@@ -228,12 +228,12 @@ public class BashlogCompiler {
   private void leftHashJoin(JoinNode j, StringBuilder sb, String indent, Context ctx) {
     sb.append(indent + AWK + "NR==FNR { ");
     sb.append("key = ");
-    sb.append(keyMask(j.getLeftJoinProjection()));
+    sb.append(keyMask(j.getLeftProjection()));
     sb.append("; h[key] = $0; ");
     sb.append("next } \n");
     sb.append(" { ");
     sb.append("key = ");
-    sb.append(keyMask(j.getRightJoinProjection()));
+    sb.append(keyMask(j.getRightProjection()));
     sb.append("; if (key in h) {");
     sb.append(" print h[key] FS $0");
     sb.append(" } }' \\\n");
@@ -279,8 +279,8 @@ public class BashlogCompiler {
   private void sortJoin(SortJoinNode j, Context ctx) {
     ctx.startPipe();
     int colLeft, colRight;
-    colLeft = j.getLeftJoinProjection()[0] + 1;
-    colRight = j.getRightJoinProjection()[0] + 1;
+    colLeft = j.getLeftProjection()[0] + 1;
+    colRight = j.getRightProjection()[0] + 1;
 
     ctx.append("join -t $'\\t' -1 ");
     ctx.append(colLeft);

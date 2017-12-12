@@ -76,11 +76,11 @@ public class PlanNodeTest {
 
     Assert.assertEquals(
             foo,
-            simplifier.apply(new MinusNode(foo, PlanNode.empty(1), new int[]{0}))
+            simplifier.apply(new AntiJoinNode(foo, PlanNode.empty(1), new int[]{0}))
     );
     Assert.assertEquals(
             PlanNode.empty(2),
-            simplifier.apply(new MinusNode(PlanNode.empty(2), foo, new int[]{0, 1}))
+            simplifier.apply(new AntiJoinNode(PlanNode.empty(2), foo, new int[]{0, 1}))
     );
 
     RecursionNode recursionNode = new RecursionNode(foo);
@@ -198,18 +198,18 @@ public class PlanNodeTest {
   }
 
   @Test
-  public void testPushDownFilterMinusBoth() {
+  public void testPushDownFilterAntiJoinBoth() {
     Optimizer optimizer = new PushDownFilterAndProject();
     PlanNode bar = new BuiltinNode(new CompoundTerm("bar", args3));
     PlanNode baz = new BuiltinNode(new CompoundTerm("baz", args2));
     assertEquals(
-            new MinusNode(
+            new AntiJoinNode(
                     new ConstantEqualityFilterNode(bar, 0, "foo"),
                     new ConstantEqualityFilterNode(baz, 1, "foo"),
                     new int[]{1, 0}
             ),
             optimizer.apply(new ConstantEqualityFilterNode(
-                    new MinusNode(bar, baz, new int[]{1, 0}),
+                    new AntiJoinNode(bar, baz, new int[]{1, 0}),
                     0,
                     "foo"
             ))
@@ -217,18 +217,18 @@ public class PlanNodeTest {
   }
 
   @Test
-  public void testPushDownFilterMinusLeft() {
+  public void testPushDownFilterAntiJoinLeft() {
     Optimizer optimizer = new PushDownFilterAndProject();
     PlanNode bar = new BuiltinNode(new CompoundTerm("bar", args3));
     PlanNode baz = new BuiltinNode(new CompoundTerm("baz", args2));
     assertEquals(
-            new MinusNode(
+            new AntiJoinNode(
                     new ConstantEqualityFilterNode(bar, 2, "foo"),
                     baz,
                     new int[]{1, 0}
             ),
             optimizer.apply(new ConstantEqualityFilterNode(
-                    new MinusNode(bar, baz, new int[]{1, 0}),
+                    new AntiJoinNode(bar, baz, new int[]{1, 0}),
                     2,
                     "foo"
             ))
@@ -255,18 +255,18 @@ public class PlanNodeTest {
 
 
   @Test
-  public void testPushDownProjectMinus() {
+  public void testPushDownProjectAntiJoin() {
     Optimizer optimizer = new PushDownFilterAndProject();
     PlanNode bar = new BuiltinNode(new CompoundTerm("bar", args3));
     PlanNode baz = new BuiltinNode(new CompoundTerm("baz", args2));
     assertEquals(
-            new MinusNode(
+            new AntiJoinNode(
                     new ProjectNode(bar, new int[]{1, 0}),
                     baz,
                     new int[]{0, 1}
             ),
             optimizer.apply(new ProjectNode(
-                    new MinusNode(bar, baz, new int[]{1, 0}),
+                    new AntiJoinNode(bar, baz, new int[]{1, 0}),
                     new int[]{1, 0}
             ))
     );

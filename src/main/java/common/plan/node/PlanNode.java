@@ -43,8 +43,8 @@ public interface PlanNode {
   }
 
   /** Convenience methods to wrap a plan node in another one */
-  default PlanNode minus(PlanNode other, int[] leftProjection) {
-    return new MinusNode(this, other, leftProjection);
+  default PlanNode antiJoin(PlanNode other, int[] leftProjection) {
+    return new AntiJoinNode(this, other, leftProjection);
   }
 
   /** Convenience methods to wrap a plan node in another one */
