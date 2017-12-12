@@ -18,6 +18,8 @@ public class PushDownFilterAndProject implements Optimizer {
     return node.transform((n) -> {
       if (n instanceof ConstantEqualityFilterNode) {
         return optimize((ConstantEqualityFilterNode) n);
+      } else if (n instanceof VariableEqualityFilterNode) {
+        return optimize((VariableEqualityFilterNode) n);
       } else if (n instanceof ProjectNode) {
           return optimize((ProjectNode) n);
       } else {
@@ -38,6 +40,15 @@ public class PushDownFilterAndProject implements Optimizer {
       return swap(node, (MinusNode) child);
     } else if (child instanceof RecursionNode) {
       return swap(node, (RecursionNode) child);
+    } else {
+      return node;
+    }
+  }
+
+  private PlanNode optimize(VariableEqualityFilterNode node) {
+    PlanNode child = node.getTable();
+    if (child instanceof UnionNode) {
+      return swap(node, (UnionNode) child);
     } else {
       return node;
     }
@@ -133,6 +144,12 @@ public class PushDownFilterAndProject implements Optimizer {
             right,
             minus.getLeftMinusProjection()
     );
+  }
+
+  private PlanNode swap(VariableEqualityFilterNode filter, UnionNode union) {
+    return new UnionNode(
+            union.getChildren().stream().map(child -> newEqualityFilter(child, filter.getField1(), filter.getField2())).collect(Collectors.toSet()),
+            filter.getArity());
   }
 
   private PlanNode swap(ProjectNode node, JoinNode child) {
@@ -232,5 +249,9 @@ public class PushDownFilterAndProject implements Optimizer {
 
   private PlanNode newEqualityFilter(PlanNode node, int field, Comparable<?> value) {
     return apply(node.equalityFilter(field, value));
+  }
+
+  private PlanNode newEqualityFilter(PlanNode node, int field1, int field2) {
+    return apply(node.equalityFilter(field1, field2));
   }
 }
