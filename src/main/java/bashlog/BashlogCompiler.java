@@ -62,7 +62,7 @@ public class BashlogCompiler {
     root = new PushDownFilterAndProject().apply(root);
 
     root = new SimplifyPlan().apply(root);
-    //root = new PushDownFilterAndProject().apply(root);
+    root = new PushDownFilterAndProject().apply(root);
     //root = new SimplifyPlan().apply(root);
     //root = new PushDownFilterAndProject().apply(root);
 
