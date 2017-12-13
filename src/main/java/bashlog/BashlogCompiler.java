@@ -62,9 +62,9 @@ public class BashlogCompiler {
     root = new PushDownFilterAndProject().apply(root);
 
     root = new SimplifyPlan().apply(root);
-    root = new PushDownFilterAndProject().apply(root);
-    root = new SimplifyPlan().apply(root);
-    root = new PushDownFilterAndProject().apply(root);
+    //root = new PushDownFilterAndProject().apply(root);
+    //root = new SimplifyPlan().apply(root);
+    //root = new PushDownFilterAndProject().apply(root);
 
     root = new CombineFilter(false).apply(root);
 
@@ -104,6 +104,9 @@ public class BashlogCompiler {
     ctx.append("sort=\"sort -S64M --parallel=2 \"\n");
 
     compile(root, ctx);
+
+    System.out.println(debugInfo());
+    System.out.println(ctx.generate());
     return ctx.generate();
   }
 
