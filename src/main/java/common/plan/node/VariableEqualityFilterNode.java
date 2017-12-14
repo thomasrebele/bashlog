@@ -2,6 +2,7 @@ package common.plan.node;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 public class VariableEqualityFilterNode implements EqualityFilterNode {
 
@@ -54,11 +55,16 @@ public class VariableEqualityFilterNode implements EqualityFilterNode {
 
   @Override
   public boolean equals(Object obj) {
+    return equals(obj, Collections.emptyMap());
+  }
+
+  @Override
+  public boolean equals(Object obj,  Map<PlanNode,PlanNode> assumedEqualities) {
     if (!(obj.getClass() == getClass())) {
       return false;
     }
     VariableEqualityFilterNode node = (VariableEqualityFilterNode) obj;
-    return table.equals(node.table) && field1 == node.field1 && field2 == node.field2;
+    return field1 == node.field1 && field2 == node.field2 && table.equals(node.table, assumedEqualities);
   }
 
   @Override

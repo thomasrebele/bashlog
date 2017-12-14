@@ -190,11 +190,10 @@ public class PlanNodeTest {
     input.addRecursivePlan(input.getDelta().join(baz, new int[]{0}, new int[]{0}).project(new int[]{0, 1}));
 
     RecursionNode expected = new RecursionNode(baz.equalityFilter(2, "xyz").project(new int[]{0, 2}));
-    expected.addRecursivePlan(expected.getDelta().join(baz, new int[]{0}, new int[]{0}).project(new int[]{0, 1}));
+    expected.addRecursivePlan(expected.getDelta().join(baz.project(new int[]{0}), new int[]{0}, new int[]{0}).project(new int[]{0, 1}));
 
     assertEquals(
-            expected
-            ,
+            expected,
             optimizer.apply(input.equalityFilter(1, "xyz"))
     );
   }

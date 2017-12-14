@@ -1,7 +1,11 @@
 package common.plan.node;
 
+import common.Tools;
+
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 /** 
  * Represents a plan node, that has itself as subplan.
@@ -75,6 +79,21 @@ public class RecursionNode implements PlanNode {
   @Override
   public int getArity() {
     return exitPlan.getArity();
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    return equals(obj, Collections.emptyMap());
+  }
+
+  @Override
+  public boolean equals(Object obj, Map<PlanNode,PlanNode> assumedEqualities) {
+    if (!(obj.getClass() == getClass())) {
+      return false;
+    }
+    RecursionNode other = (RecursionNode) obj;
+    assumedEqualities = Tools.with(Tools.with(assumedEqualities, deltaNode, other.deltaNode), fullNode, other.fullNode);
+    return exitPlan.equals(other.exitPlan, assumedEqualities) && recursivePlan.equals(other.recursivePlan, assumedEqualities);
   }
 
   @Override

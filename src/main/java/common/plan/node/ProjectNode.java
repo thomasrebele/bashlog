@@ -1,9 +1,6 @@
 package common.plan.node;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -98,11 +95,16 @@ public class ProjectNode implements PlanNode {
 
   @Override
   public boolean equals(Object obj) {
+    return equals(obj, Collections.emptyMap());
+  }
+
+  @Override
+  public boolean equals(Object obj,  Map<PlanNode,PlanNode> assumedEqualities) {
     if (!(obj.getClass() == getClass())) {
       return false;
     }
     ProjectNode node = (ProjectNode) obj;
-    return table.equals(node.table) && Arrays.equals(projection, node.projection) && Arrays.equals(constants, node.constants);
+    return Arrays.equals(projection, node.projection) && Arrays.equals(constants, node.constants) && table.equals(node.table, assumedEqualities);
   }
 
   @Override

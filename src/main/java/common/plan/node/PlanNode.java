@@ -1,6 +1,7 @@
 package common.plan.node;
 
 import java.util.List;
+import java.util.Map;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
@@ -161,5 +162,9 @@ public interface PlanNode {
       hash = String.format("%4s", hash);
     }
     return hash;
+  }
+
+  default boolean equals(Object other, Map<PlanNode,PlanNode> assumedEqualities) {
+    return equals(other);
   }
 }

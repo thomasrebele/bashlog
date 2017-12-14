@@ -2,6 +2,7 @@ package common.plan.node;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 public class PlaceholderNode implements PlanNode {
 
@@ -58,6 +59,16 @@ public class PlaceholderNode implements PlanNode {
   @Override
   public String toString() {
     return operatorString;
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    return equals(obj, Collections.emptyMap());
+  }
+
+  @Override
+  public boolean equals(Object obj,  Map<PlanNode,PlanNode> assumedEqualities) {
+    return assumedEqualities.getOrDefault(this, this) == obj;
   }
 
   @Override

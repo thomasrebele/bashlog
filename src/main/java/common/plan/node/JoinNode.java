@@ -1,7 +1,9 @@
 package common.plan.node;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -74,11 +76,17 @@ public class JoinNode implements PlanNode {
 
   @Override
   public boolean equals(Object obj) {
+    return equals(obj, Collections.emptyMap());
+  }
+
+  @Override
+  public boolean equals(Object obj,  Map<PlanNode,PlanNode> assumedEqualities) {
     if (!(obj.getClass() == getClass())) {
       return false;
     }
     JoinNode node = (JoinNode) obj;
-    return (left.equals(node.left) && right.equals(node.right) && Arrays.equals(leftProjection, node.leftProjection) && Arrays.equals(rightProjection, node.rightProjection));
+    return Arrays.equals(leftProjection, node.leftProjection) && Arrays.equals(rightProjection, node.rightProjection) &&
+            left.equals(node.left, assumedEqualities) && right.equals(node.right, assumedEqualities);
   }
 
   @Override
