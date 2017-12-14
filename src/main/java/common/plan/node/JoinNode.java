@@ -88,7 +88,10 @@ public class JoinNode implements PlanNode {
 
   @Override
   public PlanNode transform(TransformFn fn, PlanNode originalParent) {
-    return fn.apply(this, new JoinNode(left.transform(fn, this), right.transform(fn, this), leftProjection, rightProjection), originalParent);
+    PlanNode newLeft = left.transform(fn, this);
+    PlanNode newRight = right.transform(fn, this);
+    PlanNode newNode = left.equals(newLeft) && right.equals(newRight) ? this : newLeft.join(newRight, leftProjection, rightProjection);
+    return fn.apply(this, newNode, originalParent);
   }
 
   /** Transform index of output column to index of left input column, or -1 if not possible */

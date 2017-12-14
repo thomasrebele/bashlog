@@ -68,6 +68,8 @@ public class ConstantEqualityFilterNode implements EqualityFilterNode {
 
   @Override
   public PlanNode transform(TransformFn fn, PlanNode originalParent) {
-    return fn.apply(this, new ConstantEqualityFilterNode(table.transform(fn, this), field, value), originalParent);
+    PlanNode newTable = table.transform(fn, this);
+    PlanNode newNode = newTable.equals(table) ? this : newTable.equalityFilter(field, value);
+    return fn.apply(this, newNode, originalParent);
   }
 }

@@ -6,14 +6,14 @@ import java.util.List;
 
 public class MaterializationNode implements PlanNode {
 
-  final PlanNode mainPlan;
+  private final PlanNode mainPlan;
 
-  final PlanNode reusedPlan;
+  private final PlanNode reusedPlan;
 
-  final PlanNode reuseNode;
+  private final PlanNode reuseNode;
 
   /** see {@link #getReuseCount()} */
-  final int reuseCount;
+  private final int reuseCount;
 
   public static class Builder {
   
@@ -90,12 +90,10 @@ public class MaterializationNode implements PlanNode {
 
   @Override
   public PlanNode transform(TransformFn fn, PlanNode originalParent) {
-    PlanNode transformed = mainPlan.transform(fn, this);
-    return fn.apply(this, transform(transformed, reusedPlan.transform(fn, this)), originalParent);
+    PlanNode newMainPlan = mainPlan.transform(fn, this);
+    PlanNode newReusedPlan = reusedPlan.transform(fn, this);
+    PlanNode newNode = mainPlan.equals(newMainPlan) && reusedPlan.equals(newReusedPlan) ? this
+            : new MaterializationNode(newMainPlan, newReusedPlan, null, reuseNode, reuseCount);
+    return fn.apply(this, newNode, originalParent);
   }
-
-  public MaterializationNode transform(PlanNode mainPlan, PlanNode reusedPlan) {
-    return new MaterializationNode(mainPlan, reusedPlan, null, reuseNode, reuseCount);
-  }
-
 }

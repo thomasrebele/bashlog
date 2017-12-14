@@ -68,6 +68,8 @@ public class VariableEqualityFilterNode implements EqualityFilterNode {
 
   @Override
   public PlanNode transform(TransformFn fn, PlanNode originalParent) {
-    return fn.apply(this, new VariableEqualityFilterNode(table.transform(fn, this), field1, field2), originalParent);
+    PlanNode newTable = table.transform(fn, this);
+    PlanNode newNode = newTable.equals(table) ? this : newTable.equalityFilter(field1, field2);
+    return fn.apply(this, newNode, originalParent);
   }
 }

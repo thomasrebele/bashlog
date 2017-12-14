@@ -27,6 +27,8 @@ public class PlanNodeTest {
   public void testPlanNode() {
     PlanNode foo = new BuiltinNode(new CompoundTerm("foo", args2));
     PlanNode bar = new BuiltinNode(new CompoundTerm("bar", args2));
+    Assert.assertEquals(foo, foo);
+    Assert.assertNotEquals(foo, bar);
     Assert.assertTrue((new VariableEqualityFilterNode(foo, 1, 1)).contains(foo));
     Assert.assertFalse((new VariableEqualityFilterNode(foo, 1, 1)).contains(bar));
     Assert.assertEquals(

@@ -90,6 +90,8 @@ public class UnionNode implements PlanNode {
   }
 
   public PlanNode transform(TransformFn fn, PlanNode originalParent) {
-    return fn.apply(this, new UnionNode(children.stream().map(child -> child.transform(fn, this)).collect(Collectors.toSet()), this.arity), originalParent);
+    Set<PlanNode> newChildren = children.stream().map(child -> child.transform(fn, this)).collect(Collectors.toSet());
+    PlanNode newNode = newChildren.equals(children) ? this : new UnionNode(newChildren, this.arity);
+    return fn.apply(this, newNode, originalParent);
   }
 }

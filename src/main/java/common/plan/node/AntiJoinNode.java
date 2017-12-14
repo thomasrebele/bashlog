@@ -79,6 +79,9 @@ public class AntiJoinNode implements PlanNode {
 
   @Override
   public PlanNode transform(TransformFn fn, PlanNode originalParent) {
-    return fn.apply(this, new AntiJoinNode(left.transform(fn, this), right.transform(fn, this), leftProjection), originalParent);
+    PlanNode newLeft = left.transform(fn, this);
+    PlanNode newRight = right.transform(fn, this);
+    PlanNode newNode = left.equals(newLeft) && right.equals(newRight) ? this : newLeft.antiJoin(newRight, leftProjection);
+    return fn.apply(this, newNode, originalParent);
   }
 }

@@ -112,7 +112,9 @@ public class ProjectNode implements PlanNode {
 
   @Override
   public PlanNode transform(TransformFn fn, PlanNode originalParent) {
-    return fn.apply(this, new ProjectNode(table.transform(fn, this), projection, constants), originalParent);
+    PlanNode newTable = table.transform(fn, this);
+    PlanNode newNode = newTable.equals(table) ? this : newTable.project(projection, constants);
+    return fn.apply(this, newNode, originalParent);
   }
 
   /** Whether this projection uses any constants */

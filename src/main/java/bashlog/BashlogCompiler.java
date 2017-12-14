@@ -490,7 +490,7 @@ public class BashlogCompiler {
       }
 
       ctx.append("' ");
-      compile(m.getInnerTable(), ctx.file());
+      compile(m.getTable(), ctx.file());
       ctx.endPipe();
     } else if (planNode instanceof BuiltinNode) {
       CompoundTerm ct = ((BuiltinNode) planNode).compoundTerm;

@@ -94,7 +94,10 @@ public class RecursionNode implements PlanNode {
 
   @Override
   public PlanNode transform(TransformFn fn, PlanNode originalParent) {
-    return fn.apply(this, transform(exitPlan.transform(fn, this), recursivePlan.transform(fn, this)), originalParent);
+    PlanNode newExit = exitPlan.transform(fn, this);
+    PlanNode newRecursion = recursivePlan.transform(fn, this);
+    PlanNode newNode = newExit.equals(exitPlan) && newRecursion.equals(recursivePlan) ? this : transform(newExit, newRecursion);
+    return fn.apply(this, newNode, originalParent);
   }
 
   public RecursionNode transform(PlanNode exit, PlanNode recursion) {
