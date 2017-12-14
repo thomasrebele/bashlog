@@ -149,9 +149,9 @@ public class PushDownFilterAndProject implements Optimizer {
         newPrj[i] = prjLeft.length + oldRightToNew[dst - child.getLeft().getArity()];
       }
     }
-    PlanNode left = prjLeft.length == child.getLeft().getArity() && Tools.isIdentityProjection(prjLeft) ? child.getLeft()
+    PlanNode left = Tools.isIdentityProjection(prjLeft, child.getLeft().getArity()) ? child.getLeft()
         : child.getLeft().project(prjLeft);
-    PlanNode right = prjRight.length == child.getRight().getArity() && Tools.isIdentityProjection(prjRight) ? child.getRight()
+    PlanNode right = Tools.isIdentityProjection(prjRight, child.getRight().getArity()) ? child.getRight()
         : child.getRight().project(prjRight);
 
     return new JoinNode(

@@ -56,7 +56,8 @@ public class Tools {
     return b;
   }
 
-  public static boolean isIdentityProjection(int[] projection) {
+  public static boolean isIdentityProjection(int[] projection, int inputSize) {
+    if (inputSize != projection.length) return false;
     for (int i = 0; i < projection.length; i++) {
       if (projection[i] != i) {
         return false;
