@@ -1,7 +1,11 @@
 package common.plan.node;
 
+import common.Tools;
+
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 
 public class MaterializationNode implements PlanNode {
@@ -95,5 +99,20 @@ public class MaterializationNode implements PlanNode {
     PlanNode newNode = mainPlan.equals(newMainPlan) && reusedPlan.equals(newReusedPlan) ? this
             : new MaterializationNode(newMainPlan, newReusedPlan, null, reuseNode, reuseCount);
     return fn.apply(this, newNode, originalParent);
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    return equals(obj, Collections.emptyMap());
+  }
+
+  @Override
+  public boolean equals(Object obj,  Map<PlanNode,PlanNode> assumedEqualities) {
+    if (!(obj.getClass() == getClass())) {
+      return false;
+    }
+    MaterializationNode node = (MaterializationNode) obj;
+    assumedEqualities = Tools.with(assumedEqualities, reuseNode, node.reuseNode);
+    return mainPlan.equals(node.mainPlan, assumedEqualities) && reusedPlan.equals(node.reusedPlan, assumedEqualities);
   }
 }

@@ -1,8 +1,8 @@
 package common.plan.node;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.Set;
+import common.Tools;
+
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class MultiFilterNode implements PlanNode {
@@ -63,11 +63,19 @@ public class MultiFilterNode implements PlanNode {
 
   @Override
   public boolean equals(Object obj) {
+    return equals(obj, Collections.emptyMap());
+  }
+
+  @Override
+  public boolean equals(Object obj,  Map<PlanNode,PlanNode> assumedEqualities) {
     if (!(obj.getClass() == getClass())) {
       return false;
     }
     MultiFilterNode node = (MultiFilterNode) obj;
-    return children.equals(node.children);
+    Map<PlanNode,PlanNode> newAssumedEqualities = Tools.with(assumedEqualities, placeholder, node.placeholder);
+    return table.equals(node.table, newAssumedEqualities) &&
+            children.size() == node.children.size() &&
+            children.stream().allMatch(child -> node.children.stream().anyMatch(other -> other.equals(child, newAssumedEqualities)));
   }
 
   @Override
