@@ -19,7 +19,7 @@ public class AntiJoinNode implements PlanNode {
   private final int[] leftProjection;
 
 
-  public AntiJoinNode(PlanNode left, PlanNode right, int[] leftProjection) {
+  AntiJoinNode(PlanNode left, PlanNode right, int[] leftProjection) {
     if (leftProjection.length != right.getArity()) {
       throw new IllegalArgumentException("The left projection and the right plan for anti join should have the same size");
     }

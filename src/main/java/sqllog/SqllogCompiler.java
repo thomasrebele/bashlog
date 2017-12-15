@@ -5,7 +5,8 @@ import common.plan.LogicalPlanBuilder;
 import common.plan.node.*;
 import common.plan.optimizer.Optimizer;
 import common.plan.optimizer.PushDownFilterAndProject;
-import common.plan.optimizer.SimplifyPlan;
+import common.plan.optimizer.ReorderJoin;
+import common.plan.optimizer.SimplifyRecursion;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -17,7 +18,7 @@ public class SqllogCompiler {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(SqllogCompiler.class);
   private static final Set<String> BUILDS_IN = Collections.singleton("sql_table");
-  private static final List<Optimizer> OPTIMIZERS = Arrays.asList(new SimplifyPlan(), new PushDownFilterAndProject(), new SimplifyPlan());
+  private static final List<Optimizer> OPTIMIZERS = Arrays.asList(new SimplifyRecursion(), new ReorderJoin(), new PushDownFilterAndProject());
 
   private Map<PlanNode, String> closureTables = new HashMap<>();
   private int count = 0;

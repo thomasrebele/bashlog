@@ -56,7 +56,7 @@ public class Tools {
     return b;
   }
 
-  public static boolean isIdentityProjection(int[] projection, int inputSize) {
+  public static boolean isIdentity(int[] projection, int inputSize) {
     if (inputSize != projection.length) return false;
     for (int i = 0; i < projection.length; i++) {
       if (projection[i] != i) {
@@ -94,4 +94,14 @@ public class Tools {
     newMap.put(key, value);
     return newMap;
   }
+
+  /** Get constant for column i */
+  public static<T> Optional<T> get(T[] array, int i) {
+    if (array.length > i) {
+      return Optional.ofNullable(array[i]);
+    } else {
+      return Optional.empty();
+    }
+  }
+
 }

@@ -5,7 +5,6 @@ import common.plan.node.*;
 
 import java.util.Arrays;
 import java.util.OptionalInt;
-import java.util.stream.Collectors;
 
 /** Push down filter and projects nodes as much as possible. This might remove rows from intermediate results, and thus reducing their size. */
 public class PushDownFilterAndProject implements Optimizer {
@@ -60,8 +59,6 @@ public class PushDownFilterAndProject implements Optimizer {
       return swap(node, (JoinNode) child);
     } else if (child instanceof AntiJoinNode) {
         return swap(node, (AntiJoinNode) child);
-    } else if (child instanceof ProjectNode) {
-      return SimplifyPlan.mergeProjections(node, (ProjectNode) child);
     } else if (child instanceof UnionNode) {
       return swap(node, (UnionNode) child);
     } else {
@@ -78,7 +75,7 @@ public class PushDownFilterAndProject implements Optimizer {
     // count is increased for every node delta = recursion.getDelta()
     // count is decreased for every filter(delta) combination
 
-    PlanNode selectionDelta = new ConstantEqualityFilterNode(recursion.getDelta(), filter.getField(), filter.getValue());
+    PlanNode selectionDelta = recursion.getDelta().equalityFilter(filter.getField(), filter.getValue());
 
     int count[] = new int[] { 0 };
     Optimizer check = root -> root.transform(t -> {
@@ -118,17 +115,16 @@ public class PushDownFilterAndProject implements Optimizer {
   }
 
   private PlanNode swap(ConstantEqualityFilterNode filter, UnionNode union) {
-    return new UnionNode(
-        union.getChildren().stream().map(child -> newEqualityFilter(child, filter.getField(), filter.getValue())).collect(Collectors.toSet()),
-        filter.getArity());
+    return union.getChildren().stream()
+            .map(child -> newEqualityFilter(child, filter.getField(), filter.getValue()))
+            .reduce(PlanNode.empty(filter.getArity()), PlanNode::union);
   }
 
   private PlanNode swap(ConstantEqualityFilterNode filter, JoinNode join) {
     int leftField = join.getLeftField(filter.getField());
     int rightField = join.getRightField(filter.getField());
 
-    return new JoinNode(
-        (leftField >= 0 ? newEqualityFilter(join.getLeft(), leftField, filter.getValue()) : join.getLeft()), //
+    return (leftField >= 0 ? newEqualityFilter(join.getLeft(), leftField, filter.getValue()) : join.getLeft()).join( //
         (rightField >= 0 ? newEqualityFilter(join.getRight(), rightField, filter.getValue()) : join.getRight()), //
         join.getLeftProjection(), join.getRightProjection());
   }
@@ -139,17 +135,16 @@ public class PushDownFilterAndProject implements Optimizer {
     if(rightField.isPresent()) {
       right = newEqualityFilter(right, rightField.getAsInt(), filter.getValue());
     }
-    return new AntiJoinNode(
-            newEqualityFilter(antiJoin.getLeft(), filter.getField(), filter.getValue()),
+    return newEqualityFilter(antiJoin.getLeft(), filter.getField(), filter.getValue()).antiJoin(
             right,
             antiJoin.getLeftProjection()
     );
   }
 
   private PlanNode swap(VariableEqualityFilterNode filter, UnionNode union) {
-    return new UnionNode(
-            union.getChildren().stream().map(child -> newEqualityFilter(child, filter.getField1(), filter.getField2())).collect(Collectors.toSet()),
-            filter.getArity());
+    return union.getChildren().stream()
+                    .map(child -> newEqualityFilter(child, filter.getField1(), filter.getField2()))
+                    .reduce(PlanNode.empty(filter.getArity()), PlanNode::union);
   }
 
   private PlanNode swap(ProjectNode node, JoinNode child) {
@@ -228,22 +223,16 @@ public class PushDownFilterAndProject implements Optimizer {
   }
 
   private PlanNode swap(ProjectNode projection, UnionNode union) {
-    return new UnionNode(union.getChildren().stream().map(child ->
-            apply(newProjection(child, projection.getProjection(), projection.getConstants())))
-    );
+    return union.getChildren().stream()
+            .map(child -> newProjection(child, projection.getProjection(), projection.getConstants()))
+            .reduce(PlanNode.empty(union.getArity()), PlanNode::union);
   }
 
   private PlanNode newProjection(PlanNode node, int[] fields, Comparable<?>[] constants) {
-    if(Tools.isIdentityProjection(fields, node.getArity()) && Tools.isNullArray(constants)) {
-      return node;
-    }
     return apply(node.project(fields, constants));
   }
 
   private PlanNode newProjection(PlanNode node, int[] fields) {
-    if(Tools.isIdentityProjection(fields, node.getArity())) {
-      return node;
-    }
     return apply(node.project(fields));
   }
 

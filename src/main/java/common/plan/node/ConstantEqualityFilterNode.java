@@ -12,7 +12,7 @@ public class ConstantEqualityFilterNode implements EqualityFilterNode {
 
   private final Comparable<?> value;
 
-  public ConstantEqualityFilterNode(PlanNode table, int field, Comparable<?> value) {
+  ConstantEqualityFilterNode(PlanNode table, int field, Comparable<?> value) {
     if (field >= table.getArity()) {
       throw new IllegalArgumentException("The table has arity " + table.getArity() + " and the field has id " + field);
     }

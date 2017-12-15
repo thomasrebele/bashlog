@@ -12,7 +12,7 @@ public class VariableEqualityFilterNode implements EqualityFilterNode {
 
   private final int field2;
 
-  public VariableEqualityFilterNode(PlanNode table, int field1, int field2) {
+  VariableEqualityFilterNode(PlanNode table, int field1, int field2) {
     if (field1 >= table.getArity() || field2 >= table.getArity()) {
       throw new IllegalArgumentException("The table has arity " + table.getArity() + " and the fields have ids " + field1 + " and " + field2);
     }

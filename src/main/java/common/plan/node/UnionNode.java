@@ -2,7 +2,6 @@ package common.plan.node;
 
 import java.util.*;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 
 public class UnionNode implements PlanNode {
@@ -11,7 +10,7 @@ public class UnionNode implements PlanNode {
 
   protected final int arity;
 
-  public UnionNode(Set<PlanNode> children, int arity) {
+  private UnionNode(Set<PlanNode> children, int arity) {
     this.children = children;
     this.arity = arity;
   }
@@ -20,11 +19,7 @@ public class UnionNode implements PlanNode {
     this(Collections.emptySet(), arity);
   }
 
-  public UnionNode(PlanNode... children) {
-    this(new HashSet<PlanNode>(Arrays.asList(children)));
-  }
-
-  public UnionNode(Set<PlanNode> children) {
+  UnionNode(Set<PlanNode> children) {
     if (children.size() == 0) {
       throw new IllegalArgumentException("Please set the arity of this empty union");
     }
@@ -39,10 +34,6 @@ public class UnionNode implements PlanNode {
     }
     this.arity = arity;
     this.children = children;
-  }
-
-  public UnionNode(Stream<PlanNode> children) {
-    this(children.collect(Collectors.toSet()));
   }
 
   public Collection<PlanNode> getChildren() {

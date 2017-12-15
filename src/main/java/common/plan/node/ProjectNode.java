@@ -1,13 +1,13 @@
 package common.plan.node;
 
+import common.Tools;
+
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 /** Restrict a plan node to certain columns, and/or introduce new columns (based on existing columns or constants). */
 public class ProjectNode implements PlanNode {
-
-  private static final Comparable<?>[] EMPTY_CONSTANTS = new Comparable[0];
 
   private final PlanNode table;
 
@@ -19,7 +19,7 @@ public class ProjectNode implements PlanNode {
    * @param projection position in the new tuple => position in the old tuple. If <0 the value is null (i.e. empty fields)
    * @param constants  position in the new tuple => constant to set
    */
-  public ProjectNode(PlanNode table, int[] projection, Comparable<?>[] constants) {
+  ProjectNode(PlanNode table, int[] projection, Comparable<?>[] constants) {
     if (Arrays.stream(projection).anyMatch(i -> i >= table.getArity())) {
       throw new IllegalArgumentException(
           "Invalid projection: trying to project a non-existing field: " + Arrays.toString(projection) + "\n" + table + ", arity " + table.getArity());
@@ -31,11 +31,6 @@ public class ProjectNode implements PlanNode {
     this.table = table;
     this.projection = projection;
     this.constants = constants;
-  }
-
-  /** A projection whose column indices are given by array 'projection' */
-  public ProjectNode(PlanNode table, int[] projection) {
-    this(table, projection, EMPTY_CONSTANTS);
   }
 
   /** Table the projection applies to */
@@ -55,11 +50,7 @@ public class ProjectNode implements PlanNode {
 
   /** Get constant for column i */
   public Optional<Comparable<?>> getConstant(int i) {
-    if (constants.length > i && constants[i] != null) {
-      return Optional.of(constants[i]);
-    } else {
-      return Optional.empty();
-    }
+    return Tools.get(constants, i);
   }
 
   @Override

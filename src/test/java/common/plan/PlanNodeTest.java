@@ -3,11 +3,14 @@ package common.plan;
 import common.parser.CompoundTerm;
 import common.parser.TermList;
 import common.parser.Variable;
-import common.plan.node.*;
+import common.plan.node.BuiltinNode;
+import common.plan.node.MaterializationNode;
+import common.plan.node.PlanNode;
+import common.plan.node.RecursionNode;
 import common.plan.optimizer.Materialize;
 import common.plan.optimizer.Optimizer;
 import common.plan.optimizer.PushDownFilterAndProject;
-import common.plan.optimizer.SimplifyPlan;
+import common.plan.optimizer.SimplifyRecursion;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -15,13 +18,13 @@ import java.util.Objects;
 
 public class PlanNodeTest {
 
-  TermList args2 = new TermList(new Variable("X"), new Variable("Y"));
+  private TermList args2 = new TermList(new Variable("X"), new Variable("Y"));
 
-  TermList args3 = new TermList(new Variable("X"), new Variable("Y"), new Variable("Z"));
+  private TermList args3 = new TermList(new Variable("X"), new Variable("Y"), new Variable("Z"));
 
-  TermList args4 = new TermList(new Variable("X"), new Variable("Y"), new Variable("Z"), new Variable("W"));
+  private TermList args4 = new TermList(new Variable("X"), new Variable("Y"), new Variable("Z"), new Variable("W"));
 
-  TermList args5 = new TermList(new Variable("X"), new Variable("Y"), new Variable("Z"), new Variable("W"), new Variable("V"));
+  private TermList args5 = new TermList(new Variable("X"), new Variable("Y"), new Variable("Z"), new Variable("W"), new Variable("V"));
 
   @Test
   public void testPlanNode() {
@@ -29,61 +32,70 @@ public class PlanNodeTest {
     PlanNode bar = new BuiltinNode(new CompoundTerm("bar", args2));
     Assert.assertEquals(foo, foo);
     Assert.assertNotEquals(foo, bar);
-    Assert.assertTrue((new VariableEqualityFilterNode(foo, 1, 1)).contains(foo));
-    Assert.assertFalse((new VariableEqualityFilterNode(foo, 1, 1)).contains(bar));
+    Assert.assertTrue(foo.equalityFilter(1, 1).contains(foo));
+    Assert.assertFalse(foo.equalityFilter( 1, 1).contains(bar));
     Assert.assertEquals(
-            new VariableEqualityFilterNode(foo, 1, 1),
-            (new VariableEqualityFilterNode(bar, 1, 1)).replace(bar, foo)
+            foo.equalityFilter(1, 1),
+            bar.equalityFilter(1, 1).replace(bar, foo)
     );
   }
 
   @Test
   public void testSimplifier() {
-    SimplifyPlan simplifier = new SimplifyPlan();
     PlanNode foo = new BuiltinNode(new CompoundTerm("foo", args2));
     PlanNode bar = new BuiltinNode(new CompoundTerm("bar", args2));
     PlanNode baz = new BuiltinNode(new CompoundTerm("bar", args4));
     Assert.assertEquals(
-            new UnionNode(foo, bar),
-            simplifier.apply(new UnionNode(foo, new UnionNode(bar, PlanNode.empty(2))))
+            foo.union(bar),
+            foo.union(bar.union(PlanNode.empty(2)))
     );
     Assert.assertEquals(
             foo,
-            simplifier.apply(new UnionNode(foo, new UnionNode(foo, PlanNode.empty(2))))
+            foo.union(foo.union(PlanNode.empty(2)))
     );
 
     Assert.assertEquals(
             foo,
-            simplifier.apply(new ProjectNode(foo, new int[]{0, 1}))
+            foo.project(new int[]{0, 1})
     );
     Assert.assertEquals(
             PlanNode.empty(2),
-            simplifier.apply(new ProjectNode(PlanNode.empty(2), new int[]{0, 0}))
+            PlanNode.empty(2).project(new int[]{0, 0})
     );
     Assert.assertEquals(
-            new ProjectNode(baz, new int[]{0, 1, 3}),
-            simplifier.apply(new ProjectNode(
-                    new ProjectNode(baz, new int[]{3, 0, 1}),
-                    new int[]{1, 2, 0}))
+            baz.project(new int[]{0, 1, 3}),
+            baz.project(new int[]{3, 0, 1}).project(new int[]{1, 2, 0})
+    );
+    Assert.assertEquals(
+            baz.project(new int[]{0}),
+            baz.project(new int[]{2, 0}).project(new int[]{1})
     );
 
     Assert.assertEquals(
             PlanNode.empty(4),
-            simplifier.apply(new JoinNode(foo, PlanNode.empty(2), new int[]{0}, new int[]{0}))
+            foo.join(PlanNode.empty(2), new int[]{0}, new int[]{0})
     );
     Assert.assertEquals(
-            simplifier.apply(new JoinNode(foo, bar, new int[]{0}, new int[]{0})),
-            simplifier.apply(new JoinNode(foo, bar, new int[]{0}, new int[]{0}))
+            foo.join(bar, new int[]{0}, new int[]{0}),
+            foo.join(bar, new int[]{0}, new int[]{0})
     );
 
     Assert.assertEquals(
             foo,
-            simplifier.apply(new AntiJoinNode(foo, PlanNode.empty(1), new int[]{0}))
+            foo.antiJoin(PlanNode.empty(1), new int[]{0})
     );
     Assert.assertEquals(
             PlanNode.empty(2),
-            simplifier.apply(new AntiJoinNode(PlanNode.empty(2), foo, new int[]{0, 1}))
+            PlanNode.empty(2).antiJoin(foo, new int[]{0, 1})
     );
+  }
+
+
+  @Test
+  public void testSimplifyRecursion() {
+    SimplifyRecursion simplifier = new SimplifyRecursion();
+    PlanNode foo = new BuiltinNode(new CompoundTerm("foo", args2));
+    PlanNode bar = new BuiltinNode(new CompoundTerm("bar", args2));
 
     RecursionNode recursionNode = new RecursionNode(foo);
     recursionNode.addRecursivePlan(recursionNode.getDelta().join(bar, new int[]{0}, new int[]{0}).project(new int[]{0, 1}));
@@ -107,42 +119,42 @@ public class PlanNodeTest {
     Optimizer optimizer = new PushDownFilterAndProject();
     PlanNode foo = new BuiltinNode(new CompoundTerm("foo", args2));
     PlanNode bar = new BuiltinNode(new CompoundTerm("bar", args2));
-    PlanNode fooFilter = new ConstantEqualityFilterNode(foo, 0, "foo");
-    PlanNode barFilter = new ConstantEqualityFilterNode(bar, 0, "foo");
+    PlanNode fooFilter = foo.equalityFilter(0, "foo");
+    PlanNode barFilter = bar.equalityFilter(0, "foo");
 
     Assert.assertEquals(
-            new UnionNode(fooFilter, barFilter),
-            optimizer.apply(new ConstantEqualityFilterNode(new UnionNode(foo, bar), 0, "foo"))
+            fooFilter.union(barFilter),
+            optimizer.apply(foo.union(bar).equalityFilter(0, "foo"))
     );
 
     Assert.assertEquals(
-            new ProjectNode(fooFilter, new int[]{1, 0}),
-            optimizer.apply(new ConstantEqualityFilterNode(new ProjectNode(foo, new int[]{1, 0}), 1, "foo"))
+            fooFilter.project(new int[]{1, 0}),
+            optimizer.apply(foo.project(new int[]{1, 0}).equalityFilter(1, "foo"))
     );
     Assert.assertEquals(
-            new ProjectNode(foo, new int[]{0, -1}, new Comparable[]{null, "foo"}),
-            optimizer.apply(new ConstantEqualityFilterNode(new ProjectNode(foo, new int[]{0, -1}, new Comparable[]{null, "foo"}), 1, "foo"))
+            foo.project(new int[]{0, -1}, new Comparable[]{null, "foo"}),
+            optimizer.apply(foo.project(new int[]{0, -1}, new Comparable[]{null, "foo"}).equalityFilter(1, "foo"))
     );
     Assert.assertEquals(
             PlanNode.empty(2),
-            optimizer.apply(new ConstantEqualityFilterNode(new ProjectNode(foo, new int[]{0, -1}, new Comparable[]{null, "bar"}), 1, "foo"))
+            optimizer.apply(foo.project(new int[]{0, -1}, new Comparable[]{null, "bar"}).equalityFilter(1, "foo"))
     );
 
     Assert.assertEquals(
-            new JoinNode(fooFilter, bar, new int[]{1}, new int[]{1}),
-            optimizer.apply(new ConstantEqualityFilterNode(new JoinNode(foo, bar, new int[]{1}, new int[]{1}), 0, "foo"))
+            fooFilter.join(bar, new int[]{1}, new int[]{1}),
+            optimizer.apply(foo.join(bar, new int[]{1}, new int[]{1}).equalityFilter(0, "foo"))
     );
     Assert.assertEquals(
-            new JoinNode(foo, barFilter, new int[]{1}, new int[]{1}),
-            optimizer.apply(new ConstantEqualityFilterNode(new JoinNode(foo, bar, new int[]{1}, new int[]{1}), 2, "foo"))
+            foo.join(barFilter, new int[]{1}, new int[]{1}),
+            optimizer.apply(foo.join(bar, new int[]{1}, new int[]{1}).equalityFilter(2, "foo"))
     );
     Assert.assertEquals(
-            new JoinNode(fooFilter, barFilter, new int[]{0}, new int[]{0}),
-            optimizer.apply(new ConstantEqualityFilterNode(new JoinNode(foo, bar, new int[]{0}, new int[]{0}), 0, "foo"))
+            fooFilter.join(barFilter, new int[]{0}, new int[]{0}),
+            optimizer.apply(foo.join(bar, new int[]{0}, new int[]{0}).equalityFilter(0, "foo"))
     );
     Assert.assertEquals(
-            new JoinNode(fooFilter, barFilter, new int[]{0}, new int[]{0}),
-            optimizer.apply(new ConstantEqualityFilterNode(new JoinNode(foo, bar, new int[]{0}, new int[]{0}), 2, "foo"))
+            fooFilter.join(barFilter, new int[]{0}, new int[]{0}),
+            optimizer.apply(foo.join(bar, new int[]{0}, new int[]{0}).equalityFilter(2, "foo"))
     );
   }
 
@@ -151,16 +163,15 @@ public class PlanNodeTest {
     Optimizer optimizer = new PushDownFilterAndProject();
 
     PlanNode baz = new BuiltinNode(new CompoundTerm("baz", args3));
-    PlanNode bazFilter1 = new ConstantEqualityFilterNode(baz, 1, "foo1");
-    PlanNode bazFilter2 = new ConstantEqualityFilterNode(baz, 1, "foo2");
-    Assert.assertEquals(new UnionNode(//
-        new ProjectNode(bazFilter1, new int[] { 0 }), //
-        new ProjectNode(bazFilter2, new int[] { 0 }) //
-    ), //
-        optimizer.apply(new ProjectNode(new UnionNode(//
-        new ProjectNode(bazFilter1, new int[] { 2, 0 }), //
-        new ProjectNode(bazFilter2, new int[] { 2, 0 }) //
-    ), new int[] { 1 }))
+    PlanNode bazFilter1 = baz.equalityFilter(1, "foo1");
+    PlanNode bazFilter2 = baz.equalityFilter(1, "foo2");
+    Assert.assertEquals(bazFilter1.project(new int[]{0}).union(
+            bazFilter2.project(new int[]{0})
+            ),
+            optimizer.apply(
+                    bazFilter1.project(new int[]{2, 0}).union(
+                            bazFilter2.project(new int[]{2, 0})
+                    ).project(new int[]{1}))
     );
   }
 
@@ -204,16 +215,11 @@ public class PlanNodeTest {
     PlanNode bar = new BuiltinNode(new CompoundTerm("bar", args3));
     PlanNode baz = new BuiltinNode(new CompoundTerm("baz", args2));
     assertEquals(
-            new AntiJoinNode(
-                    new ConstantEqualityFilterNode(bar, 0, "foo"),
-                    new ConstantEqualityFilterNode(baz, 1, "foo"),
+           bar.equalityFilter(0, "foo").antiJoin(
+                    baz.equalityFilter(1, "foo"),
                     new int[]{1, 0}
             ),
-            optimizer.apply(new ConstantEqualityFilterNode(
-                    new AntiJoinNode(bar, baz, new int[]{1, 0}),
-                    0,
-                    "foo"
-            ))
+            optimizer.apply(bar.antiJoin(baz, new int[]{1, 0}).equalityFilter(0, "foo"))
     );
   }
 
@@ -223,16 +229,9 @@ public class PlanNodeTest {
     PlanNode bar = new BuiltinNode(new CompoundTerm("bar", args3));
     PlanNode baz = new BuiltinNode(new CompoundTerm("baz", args2));
     assertEquals(
-            new AntiJoinNode(
-                    new ConstantEqualityFilterNode(bar, 2, "foo"),
-                    baz,
-                    new int[]{1, 0}
-            ),
-            optimizer.apply(new ConstantEqualityFilterNode(
-                    new AntiJoinNode(bar, baz, new int[]{1, 0}),
-                    2,
-                    "foo"
-            ))
+            bar.equalityFilter(2, "foo").antiJoin(baz, new int[]{1, 0}),
+            optimizer.apply(
+                    bar.antiJoin(baz, new int[]{1, 0}).equalityFilter(2, "foo"))
     );
   }
 
@@ -242,14 +241,12 @@ public class PlanNodeTest {
 
     PlanNode baz = new BuiltinNode(new CompoundTerm("baz", args5));
 
-    assertEquals(new JoinNode(//
-                    baz.project(new int[]{1, 2, 3, 4}), //
+    assertEquals(baz.project(new int[]{1, 2, 3, 4}).join(
                     baz.project(new int[]{1, 2, 3}), //
                     new int[]{3, 1}, new int[]{0, 2}
             ).project(new int[]{0, 2, 5}), //
             optimizer.apply(
-                    new JoinNode(baz, baz, new int[]{4, 2}, new int[]{1, 3})
-                            .project(new int[]{1, 3, 7})
+                   baz.join(baz, new int[]{4, 2}, new int[]{1, 3}).project(new int[]{1, 3, 7})
             )
     );
   }
@@ -261,14 +258,11 @@ public class PlanNodeTest {
     PlanNode bar = new BuiltinNode(new CompoundTerm("bar", args3));
     PlanNode baz = new BuiltinNode(new CompoundTerm("baz", args2));
     assertEquals(
-            new AntiJoinNode(
-                    new ProjectNode(bar, new int[]{1, 0}),
+            bar.project(new int[]{1, 0}).antiJoin(
                     baz,
                     new int[]{0, 1}
             ),
-            optimizer.apply(new ProjectNode(
-                    new AntiJoinNode(bar, baz, new int[]{1, 0}),
-                    new int[]{1, 0}
+            optimizer.apply(bar.antiJoin(baz, new int[]{1, 0}).project(new int[]{1, 0}
             ))
     );
   }
@@ -280,16 +274,14 @@ public class PlanNodeTest {
 
     MaterializationNode.Builder b = new MaterializationNode.Builder(2);
     assertEquals(
-        b.build(new UnionNode(//
-            b.getReuseNode(), //
-            b.getReuseNode().equalityFilter(0, 1)), //
-            baz.project(new int[] { 1, 2 }), 2)
-        ,
-        optimizer.apply(new UnionNode(//
-            baz.project(new int[] { 1, 2 }), //
-            baz.project(new int[] { 1, 2 }).equalityFilter(0, 1)))
-        );
-    
+            b.build(
+                    b.getReuseNode().union(b.getReuseNode().equalityFilter(0, 1)), //
+                    baz.project(new int[]{1, 2}), 2)
+            ,
+            optimizer.apply(baz.project(new int[]{1, 2}).union(
+                    baz.project(new int[]{1, 2}).equalityFilter(0, 1)))
+    );
+
   }
 
   public static void assertEquals(PlanNode expected, PlanNode actual) {

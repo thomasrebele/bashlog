@@ -44,8 +44,7 @@ public class BashlogCompiler {
   private String debug = "";
 
   private List<List<Optimizer>> stages = Arrays.asList(//
-      Arrays.asList(new SimplifyPlan()),
-      Arrays.asList(new ReorderJoin(), new SimplifyPlan(), new PushDownFilterAndProject(), new SimplifyPlan(), new PushDownFilterAndProject()),
+      Arrays.asList(new SimplifyRecursion(), new ReorderJoin(), new PushDownFilterAndProject(), new SimplifyRecursion(), new PushDownFilterAndProject()),
       Arrays.asList(new CombineFilter(false), r -> r.transform(this::transform), new BashlogOptimizer(), new Materialize()));
 
   public BashlogCompiler(PlanNode planNode) {
@@ -178,7 +177,9 @@ public class BashlogCompiler {
       if (children.size() == 0) return u;
       if (children.size() == 1) return children.get(0);
       // use sort union, so sort all inputs
-      return new UnionNode(children.stream().map(i -> new SortNode(i, null)).collect(Collectors.toSet()), u.getArity());
+      return children.stream()
+              .map(i -> (PlanNode) new SortNode(i, null))
+              .reduce(PlanNode.empty(u.getArity()), PlanNode::union);
 
     } else if (p instanceof BuiltinNode) {
       // instead of "<(cat file)", use file directly

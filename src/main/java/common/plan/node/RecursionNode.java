@@ -16,7 +16,7 @@ public class RecursionNode implements PlanNode {
 
   private final PlanNode exitPlan;
 
-  protected PlanNode recursivePlan;
+  private PlanNode recursivePlan;
 
   protected final PlanNode deltaNode = new PlaceholderNode(this, "delta");
 
@@ -69,11 +69,7 @@ public class RecursionNode implements PlanNode {
     if (addedRecursivePlan.getArity() != exitPlan.getArity()) {
       throw new IllegalArgumentException("The recursions should have the same arity as the recursion entry");
     }
-    if (recursivePlan.isEmpty()) {
-      recursivePlan = addedRecursivePlan;
-    } else {
-      recursivePlan = recursivePlan.union(addedRecursivePlan);
-    }
+    recursivePlan = recursivePlan.union(addedRecursivePlan);
   }
 
   @Override

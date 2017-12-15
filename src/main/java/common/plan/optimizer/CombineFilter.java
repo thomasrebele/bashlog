@@ -6,7 +6,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 public class CombineFilter implements Optimizer {
 
@@ -27,19 +26,14 @@ public class CombineFilter implements Optimizer {
           innerToFiltered.computeIfAbsent(getInnerTable(c), k -> new HashSet<>()).add(c);
         }
 
-        Set<PlanNode> newChildren = innerToFiltered.entrySet().stream().map(e -> {
+        return innerToFiltered.entrySet().stream().map(e -> {
           boolean isMultiFilter = e.getValue().size() > 1;
           if (condenseNonUnionFilter && !isMultiFilter && e.getValue().size() == 1) {
             int depth = getFilterDepth(e.getValue().iterator().next());
             isMultiFilter = depth > 1;
           }
           return isMultiFilter ? new MultiFilterNode(e.getValue(), e.getKey(), u.getArity()) : e.getValue().iterator().next();
-        }).collect(Collectors.toSet());
-
-        if (newChildren.isEmpty()) {
-          return PlanNode.empty(node.getArity());
-        }
-        return newChildren.size() > 1 ? new UnionNode(newChildren) : newChildren.iterator().next();
+        }).reduce(PlanNode.empty(node.getArity()), PlanNode::union);
       }
 
       return node;

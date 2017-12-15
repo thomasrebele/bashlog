@@ -2,8 +2,10 @@ package common.plan;
 
 import common.Tools;
 import common.parser.*;
-import common.plan.node.*;
-import common.plan.optimizer.SimplifyPlan;
+import common.plan.node.BuiltinNode;
+import common.plan.node.JoinNode;
+import common.plan.node.PlanNode;
+import common.plan.node.RecursionNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -17,7 +19,6 @@ import java.util.stream.Stream;
 public class LogicalPlanBuilder {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(LogicalPlanBuilder.class);
-  private static final SimplifyPlan SIMPLIFIER = new SimplifyPlan();
 
   private Set<String> builtin;
   private Set<String> relationsToOutput;
@@ -52,7 +53,7 @@ public class LogicalPlanBuilder {
 
     Map<String, PlanNode> planNodes = new HashMap<>();
     relationsToOutput.forEach(relation ->
-            planNodes.put(relation, SIMPLIFIER.apply(getPlanForRelation(relation, Collections.emptyMap())))
+            planNodes.put(relation, getPlanForRelation(relation, Collections.emptyMap()))
     );
     return planNodes;
   }
@@ -87,7 +88,7 @@ public class LogicalPlanBuilder {
       //We map exit rules
       PlanNode exitPlan = exitRules.stream()
               .map(rule -> getPlanForRule(rule, filteredDeltaNode))
-              .reduce(UnionNode::new)
+              .reduce(PlanNode::union)
               .orElseGet(() -> PlanNode.empty(Integer.parseInt(relation.split("/")[1])));
 
       if (recursiveRules.isEmpty()) {
@@ -111,8 +112,7 @@ public class LogicalPlanBuilder {
       if (n instanceof JoinNode) {
         JoinNode join = (JoinNode) n;
         if (join.getLeft().contains(delta) && join.getRight().contains(delta)) {
-          return new UnionNode(
-                  join.getLeft().join(join.getRight().replace(delta, full), join.getLeftProjection(), join.getRightProjection()),
+          return join.getLeft().join(join.getRight().replace(delta, full), join.getLeftProjection(), join.getRightProjection()).union(
                   join.getLeft().replace(delta, full).join(join.getRight(), join.getLeftProjection(), join.getRightProjection())
           );
         }
