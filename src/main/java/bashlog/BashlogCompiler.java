@@ -494,9 +494,13 @@ public class BashlogCompiler {
       ctx.append(file.getPath());
     } else if (planNode instanceof UnionNode) {
       ctx.startPipe();
-      ctx.append("$sort -u -m ");
-      for (PlanNode child : ((UnionNode) planNode).getChildren()) {
-        compile(child, ctx.file());
+      if (planNode.children().size() == 0) {
+        ctx.append("echo -n ");
+      } else {
+        ctx.append("$sort -u -m ");
+        for (PlanNode child : ((UnionNode) planNode).getChildren()) {
+          compile(child, ctx.file());
+        }
       }
       ctx.endPipe();
     } else if (planNode instanceof SortRecursionNode) {
