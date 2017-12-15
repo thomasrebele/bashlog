@@ -43,6 +43,11 @@ public class BashlogCompiler {
   /** Save debug information (query plans)*/
   private String debug = "";
 
+  private List<List<Optimizer>> stages = Arrays.asList(//
+      Arrays.asList(new SimplifyPlan(), new PushDownFilterAndProject()),
+      Arrays.asList(new ReorderJoin(), new SimplifyPlan(), new PushDownFilterAndProject(), new SimplifyPlan(), new PushDownFilterAndProject()),
+      Arrays.asList(new CombineFilter(false), r -> r.transform(this::transform), new BashlogOptimizer(), new Materialize()));
+
   public BashlogCompiler(PlanNode planNode) {
     if (planNode == null) {
       throw new IllegalArgumentException("cannot compile an empty plan");
@@ -50,38 +55,18 @@ public class BashlogCompiler {
     root = planNode;
     debug += "orig\n";
     debug += root.toPrettyString() + "\n";
+    root = new SortNode(root, null);
 
-    root = new SimplifyPlan().apply(new SortNode(root, null));
-    root = new PushDownFilterAndProject().apply(root);
-
-    debug += "simplified\n";
-    debug += root.toPrettyString() + "\n";
-
-    root = new ReorderJoin().apply(root);
-    root = new SimplifyPlan().apply(root);
-    root = new PushDownFilterAndProject().apply(root);
-
-    root = new SimplifyPlan().apply(root);
-    root = new PushDownFilterAndProject().apply(root);
-    //root = new SimplifyPlan().apply(root);
-    //root = new PushDownFilterAndProject().apply(root);
-
-    root = new CombineFilter(false).apply(root);
-
-    debug += "optimized\n";
-    debug += root.toPrettyString() + "\n";
-
-    root = root.transform(this::transform);
-
-    debug += "bashlog plan" + "\n";
-    debug += root.toPrettyString() + "\n";
-
-    root = new BashlogOptimizer().apply(root);
-    root = new Materialize().apply(root);
-    //root = new MultiFilterOptimizer(true).apply(root);
-
-    debug += "optimized bashlog plan\n";
-    debug += root.toPrettyString();
+    List<String> stageNames = Arrays.asList("simplification", "optimization", "transforming to bashlog plan");
+    Iterator<String> it = stageNames.iterator();
+    for (List<Optimizer> stage : stages) {
+      debug += "\n\n" + (it.hasNext() ? it.next() : "") + "\n";
+      for (Optimizer o : stage) {
+        root = o.apply(root);
+        debug += "applied " + o.getClass() + " \n";
+        debug += root.toPrettyString() + "\n";
+      }
+    }
     debug = "#" + debug.replaceAll("\n", "\n# ");
   }
 

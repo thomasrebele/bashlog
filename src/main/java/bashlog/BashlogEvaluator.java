@@ -6,6 +6,9 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.*;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import common.Evaluator;
 import common.parser.ParserReader;
 import common.parser.Program;
@@ -16,6 +19,8 @@ import javatools.filehandlers.TSVWriter;
 
 /** Execute bashlog from java */
 public class BashlogEvaluator implements Evaluator {
+
+  private static final Logger LOG = LoggerFactory.getLogger(BashlogEvaluator.class);
 
   String workingDir;
 
@@ -58,12 +63,14 @@ public class BashlogEvaluator implements Evaluator {
       if (debug) {
         System.out.println(query);
       }
+      long start = System.nanoTime();
       Process proc = run.exec(new String[] { "/bin/bash", "-c", query });
       BufferedReader br = new BufferedReader(new InputStreamReader(proc.getInputStream()));
       String line;
       while ((line = br.readLine()) != null) {
         result.add(relation, line.split("\t"));
       }
+      LOG.debug("bash command executed in " + (System.nanoTime() - start) * 1e-9 + "s");
     }
 
     return result;
