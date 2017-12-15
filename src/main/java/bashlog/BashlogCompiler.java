@@ -43,6 +43,11 @@ public class BashlogCompiler {
   /** Save debug information (query plans)*/
   private String debug = "";
 
+  private List<List<Optimizer>> stages = Arrays.asList(//
+      Arrays.asList(new SimplifyPlan(), new PushDownFilterAndProject()),
+      Arrays.asList(new ReorderJoin(), new SimplifyPlan(), new PushDownFilterAndProject(), new SimplifyPlan(), new PushDownFilterAndProject()),
+      Arrays.asList(new CombineFilter(false), r -> r.transform(this::transform), new BashlogOptimizer(), new Materialize()));
+
   public BashlogCompiler(PlanNode planNode) {
     if (planNode == null) {
       throw new IllegalArgumentException("cannot compile an empty plan");
@@ -50,38 +55,18 @@ public class BashlogCompiler {
     root = planNode;
     debug += "orig\n";
     debug += root.toPrettyString() + "\n";
+    root = new SortNode(root, null);
 
-    root = new SimplifyPlan().apply(new SortNode(root, null));
-    root = new PushDownFilterAndProject().apply(root);
-
-    debug += "simplified\n";
-    debug += root.toPrettyString() + "\n";
-
-    root = new ReorderJoin().apply(root);
-    root = new SimplifyPlan().apply(root);
-    root = new PushDownFilterAndProject().apply(root);
-
-    root = new SimplifyPlan().apply(root);
-    root = new PushDownFilterAndProject().apply(root);
-    //root = new SimplifyPlan().apply(root);
-    //root = new PushDownFilterAndProject().apply(root);
-
-    root = new CombineFilter(false).apply(root);
-
-    debug += "optimized\n";
-    debug += root.toPrettyString() + "\n";
-
-    root = root.transform(this::transform);
-
-    debug += "bashlog plan" + "\n";
-    debug += root.toPrettyString() + "\n";
-
-    root = new BashlogOptimizer().apply(root);
-    root = new Materialize().apply(root);
-    //root = new MultiFilterOptimizer(true).apply(root);
-
-    debug += "optimized bashlog plan\n";
-    debug += root.toPrettyString();
+    List<String> stageNames = Arrays.asList("simplification", "optimization", "transforming to bashlog plan");
+    Iterator<String> it = stageNames.iterator();
+    for (List<Optimizer> stage : stages) {
+      debug += "\n\n" + (it.hasNext() ? it.next() : "") + "\n";
+      for (Optimizer o : stage) {
+        root = o.apply(root);
+        debug += "applied " + o.getClass() + " \n";
+        debug += root.toPrettyString() + "\n";
+      }
+    }
     debug = "#" + debug.replaceAll("\n", "\n# ");
   }
 
@@ -168,6 +153,19 @@ public class BashlogCompiler {
         int rightStart = left.getArity();
         return join.project(Tools.concat(Tools.sequence(left.getArity() - 1), Tools.sequence(rightStart, rightStart + right.getArity() - 1)));
       }
+
+    } else if (p instanceof AntiJoinNode) {
+      AntiJoinNode ajn = (AntiJoinNode) p;
+      PlanNode left = prepareSortJoin(ajn.getLeft(), ajn.getLeftProjection());
+      PlanNode right = prepareSortJoin(ajn.getRight(), Tools.sequence(ajn.getRight().getArity()));
+
+      if (ajn.getLeftProjection().length == 1) {
+        // no combined column necessary, so we can directly return the join
+        return new SortAntiJoinNode(left, right, ajn.getLeftProjection());
+      }
+      // remove extra columns
+      PlanNode antijoin = new SortAntiJoinNode(left, right.project(new int[] { right.getArity() - 1 }), new int[] { left.getArity() - 1 });
+      return antijoin.project(Tools.sequence(left.getArity() - 1));
 
     } else if (p instanceof RecursionNode) {
       // use sorted recursion
@@ -279,13 +277,13 @@ public class BashlogCompiler {
   }
 
   /** Sort left and right tree, and join with 'join' command */
-  private void sortJoin(SortJoinNode j, Context ctx) {
+  private void sortJoin(SortJoinNode j, Context ctx, String additionalArgs) {
     ctx.startPipe();
     int colLeft, colRight;
     colLeft = j.getLeftProjection()[0] + 1;
     colRight = j.getRightProjection()[0] + 1;
 
-    ctx.append("join -t $'\\t' -1 ");
+    ctx.append("join " + additionalArgs + "-t $'\\t' -1 ");
     ctx.append(colLeft);
     ctx.append(" -2 ");
     ctx.append(colRight);
@@ -421,11 +419,18 @@ public class BashlogCompiler {
     } else if (planNode instanceof SortNode) {
       SortNode s = (SortNode) planNode;
       sort(s, ctx);
+
+      // check for sort anti join node first, as it's also a sort join node
+    } else if (planNode instanceof SortAntiJoinNode) {
+      ctx.info(planNode);
+      SortAntiJoinNode j = (SortAntiJoinNode) planNode;
+      sortJoin(j, ctx, " -v 1 ");
     } else if (planNode instanceof SortJoinNode) {
       ctx.info(planNode);
       SortJoinNode j = (SortJoinNode) planNode;
       //leftHashJoin(j, sb, indent);
-      sortJoin(j, ctx);
+      sortJoin(j, ctx, "");
+
     } else if (planNode instanceof CombinedColumnNode) {
       CombinedColumnNode c = (CombinedColumnNode) planNode;
       ctx.startPipe();
@@ -509,9 +514,13 @@ public class BashlogCompiler {
       ctx.append(file.getPath());
     } else if (planNode instanceof UnionNode) {
       ctx.startPipe();
-      ctx.append("$sort -u -m ");
-      for (PlanNode child : ((UnionNode) planNode).getChildren()) {
-        compile(child, ctx.file());
+      if (planNode.children().size() == 0) {
+        ctx.append("echo -n ");
+      } else {
+        ctx.append("$sort -u -m ");
+        for (PlanNode child : ((UnionNode) planNode).getChildren()) {
+          compile(child, ctx.file());
+        }
       }
       ctx.endPipe();
     } else if (planNode instanceof SortRecursionNode) {
