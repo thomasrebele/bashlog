@@ -23,10 +23,10 @@ public class JoinNode implements PlanNode {
       throw new IllegalArgumentException("The left and right projections for join should have the same size");
     }
     if (Arrays.stream(leftProjection).anyMatch(i -> i >= left.getArity())) {
-      throw new IllegalArgumentException("Invalid left projection: try to project a not existing field");
+      throw new IllegalArgumentException("Invalid left projection: trying to project a non-existing field");
     }
     if (Arrays.stream(rightProjection).anyMatch(i -> i >= right.getArity())) {
-      throw new IllegalArgumentException("Invalid left projection: try to project a not existing field");
+      throw new IllegalArgumentException("Invalid left projection: trying to project a non-existing field");
     }
 
     this.left = left;

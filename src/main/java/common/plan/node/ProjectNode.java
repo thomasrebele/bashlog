@@ -25,10 +25,10 @@ public class ProjectNode implements PlanNode {
   public ProjectNode(PlanNode table, int[] projection, Comparable<?>[] constants) {
     if (Arrays.stream(projection).anyMatch(i -> i >= table.getArity())) {
       throw new IllegalArgumentException(
-          "Invalid projection: try to project a not existing field: " + Arrays.toString(projection) + "\n" + table + ", arity " + table.getArity());
+          "Invalid projection: trying to project a non-existing field: " + Arrays.toString(projection) + "\n" + table + ", arity " + table.getArity());
     }
     if (IntStream.range(0, projection.length).anyMatch(i -> projection[i] < 0 && (constants.length <= i || constants[i] == null))) {
-      throw new IllegalArgumentException("Invalid projection: try to project a not existing field");
+      throw new IllegalArgumentException("Invalid projection: trying to project a non-existing field");
     }
 
     this.table = table;

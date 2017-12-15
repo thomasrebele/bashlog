@@ -101,7 +101,7 @@ public class BashlogCompiler {
     // use mawk if possible for better performance
     ctx.append("if [ \"$awk\" == \"\" ]; then if type mawk > /dev/null; then awk=\"mawk\"; else awk=\"awk\"; fi fi\n");
     // tweak sort
-    ctx.append("sort=\"sort -S64M --parallel=2 \"\n");
+    ctx.append("sort=\"sort -S64M --parallel=2 \"\n\n");
 
     compile(root, ctx);
 

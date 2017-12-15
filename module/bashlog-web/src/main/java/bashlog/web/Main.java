@@ -14,7 +14,7 @@ import common.parser.ParseException;
 import common.parser.ParserReader;
 import common.parser.Program;
 
-@WebServlet("/")
+@WebServlet("/index.jsp")
 public class Main extends HttpServlet {
 
 	@Override
@@ -24,6 +24,7 @@ public class Main extends HttpServlet {
 
 	@Override
 	protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+		System.out.println(req.getRequestURI());
 		String datalog = req.getParameter("datalog");
 		if (datalog != null) {
 			Program p;
@@ -37,7 +38,7 @@ public class Main extends HttpServlet {
 				String bashlog = BashlogCompiler.compileQuery(p, query);
 
 				req.setAttribute("bashlog", bashlog);
-			} catch (ParseException e) {
+			} catch (ParseException | IllegalArgumentException e) {
 				req.setAttribute("bashlog", e.getMessage());
 			}
 		} else {

@@ -22,7 +22,7 @@ public class AntiJoinNode implements PlanNode {
       throw new IllegalArgumentException("The left projection and the right plan for anti join should have the same size");
     }
     if (Arrays.stream(leftProjection).anyMatch(i -> i >= left.getArity())) {
-      throw new IllegalArgumentException("Invalid left projection: try to project a not existing field");
+      throw new IllegalArgumentException("Invalid left projection: trying to project a non-existing field");
     }
 
     this.left = left;
