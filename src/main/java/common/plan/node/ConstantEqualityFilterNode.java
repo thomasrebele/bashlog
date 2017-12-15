@@ -2,6 +2,7 @@ package common.plan.node;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 public class ConstantEqualityFilterNode implements EqualityFilterNode {
 
@@ -54,11 +55,16 @@ public class ConstantEqualityFilterNode implements EqualityFilterNode {
 
   @Override
   public boolean equals(Object obj) {
+    return equals(obj, Collections.emptyMap());
+  }
+
+  @Override
+  public boolean equals(Object obj,  Map<PlanNode,PlanNode> assumedEqualities) {
     if (!(obj.getClass() == getClass())) {
       return false;
     }
     ConstantEqualityFilterNode node = (ConstantEqualityFilterNode) obj;
-    return table.equals(node.table) && field == node.field && value.equals(node.value);
+    return field == node.field && value.equals(node.value) && table.equals(node.table, assumedEqualities);
   }
 
   @Override
@@ -68,6 +74,8 @@ public class ConstantEqualityFilterNode implements EqualityFilterNode {
 
   @Override
   public PlanNode transform(TransformFn fn, PlanNode originalParent) {
-    return fn.apply(this, new ConstantEqualityFilterNode(table.transform(fn, this), field, value), originalParent);
+    PlanNode newTable = table.transform(fn, this);
+    PlanNode newNode = newTable.equals(table) ? this : newTable.equalityFilter(field, value);
+    return fn.apply(this, newNode, originalParent);
   }
 }

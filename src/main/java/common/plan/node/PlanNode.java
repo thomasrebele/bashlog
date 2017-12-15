@@ -1,6 +1,7 @@
 package common.plan.node;
 
 import java.util.List;
+import java.util.Map;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
@@ -73,7 +74,7 @@ public interface PlanNode {
   }
 
   /** Lambda class for applying transformation on plan node */
-  public interface TransformFn {
+  interface TransformFn {
 
     /**
      * If transformations need access to the original node or its parent, they need to implement this method
@@ -82,7 +83,7 @@ public interface PlanNode {
      * @param originalParent 
      * @return replacement for current node
      */
-    public PlanNode apply(PlanNode originalNode, PlanNode transformed, PlanNode originalParent);
+    PlanNode apply(PlanNode originalNode, PlanNode transformed, PlanNode originalParent);
   }
 
   /**
@@ -91,22 +92,22 @@ public interface PlanNode {
    * If you don't want to apply any specific operation just return the parameter
    * Parameters of fn: (original node, transformed node)
    */
-  public default PlanNode transform(TransformFn fn, PlanNode originalParent) {
+  default PlanNode transform(TransformFn fn, PlanNode originalParent) {
     return fn.apply(this, this, originalParent);
   }
 
   /** Convenience method. Calls {@link #transform(TransformFn, PlanNode)} */
-  public default PlanNode transform(TransformFn fn) {
+  default PlanNode transform(TransformFn fn) {
     return transform(fn, null);
   }
 
   /** Convenience method. Calls {@link #transform(TransformFn, PlanNode)} */
-  public default PlanNode transform(Function<PlanNode, PlanNode> fn) {
+  default PlanNode transform(Function<PlanNode, PlanNode> fn) {
     return transform((o, n, p) -> fn.apply(n), null);
   }
 
   /** Check whether plan node contains 'target' as subplan */
-  public default boolean contains(PlanNode target) {
+  default boolean contains(PlanNode target) {
     boolean[] found = new boolean[] { false };
     transform((node) -> {
       if (node.equals(target)) {
@@ -118,7 +119,7 @@ public interface PlanNode {
   }
 
   /** Create a new plan where target subplan is replaced by replacement subplan */
-  public default PlanNode replace(PlanNode target, PlanNode replacement) {
+  default PlanNode replace(PlanNode target, PlanNode replacement) {
     return transform((node) -> (node.equals(target)) ? replacement : node);
   }
 
@@ -161,5 +162,9 @@ public interface PlanNode {
       hash = String.format("%4s", hash);
     }
     return hash;
+  }
+
+  default boolean equals(Object other, Map<PlanNode,PlanNode> assumedEqualities) {
+    return equals(other);
   }
 }

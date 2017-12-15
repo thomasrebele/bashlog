@@ -1,7 +1,11 @@
 package common.plan.node;
 
+import common.Tools;
+
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 /** 
  * Represents a plan node, that has itself as subplan.
@@ -78,6 +82,21 @@ public class RecursionNode implements PlanNode {
   }
 
   @Override
+  public boolean equals(Object obj) {
+    return equals(obj, Collections.emptyMap());
+  }
+
+  @Override
+  public boolean equals(Object obj, Map<PlanNode,PlanNode> assumedEqualities) {
+    if (!(obj.getClass() == getClass())) {
+      return false;
+    }
+    RecursionNode other = (RecursionNode) obj;
+    assumedEqualities = Tools.with(Tools.with(assumedEqualities, deltaNode, other.deltaNode), fullNode, other.fullNode);
+    return exitPlan.equals(other.exitPlan, assumedEqualities) && recursivePlan.equals(other.recursivePlan, assumedEqualities);
+  }
+
+  @Override
   public String toString() {
     return "rec(" + exitPlan.toString() + ", " + recursivePlan.toString() + ")";
   }
@@ -94,7 +113,10 @@ public class RecursionNode implements PlanNode {
 
   @Override
   public PlanNode transform(TransformFn fn, PlanNode originalParent) {
-    return fn.apply(this, transform(exitPlan.transform(fn, this), recursivePlan.transform(fn, this)), originalParent);
+    PlanNode newExit = exitPlan.transform(fn, this);
+    PlanNode newRecursion = recursivePlan.transform(fn, this);
+    PlanNode newNode = newExit.equals(exitPlan) && newRecursion.equals(recursivePlan) ? this : transform(newExit, newRecursion);
+    return fn.apply(this, newNode, originalParent);
   }
 
   public RecursionNode transform(PlanNode exit, PlanNode recursion) {

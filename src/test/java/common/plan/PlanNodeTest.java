@@ -27,6 +27,8 @@ public class PlanNodeTest {
   public void testPlanNode() {
     PlanNode foo = new BuiltinNode(new CompoundTerm("foo", args2));
     PlanNode bar = new BuiltinNode(new CompoundTerm("bar", args2));
+    Assert.assertEquals(foo, foo);
+    Assert.assertNotEquals(foo, bar);
     Assert.assertTrue((new VariableEqualityFilterNode(foo, 1, 1)).contains(foo));
     Assert.assertFalse((new VariableEqualityFilterNode(foo, 1, 1)).contains(bar));
     Assert.assertEquals(
@@ -188,11 +190,10 @@ public class PlanNodeTest {
     input.addRecursivePlan(input.getDelta().join(baz, new int[]{0}, new int[]{0}).project(new int[]{0, 1}));
 
     RecursionNode expected = new RecursionNode(baz.equalityFilter(2, "xyz").project(new int[]{0, 2}));
-    expected.addRecursivePlan(expected.getDelta().join(baz, new int[]{0}, new int[]{0}).project(new int[]{0, 1}));
+    expected.addRecursivePlan(expected.getDelta().join(baz.project(new int[]{0}), new int[]{0}, new int[]{0}).project(new int[]{0, 1}));
 
     assertEquals(
-            expected
-            ,
+            expected,
             optimizer.apply(input.equalityFilter(1, "xyz"))
     );
   }

@@ -7,7 +7,7 @@ import java.util.stream.Collectors;
 
 public class MultiFilterNode implements PlanNode {
 
-  protected final PlanNode innerPlan;
+  private final PlanNode table;
 
   protected final Set<PlanNode> children;
 
@@ -15,31 +15,31 @@ public class MultiFilterNode implements PlanNode {
 
   protected final String operatorString;
 
-  protected final PlanNode placeholder;
+  private final PlanNode placeholder;
 
-  public MultiFilterNode(Set<PlanNode> children, PlanNode innerPlan, int arity) {
+  public MultiFilterNode(Set<PlanNode> children, PlanNode table, int arity) {
     this.arity = arity;
-    this.innerPlan = innerPlan;
+    this.table = table;
 
-    placeholder = new PlaceholderNode(this, "inner_plan", innerPlan.getArity());
+    placeholder = new PlaceholderNode(this, "inner_plan", table.getArity());
 
-    this.children = children.stream().map(c -> c.replace(innerPlan, placeholder)).collect(Collectors.toSet());
+    this.children = children.stream().map(c -> c.replace(table, placeholder)).collect(Collectors.toSet());
     operatorString = this.children.stream().map(PlanNode::toString).collect(Collectors.joining(", "));
-    children.stream().filter(n -> !n.contains(innerPlan)).forEach(child -> {
+    children.stream().filter(n -> !n.contains(table)).forEach(child -> {
       throw new IllegalArgumentException("child doesn't contain inner plan: " + child.toPrettyString());
     });
   }
 
-  public MultiFilterNode(Set<PlanNode> children, PlanNode innerPlan, PlanNode placeholder, int arity) {
+  public MultiFilterNode(Set<PlanNode> children, PlanNode table, PlanNode placeholder, int arity) {
     this.children = children;
-    this.innerPlan = innerPlan;
+    this.table = table;
     this.placeholder = placeholder;
     this.arity = arity;
     operatorString = this.children.stream().map(PlanNode::toString).collect(Collectors.joining(", "));
   }
 
-  public PlanNode getInnerTable() {
-    return innerPlan;
+  public PlanNode getTable() {
+    return table;
   }
 
   public Set<PlanNode> getFilter() {
@@ -58,7 +58,7 @@ public class MultiFilterNode implements PlanNode {
 
   @Override
   public List<PlanNode> children() {
-    return Arrays.asList(innerPlan);
+    return Arrays.asList(table);
   }
 
   @Override
@@ -76,11 +76,8 @@ public class MultiFilterNode implements PlanNode {
   }
 
   public PlanNode transform(TransformFn fn, PlanNode originalParent) {
-    return fn.apply(this, transform(children, innerPlan.transform(fn, this)), originalParent);
+    PlanNode newTable = table.transform(fn, this);
+    PlanNode newNode = newTable.equals(table) ? this : new MultiFilterNode(children, newTable, placeholder, arity);
+    return fn.apply(this, newNode, originalParent);
   }
-
-  protected MultiFilterNode transform(Set<PlanNode> children, PlanNode innerPlan) {
-    return new MultiFilterNode(children, innerPlan, placeholder, arity);
-  }
-
 }

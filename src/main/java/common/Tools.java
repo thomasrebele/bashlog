@@ -89,4 +89,9 @@ public class Tools {
     R apply(T t, U u, V v, W w);
   }
 
+  public static <K,V> Map<K,V> with(Map<K,V> map, K key, V value) {
+    Map<K,V> newMap = new HashMap<>(map);
+    newMap.put(key, value);
+    return newMap;
+  }
 }
