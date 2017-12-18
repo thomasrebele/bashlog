@@ -20,7 +20,7 @@ public class PushDownFilterAndProject implements Optimizer {
       } else if (n instanceof VariableEqualityFilterNode) {
         return optimize((VariableEqualityFilterNode) n);
       } else if (n instanceof ProjectNode) {
-          return optimize((ProjectNode) n);
+        return optimize((ProjectNode) n);
       } else {
         return n;
       }
@@ -58,7 +58,7 @@ public class PushDownFilterAndProject implements Optimizer {
     if (child instanceof JoinNode) {
       return swap(node, (JoinNode) child);
     } else if (child instanceof AntiJoinNode) {
-        return swap(node, (AntiJoinNode) child);
+      return swap(node, (AntiJoinNode) child);
     } else if (child instanceof UnionNode) {
       return swap(node, (UnionNode) child);
     } else {
@@ -100,10 +100,7 @@ public class PushDownFilterAndProject implements Optimizer {
   private PlanNode swap(ConstantEqualityFilterNode filter, ProjectNode project) {
     int newField = project.getProjection()[filter.getField()];
     if (newField >= 0) { //We could move the project
-      return newEqualityFilter(project.getTable(), newField, filter.getValue()).project(
-              project.getProjection(),
-              project.getConstants()
-      );
+      return newEqualityFilter(project.getTable(), newField, filter.getValue()).project(project.getProjection(), project.getConstants());
     } else {
       boolean sameConstant = project.getConstant(filter.getField()).filter(constant -> constant.equals(filter.getValue())).isPresent();
       if (sameConstant) {
@@ -115,9 +112,8 @@ public class PushDownFilterAndProject implements Optimizer {
   }
 
   private PlanNode swap(ConstantEqualityFilterNode filter, UnionNode union) {
-    return union.getChildren().stream()
-            .map(child -> newEqualityFilter(child, filter.getField(), filter.getValue()))
-            .reduce(PlanNode.empty(filter.getArity()), PlanNode::union);
+    return union.getChildren().stream().map(child -> newEqualityFilter(child, filter.getField(), filter.getValue()))
+        .reduce(PlanNode.empty(filter.getArity()), PlanNode::union);
   }
 
   private PlanNode swap(ConstantEqualityFilterNode filter, JoinNode join) {
@@ -132,55 +128,46 @@ public class PushDownFilterAndProject implements Optimizer {
   private PlanNode swap(ConstantEqualityFilterNode filter, AntiJoinNode antiJoin) {
     PlanNode right = antiJoin.getRight();
     OptionalInt rightField = Tools.findKey(antiJoin.getLeftProjection(), filter.getField());
-    if(rightField.isPresent()) {
+    if (rightField.isPresent()) {
       right = newEqualityFilter(right, rightField.getAsInt(), filter.getValue());
     }
-    return newEqualityFilter(antiJoin.getLeft(), filter.getField(), filter.getValue()).antiJoin(
-            right,
-            antiJoin.getLeftProjection()
-    );
+    return newEqualityFilter(antiJoin.getLeft(), filter.getField(), filter.getValue()).antiJoin(right, antiJoin.getLeftProjection());
   }
 
   private PlanNode swap(VariableEqualityFilterNode filter, UnionNode union) {
-    return union.getChildren().stream()
-                    .map(child -> newEqualityFilter(child, filter.getField1(), filter.getField2()))
-                    .reduce(PlanNode.empty(filter.getArity()), PlanNode::union);
+    return union.getChildren().stream().map(child -> newEqualityFilter(child, filter.getField1(), filter.getField2()))
+        .reduce(PlanNode.empty(filter.getArity()), PlanNode::union);
   }
 
   private PlanNode swap(ProjectNode node, JoinNode child) {
-    return swapJoin(
-            node, child.getLeft(), child.getRight(), child.getLeftProjection(), child.getRightProjection(),
-            PlanNode::join
-    );
+    return swapJoin(node, child.getLeft(), child.getRight(), child.getLeftProjection(), child.getRightProjection(), PlanNode::join);
   }
 
   private PlanNode swap(ProjectNode node, AntiJoinNode child) {
-    return swapJoin(
-            node, child.getLeft(), child.getRight(), child.getLeftProjection(), Tools.sequence(child.getRight().getArity()),
-            (left, right, leftProjection, rightProjection) ->
-                    left.antiJoin(newProjection(right, rightProjection), leftProjection)
-    );
+    return swapJoin(node, child.getLeft(), child.getRight(), child.getLeftProjection(), Tools.sequence(child.getRight().getArity()),
+        (left, right, leftProjection, rightProjection) -> left.antiJoin(newProjection(right, rightProjection), leftProjection));
   }
 
-  private PlanNode swapJoin(
-          ProjectNode node, PlanNode left, PlanNode right, int[] leftProjection, int[] rightProjection,
-          Tools.QuadriFunction<PlanNode, PlanNode, int[], int[], PlanNode> buildNew
-          ) {
+  private PlanNode swapJoin(ProjectNode node, PlanNode left, PlanNode right, int[] leftProjection, int[] rightProjection,
+      Tools.QuadriFunction<PlanNode, PlanNode, int[], int[], PlanNode> buildNew) {
+
     //TODO: could be improved to simplify the actual projections
     boolean[] neededLeft = new boolean[left.getArity()], neededRight = new boolean[right.getArity()];
     Arrays.fill(neededLeft, false);
     Arrays.fill(neededRight, false);
     for (int i : leftProjection) {
-      neededLeft[i] = true;
+      if (i >= 0) neededLeft[i] = true;
     }
     for (int i : rightProjection) {
-      neededRight[i] = true;
+      if (i >= 0) neededRight[i] = true;
     }
     for (int i : node.getProjection()) {
-      if (i < left.getArity()) {
-        neededLeft[i] = true;
-      } else {
-        neededRight[i - left.getArity()] = true;
+      if (i >= 0) {
+        if (i < left.getArity()) {
+          neededLeft[i] = true;
+        } else {
+          neededRight[i - left.getArity()] = true;
+        }
       }
     }
 
@@ -193,7 +180,7 @@ public class PushDownFilterAndProject implements Optimizer {
     int oldPrj[] = node.getProjection();
     for (int i = 0; i < oldPrj.length; i++) {
       int dst = oldPrj[i];
-      if(dst >= 0) {
+      if (dst >= 0) {
         if (dst < left.getArity()) {
           newPrj[i] = oldLeftToNew[dst];
         } else {
@@ -204,11 +191,8 @@ public class PushDownFilterAndProject implements Optimizer {
     left = newProjection(left, prjLeft);
     right = newProjection(right, prjRight);
 
-    return buildNew.apply(
-            left, right,
-            Tools.apply(leftProjection, oldLeftToNew),
-            Tools.apply(rightProjection, oldRightToNew)
-    ).project(newPrj, node.getConstants());
+    return buildNew.apply(left, right, Tools.apply(leftProjection, oldLeftToNew), Tools.apply(rightProjection, oldRightToNew)).project(newPrj,
+        node.getConstants());
   }
 
   private int[] boolToIndex(boolean[] used) {
@@ -223,9 +207,8 @@ public class PushDownFilterAndProject implements Optimizer {
   }
 
   private PlanNode swap(ProjectNode projection, UnionNode union) {
-    return union.getChildren().stream()
-            .map(child -> newProjection(child, projection.getProjection(), projection.getConstants()))
-            .reduce(PlanNode.empty(union.getArity()), PlanNode::union);
+    return union.getChildren().stream().map(child -> newProjection(child, projection.getProjection(), projection.getConstants()))
+        .reduce(PlanNode.empty(union.getArity()), PlanNode::union);
   }
 
   private PlanNode newProjection(PlanNode node, int[] fields, Comparable<?>[] constants) {
