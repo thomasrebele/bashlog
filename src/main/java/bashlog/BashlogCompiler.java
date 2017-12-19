@@ -395,8 +395,6 @@ public class BashlogCompiler {
     ctx.endPipe();
   }
 
-  private int flockIdx = 4;
-
   private void compile(PlanNode planNode, Context ctx) {
     if (planNode instanceof MaterializationNode) {
       ctx.startPipe();
@@ -417,15 +415,13 @@ public class BashlogCompiler {
         }
         ctx.append("\n");
       }
-      ctx.append("( flock " + flockIdx + "; (");
+      ctx.append("( flock 1; (");
       compile(m.getReusedPlan(), ctx.pipe());
       ctx.append("; \\\n");
       if (asFile) {
-        ctx.append(" flock --unlock " + flockIdx + ")& ");
-        ctx.append(") " + flockIdx + "> ");
+        ctx.append(" flock --unlock 1)& ");
+        ctx.append(") 1> ");
         ctx.append(matFile);
-        ctx.append(" 1>&" + flockIdx);
-        flockIdx += 1;
       } else {
         for (int i = 0; i < m.getReuseCount(); i++) {
           ctx.append(i < m.getReuseCount() - 1 ? " | tee " : " > ");
