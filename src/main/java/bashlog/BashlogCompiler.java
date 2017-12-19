@@ -1,5 +1,6 @@
 package bashlog;
 
+import bashlog.Context.ContextType;
 import bashlog.plan.*;
 import common.Tools;
 import common.parser.CompoundTerm;
@@ -285,6 +286,7 @@ public class BashlogCompiler {
     colLeft = j.getLeftProjection()[0] + 1;
     colRight = j.getRightProjection()[0] + 1;
 
+    lock(ctx, j.children());
     ctx.append("join " + additionalArgs + "-t $'\\t' -1 ");
     ctx.append(colLeft);
     ctx.append(" -2 ");
@@ -366,6 +368,21 @@ public class BashlogCompiler {
     return sb.toString();
   }
 
+  private void lock(Context ctx, List<PlanNode> children) {
+    StringBuilder sb = new StringBuilder();
+    for (PlanNode child : children) {
+      if (child instanceof PlaceholderNode) {
+        PlanNode parent = ((PlaceholderNode) child).getParent();
+        if (parent instanceof MaterializationNode) {
+          String matFile = matNodeToFilename.get(parent);
+          sb.append("flock -s " + matFile + " ");
+        }
+      }
+    }
+
+    ctx.append(sb.toString());
+  }
+
   private void recursionInMemory(RecursionNode rn, Context ctx, String fullFile, String deltaFile, String newDeltaFile) {
     ctx.startPipe();
     compile(rn.getRecursivePlan(), ctx.pipe());
@@ -377,6 +394,8 @@ public class BashlogCompiler {
     ctx.append(INDENT + "mv " + newDeltaFile + " " + deltaFile + "; \n");
     ctx.endPipe();
   }
+
+  private int flockIdx = 4;
 
   private void compile(PlanNode planNode, Context ctx) {
     if (planNode instanceof MaterializationNode) {
@@ -398,22 +417,26 @@ public class BashlogCompiler {
         }
         ctx.append("\n");
       }
+      ctx.append("( flock " + flockIdx + "; (");
       compile(m.getReusedPlan(), ctx.pipe());
-      ctx.append(" \\\n");
+      ctx.append("; \\\n");
       if (asFile) {
-        ctx.append(" > ");
+        ctx.append(" flock --unlock " + flockIdx + ")& ");
+        ctx.append(") " + flockIdx + "> ");
         ctx.append(matFile);
+        ctx.append(" 1>&" + flockIdx);
+        flockIdx += 1;
       } else {
         for (int i = 0; i < m.getReuseCount(); i++) {
           ctx.append(i < m.getReuseCount() - 1 ? " | tee " : " > ");
           ctx.append(matFile + "_" + i);
+          ctx.append(" &");
         }
-        ctx.append(" &");
       }
       ctx.append("\n");
 
       if (!(m.getMainPlan() instanceof MaterializationNode)) {
-        ctx.append("# plan\n");
+        ctx.append("\n# plan\n");
       }
       compile(m.getMainPlan(), ctx.pipe());
       ctx.endPipe();
@@ -462,6 +485,7 @@ public class BashlogCompiler {
       ctx.endPipe();
     } else if (planNode instanceof EqualityFilterNode) {
       ctx.startPipe();
+      lock(ctx, planNode.children());
       ctx.append(AWK);
       ctx.append(awkEquality((EqualityFilterNode) planNode));
       ctx.append(" { print $0 }' ");
@@ -470,6 +494,8 @@ public class BashlogCompiler {
     } else if (planNode instanceof MultiFilterNode) {
       MultiFilterNode m = (MultiFilterNode) planNode;
       ctx.startPipe();
+
+      lock(ctx, planNode.children());
       ctx.append(AWK);
 
       for (PlanNode c : m.getFilter()) {
@@ -495,10 +521,10 @@ public class BashlogCompiler {
         else ctx.append(awkProject(p));
         ctx.append("} ");
       }
-
       ctx.append("' ");
       compile(m.getTable(), ctx.file());
       ctx.endPipe();
+
     } else if (planNode instanceof BuiltinNode) {
       CompoundTerm ct = ((BuiltinNode) planNode).compoundTerm;
       if ("bash_command".equals(ct.name)) {
@@ -510,17 +536,20 @@ public class BashlogCompiler {
       } else {
         throw new UnsupportedOperationException("predicate not supported: " + ct.getRelation());
       }
+
     } else if (planNode instanceof TSVFileNode) {
       TSVFileNode file = (TSVFileNode) planNode;
       if (!ctx.isFile()) {
         ctx.append("cat ");
       }
       ctx.append(file.getPath());
+
     } else if (planNode instanceof UnionNode) {
       ctx.startPipe();
       if (planNode.children().size() == 0) {
         ctx.append("echo -n ");
       } else {
+        lock(ctx, planNode.children());
         ctx.append("$sort -u -m ");
         for (PlanNode child : ((UnionNode) planNode).getChildren()) {
           compile(child, ctx.file());
@@ -574,6 +603,7 @@ public class BashlogCompiler {
         String matFile = matNodeToFilename.get(parent);
         if (!ctx.isFile()) {
           ctx.startPipe();
+          lock(ctx, Arrays.asList(planNode));
           ctx.append("cat ");
         }
         ctx.append(matFile);
