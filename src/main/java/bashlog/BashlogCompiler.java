@@ -503,7 +503,9 @@ public class BashlogCompiler {
       CompoundTerm ct = ((BuiltinNode) planNode).compoundTerm;
       if ("bash_command".equals(ct.name)) {
         ctx.startPipe();
-        ctx.append(((Constant<?>) ct.args[0]).getValue());
+        String command = ((Constant<?>) ct.args[0]).getValue().toString();
+        // remove newline from command
+        ctx.append(command.trim());
         ctx.endPipe();
       } else {
         throw new UnsupportedOperationException("predicate not supported: " + ct.getRelation());
