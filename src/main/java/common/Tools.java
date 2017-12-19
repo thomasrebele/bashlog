@@ -22,6 +22,12 @@ public class Tools {
     return result;
   }
 
+  public static <T> T[] concat(T[] first, T[] second) {
+    T[] result = Arrays.copyOf(first, first.length + second.length);
+    System.arraycopy(second, 0, result, first.length, second.length);
+    return result;
+  }
+
   public static <T> Set<T> set(@SuppressWarnings("unchecked") T... items) {
     Set<T> set = new HashSet<>(items.length);
     Collections.addAll(set, items);
@@ -102,6 +108,10 @@ public class Tools {
     } else {
       return Optional.empty();
     }
+  }
+
+  public static int[] addToElements(int[] projection, int shift) {
+    return Arrays.stream(projection).map(i -> i + shift).toArray();
   }
 
 }

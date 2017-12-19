@@ -7,10 +7,8 @@ import common.plan.node.BuiltinNode;
 import common.plan.node.MaterializationNode;
 import common.plan.node.PlanNode;
 import common.plan.node.RecursionNode;
-import common.plan.optimizer.Materialize;
-import common.plan.optimizer.Optimizer;
-import common.plan.optimizer.PushDownFilterAndProject;
-import common.plan.optimizer.SimplifyRecursion;
+import common.plan.optimizer.*;
+
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -282,6 +280,24 @@ public class PlanNodeTest {
                     baz.project(new int[]{1, 2}).equalityFilter(0, 1)))
     );
 
+  }
+
+  @Test
+  public void testPushDownJoin() {
+    Optimizer optimizer = new PushDownJoin();
+    PlanNode bar = new BuiltinNode(new CompoundTerm("bar", args4));
+    // push left
+    assertEquals(//
+        bar.join(bar, new int[] { 2 }, new int[] { 2 }).project(new int[] { 2, 1, 4, 5, 6, 7 }), //
+        optimizer.apply(
+            bar.project(new int[] { 2, 1 }).join(bar, new int[] { 0 }, new int[] { 2 })
+            )
+        );
+
+    // push right
+    assertEquals(//
+        bar.join(bar, new int[] { 3 }, new int[] { 2 }).project(new int[] { 0, 1, 2, 3, 6, 5 }), //
+        optimizer.apply(bar.join(bar.project(new int[] { 2, 1 }), new int[] { 3 }, new int[] { 0 })));
   }
 
   public static void assertEquals(PlanNode expected, PlanNode actual) {
