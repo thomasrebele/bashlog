@@ -78,7 +78,7 @@ public class UnionNode implements PlanNode {
     }
     UnionNode node = (UnionNode) obj;
     return children.size() == node.children.size() &&
-            children.stream().allMatch(child -> node.children.stream().anyMatch(other -> other.equals(child, assumedEqualities)));
+        children.stream().allMatch(child -> node.children.stream().anyMatch(other -> child.equals(other, assumedEqualities)));
   }
 
   @Override
