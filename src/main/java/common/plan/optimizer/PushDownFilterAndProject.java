@@ -186,6 +186,8 @@ public class PushDownFilterAndProject implements Optimizer {
         } else {
           newPrj[i] = prjLeft.length + oldRightToNew[dst - left.getArity()];
         }
+      } else {
+        newPrj[i] = -1;
       }
     }
     left = newProjection(left, prjLeft);
