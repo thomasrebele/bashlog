@@ -1,6 +1,5 @@
 package bashlog;
 
-import bashlog.Context.ContextType;
 import bashlog.plan.*;
 import common.Tools;
 import common.parser.CompoundTerm;
