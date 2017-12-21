@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import bashlog.BashlogCompiler;
+import bashlog.plan.SortNode;
 import common.plan.node.PlanNode;
 
 public interface Bash {
@@ -125,6 +126,7 @@ public interface Bash {
       this();
       commands.add(prev);
     }
+
   }
 
   public static class BashFile implements Bash {
@@ -208,4 +210,16 @@ public interface Bash {
     generate(sb);
     return sb.generate();
   }
+
+  public default Bash info(PlanNode node, String str) {
+    CommandSequence result;
+    if (this instanceof CommandSequence) {
+      result = (CommandSequence) this;
+    } else {
+      result = new CommandSequence();
+    }
+    result.comment(node, str);
+    return result;
+  }
+
 }
