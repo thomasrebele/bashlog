@@ -2,6 +2,7 @@ package common.plan.node;
 
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 
 public class UnionNode implements PlanNode {
@@ -87,7 +88,10 @@ public class UnionNode implements PlanNode {
   }
 
   public PlanNode transform(TransformFn fn, PlanNode originalParent) {
-    Set<PlanNode> newChildren = children.stream().map(child -> child.transform(fn, this)).collect(Collectors.toSet());
+    Set<PlanNode> newChildren = children.stream()//
+        .map(child -> child.transform(fn, this))//
+        .flatMap(child -> (Stream<PlanNode>) ((child instanceof UnionNode) ? ((UnionNode) child).children().stream() : Stream.of(child)))//
+        .collect(Collectors.toSet());
     PlanNode newNode = newChildren.equals(children) ? this : new UnionNode(newChildren, this.arity);
     return fn.apply(this, newNode, originalParent);
   }
