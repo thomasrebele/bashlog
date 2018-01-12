@@ -46,8 +46,10 @@ public class BashlogCompiler {
   /** Save debug information (query plans)*/
   private String debug = "";
 
+  private String bash = null;
+
   private List<List<Optimizer>> stages = Arrays.asList(//
-      Arrays.asList(new SimplifyRecursion(), new PushDownJoin(), new ReorderJoin(), new PushDownFilterAndProject(), new SimplifyRecursion(),
+      Arrays.asList(new SimplifyRecursion(), new PushDownJoin(), new ReorderJoinLinear(), new PushDownFilterAndProject(), new SimplifyRecursion(),
           new PushDownFilterAndProject()),
       Arrays.asList(new CombineFilter(false), r -> r.transform(this::transform), new BashlogOptimizer(), new Materialize()));
 
@@ -74,7 +76,10 @@ public class BashlogCompiler {
   }
 
   public String compile() {
-    return compile("", true);
+    if (bash == null) {
+      bash = compile("", true);
+    }
+    return bash;
   }
 
   public String compile(String indent, boolean comments) {

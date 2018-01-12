@@ -6,7 +6,7 @@ import common.plan.LogicalPlanBuilder;
 import common.plan.node.*;
 import common.plan.optimizer.Optimizer;
 import common.plan.optimizer.PushDownFilterAndProject;
-import common.plan.optimizer.ReorderJoin;
+import common.plan.optimizer.ReorderJoinLinear;
 import common.plan.optimizer.SimplifyRecursion;
 import org.apache.commons.compress.utils.Sets;
 import org.apache.flink.api.common.functions.MapFunction;
@@ -35,7 +35,7 @@ public class FlinkEvaluator implements Evaluator {
   private static final Logger LOGGER = LoggerFactory.getLogger(FlinkEvaluator.class);
   private static final int MAX_ITERATION = Integer.MAX_VALUE;
   private static final Set<String> BUILDS_IN = Sets.newHashSet("flink_entry_values", "bash_command");
-  private static final List<Optimizer> OPTIMIZERS = Arrays.asList(new SimplifyRecursion(), new ReorderJoin(), new PushDownFilterAndProject(), new SimplifyRecursion());
+  private static final List<Optimizer> OPTIMIZERS = Arrays.asList(new SimplifyRecursion(), new ReorderJoinLinear(), new PushDownFilterAndProject(), new SimplifyRecursion());
 
   private ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
   private FactsSet factsSet;
