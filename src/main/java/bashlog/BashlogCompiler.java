@@ -64,12 +64,20 @@ public class BashlogCompiler {
 
     List<String> stageNames = Arrays.asList("simplification", "optimization", "transforming to bashlog plan");
     Iterator<String> it = stageNames.iterator();
+    PlanValidator check = new PlanValidator();
     for (List<Optimizer> stage : stages) {
       debug += "\n\n" + (it.hasNext() ? it.next() : "") + "\n";
       for (Optimizer o : stage) {
         root = o.apply(root);
+
         debug += "applied " + o.getClass() + " \n";
         debug += root.toPrettyString() + "\n";
+        try {
+          check.apply(root);
+        } catch (Exception e) {
+          LOG.error(e.getMessage());
+          debug += "WARNING: " + e.getMessage();
+        }
       }
     }
     debug = "#" + debug.replaceAll("\n", "\n# ");
