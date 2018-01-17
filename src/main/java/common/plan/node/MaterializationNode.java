@@ -115,4 +115,9 @@ public class MaterializationNode implements PlanNode {
     assumedEqualities = Tools.with(assumedEqualities, reuseNode, node.reuseNode);
     return mainPlan.equals(node.mainPlan, assumedEqualities) && reusedPlan.equals(node.reusedPlan, assumedEqualities);
   }
+
+  @Override
+  public int hashCode() {
+    return mainPlan.getClass().hashCode() ^ reusedPlan.getClass().hashCode() ^ mainPlan.getArity() ^ reusedPlan.getArity();
+  }
 }

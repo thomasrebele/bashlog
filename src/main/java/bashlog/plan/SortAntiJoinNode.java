@@ -9,16 +9,13 @@ import common.plan.node.PlanNode;
 /** Anti-Join two sorted inputs based on ONE column */
 public class SortAntiJoinNode extends SortJoinNode {
 
-  private final int[] outputProjection;
-
   public SortAntiJoinNode(PlanNode left, PlanNode right, int[] leftJoinProjection) {
     this(left, right, leftJoinProjection, Tools.sequence(left.getArity() ));
   }
 
   public SortAntiJoinNode(PlanNode left, PlanNode right, int[] leftJoinProjection, int[] outputProjection) {
-    super(left, right, leftJoinProjection, new int[] { 0 });
+    super(left, right, leftJoinProjection, new int[] { 0 }, outputProjection);
     if (leftJoinProjection.length > 1) throw new UnsupportedOperationException("sort join does not support sorting on more than one column");
-    this.outputProjection = outputProjection;
   }
 
   @Override

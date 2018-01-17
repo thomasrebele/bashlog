@@ -93,6 +93,11 @@ public class RecursionNode implements PlanNode {
   }
 
   @Override
+  public int hashCode() {
+    return exitPlan.hashCode() ^ recursivePlan.hashCode();
+  }
+
+  @Override
   public String toString() {
     return "rec(" + exitPlan.toString() + ", " + recursivePlan.toString() + ")";
   }

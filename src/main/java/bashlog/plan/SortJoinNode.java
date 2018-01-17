@@ -5,11 +5,12 @@ import common.plan.node.JoinNode;
 import common.plan.node.PlanNode;
 
 import java.util.Arrays;
+import java.util.Map;
 
 /** Join two sorted inputs based on ONE column */
 public class SortJoinNode extends JoinNode {
 
-  private final int[] outputProjection;
+  protected final int[] outputProjection;
 
   public SortJoinNode(PlanNode left, PlanNode right, int[] leftJoinProjection, int[] rightJoinProjection) {
     this(left, right, leftJoinProjection, rightJoinProjection, Tools.sequence(left.getArity() + right.getArity()));
@@ -37,6 +38,15 @@ public class SortJoinNode extends JoinNode {
 
   public int[] getOutputProjection() {
     return outputProjection;
+  }
+
+  @Override
+  public boolean equals(Object obj, Map<PlanNode, PlanNode> assumedEqualities) {
+    if (!(obj.getClass() == getClass())) {
+      return false;
+    }
+    SortJoinNode node = (SortJoinNode) obj;
+    return super.equals(obj, assumedEqualities) && Arrays.equals(outputProjection, node.outputProjection);
   }
 
   @Override

@@ -72,6 +72,11 @@ public class PlaceholderNode implements PlanNode {
   }
 
   @Override
+  public int hashCode() {
+    return 0;
+  }
+
+  @Override
   public int getArity() {
     return arity == null ? parent.getArity() : arity;
   }
