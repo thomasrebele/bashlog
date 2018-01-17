@@ -1,7 +1,6 @@
 package bashlog;
 
 import bashlog.command.Bash;
-import bashlog.command.Bash.BashFile;
 import bashlog.command.Bash.Pipe;
 import bashlog.plan.*;
 import common.Tools;
@@ -12,6 +11,7 @@ import common.parser.Program;
 import common.plan.LogicalPlanBuilder;
 import common.plan.node.*;
 import common.plan.optimizer.*;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * 
@@ -196,9 +197,7 @@ public class BashlogCompiler {
       if (children.size() == 0) return u;
       if (children.size() == 1) return children.get(0);
       // use sort union, so sort all inputs
-      return children.stream()
-              .map(i -> (PlanNode) new SortNode(i, null))
-              .reduce(PlanNode.empty(u.getArity()), PlanNode::union);
+      return children.stream().map(i -> (PlanNode) new SortNode(i, null)).reduce(PlanNode.empty(u.getArity()), PlanNode::union);
 
     } else if (p instanceof BuiltinNode) {
       // instead of "<(cat file)", use file directly
@@ -406,7 +405,6 @@ public class BashlogCompiler {
     return result;
   }
 
-
   private Bash recursionInMemory(RecursionNode rn, String fullFile, String deltaFile, String newDeltaFile) {
     // untested
     Bash prev = compile(rn.getRecursivePlan());
@@ -424,6 +422,10 @@ public class BashlogCompiler {
     return waitFor(compileIntern(planNode), planNode.children());
   }
 
+  /**
+   * @param planNode
+   * @return
+   */
   private Bash compileIntern(PlanNode planNode) {
     if (planNode instanceof MaterializationNode) {
       MaterializationNode m = (MaterializationNode) planNode;
@@ -520,8 +522,56 @@ public class BashlogCompiler {
       MultiFilterNode m = (MultiFilterNode) planNode;
       Bash.Command cmd = new Bash.Command(AWK);
 
+      // replace value-filters by associative array lookup
+      // first, collect all filters that can be combined
+      PushDownFilterAndProject pushdown = new PushDownFilterAndProject();
+      Map<List<Integer>, Map<List<Integer>, List<List<Comparable<?>>>>> outputColToFilteredColToValues = new HashMap<>();
+      List<PlanNode> remaining = m.getFilter().stream().map(pushdown::apply).filter(pn -> {
+        Map<Integer, Comparable<?>> filterCols = new TreeMap<>();
+        int[] outputCols = getCols(pn, filterCols);
+        if (outputCols == null || filterCols.size() == 0) return true;
+        
+        outputColToFilteredColToValues.computeIfAbsent( //
+            Arrays.stream(outputCols).boxed().collect(Collectors.toList()), //
+            k -> new HashMap<>()) //
+            .computeIfAbsent(new ArrayList<>(filterCols.keySet()), k -> new ArrayList<>())//
+            .add(new ArrayList<Comparable<?>>(filterCols.values()));
+
+        return false;
+      }).collect(Collectors.toList());
+
       StringBuilder arg = new StringBuilder();
-      for (PlanNode c : m.getFilter()) {
+      if (outputColToFilteredColToValues.size() > 0) {
+        // create arrays outCOLS_condCOLS[VAL] = "1";
+        // where COLS looks like 0c1c2
+
+        arg.append("BEGIN { ");
+        outputColToFilteredColToValues.forEach((outCols, map) -> {
+          map.forEach((filterCols, values) -> {
+            values.forEach(vals -> {
+              arg.append("out").append(joinStr(outCols, "c"));
+              arg.append("_cond").append(joinStr(filterCols, "c"));
+              arg.append("[\"").append(joinStr(vals, "\" FS \"")).append("\"] = \"1\"; ");
+            });
+          });
+        });
+        arg.append(" } ");
+        
+        // filter lines using arrays
+        outputColToFilteredColToValues.forEach((outCols, map) -> {
+          arg.append("(");
+          arg.append(map.keySet().stream().map(filterCols -> {
+            return (String) "(" + joinStr(filterCols.stream().map(i -> "$" + (i + 1)), " FS ") + ")" + //
+            " in out" + joinStr(outCols, "c") + "_cond" + joinStr(filterCols, "c");
+          }).collect(Collectors.joining(" || ")));
+
+          arg.append(") ");
+          arg.append("{ print ").append(joinStr(outCols.stream().map(i -> "$" + (i + 1)), " FS ")).append(" } ");
+        });
+      }
+
+      // process remaining filter nodes
+      for (PlanNode c : remaining) {
         // do we need this actually?
         c = new PushDownFilterAndProject().apply(c);
         ProjectNode p = null;
@@ -552,7 +602,9 @@ public class BashlogCompiler {
       cmd.file(compile(m.getTable()));
 
       return cmd;
-    } else if (planNode instanceof BuiltinNode) {
+    } else if (planNode instanceof BuiltinNode)
+
+    {
       CompoundTerm ct = ((BuiltinNode) planNode).compoundTerm;
       if ("bash_command".equals(ct.name)) {
         String command = ((Constant<?>) ct.args[0]).getValue().toString();
@@ -573,7 +625,7 @@ public class BashlogCompiler {
         Bash.Command result = new Bash.Command("$sort").arg("-u").arg("-m");
         for (PlanNode child : ((UnionNode) planNode).getChildren()) {
           result.file(compile(child));
-        }
+      }
         return result;
       }
 
@@ -622,16 +674,40 @@ public class BashlogCompiler {
         AtomicInteger useCount = matNodeToCount.get(parent);
         if (useCount != null) {
           matFile = matFile + "_" + useCount.getAndIncrement();
-        }
-        return new Bash.BashFile(matFile);
-      } else {
-        LOG.error("compilation of " + planNode.getClass() + " not yet supported");
-        return null;
       }
+        return new Bash.BashFile(matFile);
     } else {
       LOG.error("compilation of " + planNode.getClass() + " not yet supported");
       return null;
     }
+    } else {
+      LOG.error("compilation of " + planNode.getClass() + " not yet supported");
+      return null;
+    }
+  }
+
+  private <T> String joinStr(Collection<T> outCols, String delimiter) {
+    return joinStr(outCols.stream(), delimiter);
+  }
+
+  private <T> String joinStr(Stream<T> outCols, String delimiter) {
+    return outCols.map(t -> t.toString()).collect(Collectors.joining(delimiter));
+  }
+
+  private int[] getCols(PlanNode node, Map<Integer, Comparable<?>> filterCols) {
+    if (node instanceof ConstantEqualityFilterNode) {
+      ConstantEqualityFilterNode eq = (ConstantEqualityFilterNode) node;
+      filterCols.put(eq.getField(), eq.getValue());
+      return getCols(eq.getTable(), filterCols);
+    }
+    if (node instanceof ProjectNode) {
+      ProjectNode p = (ProjectNode) node;
+      int[] cols = getCols(p.getTable(), filterCols);
+      // may only have one projection!
+      if (cols != null) throw new UnsupportedOperationException(((ProjectNode) node).getTable().toString());
+      return p.getProjection();
+    }
+    return null;
   }
 
   /** Transform datalog program and query relation to a bash script. */
@@ -655,6 +731,20 @@ public class BashlogCompiler {
     PlanNode pn = plan.get(query);
     BashlogCompiler bc = new BashlogCompiler(pn);
     return bc;
+  }
+
+  public static void main(String[] args) {
+    PlanNode table = new TSVFileNode("abc", 5);
+    MultiFilterNode mfn = new MultiFilterNode(new HashSet<>(Arrays.asList(
+        //table.equalityFilter(1, 2).project(new int[] { 1, 2 }), //
+        table.equalityFilter(3, "abc").project(new int[] { 1, 2 }), //
+        table.equalityFilter(3, "def").project(new int[] { 1, 2 }), //
+        table.equalityFilter(3, "ghi").project(new int[] { 1, 2 }), //
+        table.equalityFilter(1, 2).project(new int[] { 3, 4 }))), table, 2);
+
+    BashlogCompiler bc = new BashlogCompiler(mfn);
+    Bash b = bc.compileIntern(mfn);
+    System.out.println(b.generate());
   }
 
 }
