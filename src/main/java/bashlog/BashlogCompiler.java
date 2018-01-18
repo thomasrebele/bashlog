@@ -673,6 +673,10 @@ public class BashlogCompiler {
         return new Bash.BashFile(file);
       } else if (parent instanceof MaterializationNode) {
         String matFile = matNodeToFilename.get(parent);
+        if (matFile == null) {
+          matNodeToFilename.forEach((m, f) -> System.err.println(m.operatorString() + "  " + f));
+          throw new IllegalStateException("no file assigned to " + planNode.operatorString() + " for materialization " + parent.operatorString());
+        }
         AtomicInteger useCount = matNodeToCount.get(parent);
         if (useCount != null) {
           matFile = matFile + "_" + useCount.getAndIncrement();
