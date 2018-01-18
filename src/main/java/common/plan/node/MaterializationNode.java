@@ -118,6 +118,6 @@ public class MaterializationNode implements PlanNode {
 
   @Override
   public int hashCode() {
-    return mainPlan.getClass().hashCode() ^ reusedPlan.getClass().hashCode() ^ mainPlan.getArity() ^ reusedPlan.getArity();
+    return mainPlan.hashCode() ^ reusedPlan.hashCode();
   }
 }
