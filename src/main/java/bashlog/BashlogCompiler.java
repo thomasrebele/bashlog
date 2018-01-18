@@ -41,6 +41,9 @@ public class BashlogCompiler {
   /** Maps a materialization node to its use count. Applies only if materialized a finite number of times */
   Map<MaterializationNode, AtomicInteger> matNodeToCount = new HashMap<>();
 
+  /** Maps a materialization node to its temporary file. Reuse nodes use the filename of the materialized relation. */
+  Map<PlaceholderNode, String> placeholderToFilename = new HashMap<>();
+
   /** Query plan which should be translated */
   PlanNode root;
 
@@ -52,7 +55,8 @@ public class BashlogCompiler {
   private List<List<Optimizer>> stages = Arrays.asList(//
       Arrays.asList(new SimplifyRecursion(), new PushDownJoin(), new ReorderJoinLinear(), new PushDownFilterAndProject(), new SimplifyRecursion(),
           new PushDownFilterAndProject()),
-      Arrays.asList(new CombineFilter(false), r -> r.transform(this::transform), new BashlogOptimizer(), new Materialize()));
+      Arrays.asList(/*new CombineFilter(false),*/ r -> r.transform(this::transform),
+          new BashlogOptimizer()/*, new MultiOutput() */, new Materialize()));
 
   public BashlogCompiler(PlanNode planNode) {
     if (planNode == null) {
@@ -73,6 +77,7 @@ public class BashlogCompiler {
 
         debug += "applied " + o.getClass() + " \n";
         debug += root.toPrettyString() + "\n";
+
         try {
           check.apply(root);
         } catch (Exception e) {
@@ -99,15 +104,17 @@ public class BashlogCompiler {
     header.append("export LC_ALL=C\n");
     // for temporary files
     header.append("mkdir -p tmp\n");
+    header.append("rm tmp/*\n");
     // use mawk if possible for better performance
     header.append("if [ \"$awk\" == \"\" ]; then if type mawk > /dev/null; then awk=\"mawk\"; else awk=\"awk\"; fi fi\n");
     // tweak sort
     header.append("sort=\"sort -S64M --parallel=2 \"\n\n");
 
+    System.out.println(debugInfo());
+
     Bash e = compile(root);
     String result = header.toString() + e.generate();
 
-    System.out.println(debugInfo());
     System.out.println(result);
     System.out.println("\n\n---------------------------------\n");
 
@@ -460,8 +467,7 @@ public class BashlogCompiler {
       if (asFile) {
         reused = reused.wrap("(flock 1; (", "; \\\n flock --unlock 1)& )");
         result.add(reused.wrap("", " 1> " + matFile));
-      }
-      else {
+      } else {
         throw new UnsupportedOperationException();
       }
 
@@ -469,6 +475,25 @@ public class BashlogCompiler {
         result.other("\n# plan");
       }
       result.add(compile(m.getMainPlan()));
+      return result;
+
+    } else if (planNode instanceof MultiOutputNode) {
+      Bash.CommandSequence result = new Bash.CommandSequence();
+      Bash.Command cmd = result.cmd(AWK);
+      MultiOutputNode mo = (MultiOutputNode) planNode;
+
+      StringBuilder arg = new StringBuilder();
+      List<PlanNode> plans = mo.reusedPlans(), nodes = mo.reuseNodes();
+      for (int i = 0; i < plans.size(); i++) {
+        PlanNode plan = plans.get(i), node = nodes.get(i);
+
+        String matFile = "tmp/mat" + tmpFileIndex++;
+        placeholderToFilename.putIfAbsent((PlaceholderNode) node, matFile);
+        arg.append(awkLine(plan, matFile));
+      }
+      cmd.arg(arg.toString()).arg("'");
+      cmd.file(compile(mo.getLeaf()));
+      result.add(compile(mo.getMainPlan()));
       return result;
 
     } else if (planNode instanceof SortNode) {
@@ -530,7 +555,7 @@ public class BashlogCompiler {
         Map<Integer, Comparable<?>> filterCols = new TreeMap<>();
         int[] outputCols = getCols(pn, filterCols);
         if (outputCols == null || filterCols.size() == 0) return true;
-        
+
         outputColToFilteredColToValues.computeIfAbsent( //
             Arrays.stream(outputCols).boxed().collect(Collectors.toList()), //
             k -> new HashMap<>()) //
@@ -556,7 +581,7 @@ public class BashlogCompiler {
           });
         });
         arg.append(" } ");
-        
+
         // filter lines using arrays
         outputColToFilteredColToValues.forEach((outCols, map) -> {
           arg.append("(");
@@ -572,30 +597,7 @@ public class BashlogCompiler {
 
       // process remaining filter nodes
       for (PlanNode c : remaining) {
-        // do we need this actually?
-        c = new PushDownFilterAndProject().apply(c);
-        ProjectNode p = null;
-        List<String> conditions = new ArrayList<>();
-        do {
-          if (c instanceof ProjectNode) {
-            if (p != null) throw new IllegalStateException("currently only one projection supported");
-            p = (ProjectNode) c;
-            c = p.getTable();
-          } else if (c instanceof EqualityFilterNode) {
-            conditions.add(awkEquality((EqualityFilterNode) c));
-            c = ((EqualityFilterNode) c).getTable();
-          } else {
-            break;
-          }
-        } while (true);
-        arg.append(conditions.stream().collect(Collectors.joining(" && ")));
-        arg.append(" { print ");
-        if (p == null) {
-          arg.append("$0");
-        } else {
-          arg.append(awkProject(p));
-        }
-        arg.append("} ");
+        arg.append(awkLine(c, null));
       }
       arg.append("' ");
       cmd.arg(arg.toString());
@@ -625,7 +627,7 @@ public class BashlogCompiler {
         Bash.Command result = new Bash.Command("$sort").arg("-u").arg("-m");
         for (PlanNode child : ((UnionNode) planNode).getChildren()) {
           result.file(compile(child));
-      }
+        }
         return result;
       }
 
@@ -674,16 +676,57 @@ public class BashlogCompiler {
         AtomicInteger useCount = matNodeToCount.get(parent);
         if (useCount != null) {
           matFile = matFile + "_" + useCount.getAndIncrement();
-      }
+        }
         return new Bash.BashFile(matFile);
+      } else if (parent instanceof MultiOutputNode) {
+        String matFile = placeholderToFilename.get(planNode);
+        return new Bash.BashFile(matFile);
+      } else {
+        LOG.error("compilation of " + planNode.getClass() + " not yet supported");
+        return null;
+      }
     } else {
       LOG.error("compilation of " + planNode.getClass() + " not yet supported");
       return null;
     }
+  }
+
+  /**
+   * 
+   * @param plan consisting of selections and (at most one) projections
+   * @param output if null output to stdout, otherwise output to file
+   * @return
+   */
+  private String awkLine(PlanNode plan, String output) {
+    StringBuilder arg = new StringBuilder();
+    // do we need this actually?
+    plan = new PushDownFilterAndProject().apply(plan);
+    ProjectNode p = null;
+    List<String> conditions = new ArrayList<>();
+    do {
+      if (plan instanceof ProjectNode) {
+        if (p != null) throw new IllegalStateException("currently only one projection supported");
+        p = (ProjectNode) plan;
+        plan = p.getTable();
+      } else if (plan instanceof EqualityFilterNode) {
+        conditions.add(awkEquality((EqualityFilterNode) plan));
+        plan = ((EqualityFilterNode) plan).getTable();
+      } else {
+        break;
+      }
+    } while (true);
+    arg.append(conditions.stream().collect(Collectors.joining(" && ")));
+    arg.append(" { print ");
+    if (p == null) {
+      arg.append("$0");
     } else {
-      LOG.error("compilation of " + planNode.getClass() + " not yet supported");
-      return null;
+      arg.append(awkProject(p));
     }
+    if (output != null) {
+      arg.append(" >> \"").append(output).append("\"");
+    }
+    arg.append("} ");
+    return arg.toString();
   }
 
   private <T> String joinStr(Collection<T> outCols, String delimiter) {
@@ -733,7 +776,7 @@ public class BashlogCompiler {
     return bc;
   }
 
-  public static void main(String[] args) {
+  /*public static void main(String[] args) {
     PlanNode table = new TSVFileNode("abc", 5);
     MultiFilterNode mfn = new MultiFilterNode(new HashSet<>(Arrays.asList(
         //table.equalityFilter(1, 2).project(new int[] { 1, 2 }), //
@@ -741,10 +784,10 @@ public class BashlogCompiler {
         table.equalityFilter(3, "def").project(new int[] { 1, 2 }), //
         table.equalityFilter(3, "ghi").project(new int[] { 1, 2 }), //
         table.equalityFilter(1, 2).project(new int[] { 3, 4 }))), table, 2);
-
+  
     BashlogCompiler bc = new BashlogCompiler(mfn);
     Bash b = bc.compileIntern(mfn);
     System.out.println(b.generate());
-  }
+  }*/
 
 }
