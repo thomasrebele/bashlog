@@ -65,7 +65,10 @@ public class MultiOutputNode implements PlanNode {
         this.reuseNodes.add(newReuseNode);
 
         if (!mainPlan.contains(oldReuseNode)) {
-          throw new IllegalArgumentException("incorrect reuse node specified:" + oldReuseNode.toPrettyString() + "\n" + mainPlan.toPrettyString());
+          System.err.println("exception while constructing " + this.operatorString());
+          System.err.println("main plan:\n" + mainPlan.toPrettyString());
+          throw new IllegalArgumentException(
+              "incorrect reuse node specified:" + oldReuseNode.toPrettyString() + "\nfor reuse plan\n" + reusedPlans.get(i).toPrettyString());
         }
         mainPlan = mainPlan.replace(oldReuseNode, newReuseNode);
       }
@@ -98,8 +101,16 @@ public class MultiOutputNode implements PlanNode {
     PlanNode newMainPlan = mainPlan.transform(fn, this);
     PlanNode newLeafPlan = leafPlan.transform(fn, this);
     List<PlanNode> newReusedPlans = reusedPlans.stream().map(n -> n.transform(fn, this)).collect(Collectors.toList());
-    PlanNode newNode = mainPlan.equals(newMainPlan) && leafPlan.equals(newLeafPlan) && reusedPlans.equals(newReusedPlans) ? this
-        : new MultiOutputNode(newMainPlan, newLeafPlan, newReusedPlans, null, reuseNodes);
+    //List<PlanNode> newReusedPlans = reusedPlans;
+    PlanNode newNode = this;
+    if (!(mainPlan.equals(newMainPlan) && leafPlan.equals(newLeafPlan) && reusedPlans.equals(newReusedPlans))) {
+      try {
+        newNode = new MultiOutputNode(newMainPlan, newLeafPlan, newReusedPlans, null, reuseNodes);
+      } catch (Exception e) {
+        System.err.println("problem transforming multi output node\n" + this.toPrettyString());
+        throw e;
+      }
+    }
     return fn.apply(this, newNode, originalParent);
   }
 
@@ -132,7 +143,7 @@ public class MultiOutputNode implements PlanNode {
 
   @Override
   public int hashCode() {
-    return mainPlan.getClass().hashCode() ^ mainPlan.getArity() ^ leafPlan.getClass().hashCode() ^ leafPlan.getArity();
+    return Objects.hash(mainPlan, leafPlan);
   }
 
   public List<PlanNode> reusedPlans() {

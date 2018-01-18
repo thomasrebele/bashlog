@@ -1,8 +1,7 @@
 package common.plan.node;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
 public class PlaceholderNode implements PlanNode {
 
@@ -94,6 +93,20 @@ public class PlaceholderNode implements PlanNode {
   @Override
   public String operatorString() {
     return operatorString;
+  }
+
+  /** Walk through the plan and collect outer nodes that have a place holder in the plan */
+  public static Set<PlanNode> outerParents(PlanNode plan) {
+    HashMap<PlanNode, Boolean> nodeToContained = new HashMap<>();
+
+    plan.transform(pn -> {
+      nodeToContained.put(plan, true);
+      if (pn instanceof PlaceholderNode) {
+        nodeToContained.putIfAbsent(((PlaceholderNode) pn).getParent(), false);
+      }
+      return pn;
+    });
+    return nodeToContained.entrySet().stream().filter(e -> !e.getValue()).map(e -> e.getKey()).collect(Collectors.toSet());
   }
 
 }

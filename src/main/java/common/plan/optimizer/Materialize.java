@@ -1,6 +1,7 @@
 package common.plan.optimizer;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 import bashlog.plan.TSVFileNode;
 import common.plan.node.*;
@@ -31,13 +32,13 @@ public class Materialize implements Optimizer {
       }
     });
 
+    System.out.println(t.toPrettyString());
     return t.transform((old, node, parent) -> {
       if (nodesToReuseNode.containsKey(old)) {
         return nodesToReuseNode.get(old);
       }
       List<Info> info = nodesToInfo.get(old);
       if (info != null) {
-        info.get(0).plan.height();
         Comparator<Info> cmp = Comparator.comparing((i) -> -i.plan.height());
         cmp.thenComparing(new Comparator<Info>() {
 
@@ -55,6 +56,7 @@ public class Materialize implements Optimizer {
 
         PlanNode mat = node;
         for (Info i : info) {
+          System.err.println("materialize at " + i.materializeAt.operatorString());
           PlanNode newReusedPlan = i.plan.transform((o, pn, p) -> {
             // compare with 'old' node, as plan tree might have changed due to preceding materializations
             if (o.equals(i.plan)) return pn;
@@ -176,6 +178,9 @@ public class Materialize implements Optimizer {
      */
     final Set<PlanNode> calledRecursions = new HashSet<>();
 
+    /** Outer plan nodes whose placeholder occurs in plan */
+    final Set<PlanNode> placeholderParents = new HashSet<>();
+
     /** If reuse, either materialize output to file, or create named pipes and fill them with tee */
     private boolean reuse = false;
 
@@ -219,8 +224,16 @@ public class Materialize implements Optimizer {
     PlanNode reuseAt() {
       if (isRepeated == null) {
         int[] calledDepth = new int[] { -1 }, outerDepth = new int[] { -1 };
-        materializeAt = maxDepth(calledRecursions, calledDepth);
+        Set<PlanNode> outer = PlaceholderNode.outerParents(plan).stream().map(pn -> {
+          if (pn instanceof MultiOutputNode) {
+            return ((MultiOutputNode) pn).getMainPlan();
+          }
+          return pn;
+        }).collect(Collectors.toSet());
+        materializeAt = maxDepth(outer, new int[] { -1 });
+        // calculate outer and called depth
         maxDepth(outerRecursions, outerDepth);
+        maxDepth(calledRecursions, calledDepth);
         // check whether this plan is contained within a recursion node, but doesn't contain its delta/full nodes
         // in that case we should materialize it at node 'materializeAt'
         isRepeated = outerDepth[0] > calledDepth[0];

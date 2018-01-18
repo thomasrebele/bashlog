@@ -56,10 +56,10 @@ public class MultiOutput implements Optimizer {
       if (info != null) {
         PlanNode mat = node;
         for (Info i : info) {
-          mat = i.builder.build(mat, i.leaf, i.plans.stream().map(p -> p.transform(pn -> {
-            if (pn.equals(p)) return pn;
-            PlanNode rn = nodesToReuseNode.get(pn);
-            return rn == null ? pn : rn;
+          mat = i.builder.build(mat, i.leaf, i.plans.stream().map(p -> p.transform((subOld, subNode, subParent) -> {
+            if (subOld.equals(p)) return subNode;
+            PlanNode rn = nodesToReuseNode.get(subOld);
+            return rn == null ? subNode : rn;
           })).collect(Collectors.toList()));
         }
         return mat;
