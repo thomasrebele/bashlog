@@ -25,8 +25,14 @@ public class Check implements AutoCloseable {
 
   boolean ignoreUnexpected = false;
 
+  boolean ignoreTooOften = false;
+
   public void ignoreUnexpected() {
     this.ignoreUnexpected = true;
+  }
+
+  public void ignoreTooOften() {
+    this.ignoreTooOften = true;
   }
 
   public boolean apply(Object... vals) {
@@ -69,7 +75,7 @@ public class Check implements AutoCloseable {
           fail[0] = true;
           if (count[0]++ > 10) return;
         }
-        if (c < 0) {
+        if (c < 0 && !ignoreTooOften) {
           log.error("too often (" + c + "x): " + l);
           fail[0] = true;
           if (count[0]++ > 10) return;
