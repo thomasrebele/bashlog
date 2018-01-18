@@ -55,11 +55,13 @@ public class Materialize implements Optimizer {
 
         PlanNode mat = node;
         for (Info i : info) {
-          mat = i.matNodeBuilder.build(mat, i.plan.transform(pn -> {
-            if (pn.equals(i.plan)) return pn;
-            PlanNode rn = nodesToReuseNode.get(pn);
+          PlanNode newReusedPlan = i.plan.transform((o, pn, p) -> {
+            // compare with 'old' node, as plan tree might have changed due to preceding materializations
+            if (o.equals(i.plan)) return pn;
+            PlanNode rn = nodesToReuseNode.get(o);
             return rn == null ? pn : rn;
-          }), i.useCount());
+          });
+          mat = i.matNodeBuilder.build(mat, newReusedPlan, i.useCount());
         }
         return mat;
       }

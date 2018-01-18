@@ -1,11 +1,8 @@
 package common.plan.node;
 
-import common.Tools;
+import java.util.*;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import common.Tools;
 
 
 public class MaterializationNode implements PlanNode {
@@ -54,7 +51,13 @@ public class MaterializationNode implements PlanNode {
     this.reuseNode = builder != null ? reuseNode : new PlaceholderNode(this, reuseNode.operatorString(), reusedPlan.getArity());
     this.reusedPlan = reusedPlan;
     if (!mainPlan.contains(reuseNode)) {
-      throw new IllegalArgumentException("incorrect reuse node specified:" + reuseNode.toPrettyString() + "\n" + mainPlan.toPrettyString());
+      if (builder != null) {
+        builder.setOperatorString(reuseNode.operatorString() + " (EXCEPTION)");
+      }
+      System.err.println("exception while constructing " + this.operatorString());
+      System.err.println("main plan:\n" + mainPlan.toPrettyString());
+      throw new IllegalArgumentException(
+          "incorrect reuse node specified:" + reuseNode.toPrettyString() + "\nfor reuse plan\n" + reusedPlan.toPrettyString());
     }
     this.mainPlan = builder != null ? mainPlan : mainPlan.replace(reuseNode, this.reuseNode);
     this.reuseCount = reuseCount;
@@ -118,6 +121,6 @@ public class MaterializationNode implements PlanNode {
 
   @Override
   public int hashCode() {
-    return mainPlan.hashCode() ^ reusedPlan.hashCode();
+    return Objects.hash(mainPlan, reusedPlan);
   }
 }

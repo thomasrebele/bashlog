@@ -28,6 +28,11 @@ public class PlaceholderNode implements PlanNode {
       node.parent = parent;
     }
 
+    /** Only use for debugging */
+    public void setOperatorString(String str) {
+      node.operatorString = str;
+    }
+
     public PlaceholderNode build(PlanNode parent, String operatorString) {
       if (node == null) throw new IllegalStateException("already built!");
       try {
