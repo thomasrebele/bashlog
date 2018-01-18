@@ -134,6 +134,7 @@ public interface Bash {
     String path;
 
     public BashFile(String path) {
+      if (path == null) throw new IllegalArgumentException("file cannot be null");
       this.path = path;
     }
 

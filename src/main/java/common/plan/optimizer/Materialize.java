@@ -124,6 +124,7 @@ public class Materialize implements Optimizer {
   private void analyzeReuse(PlanNode p, int parentUseCount) {
     Info info = planToInfo.get(p);
     if (info == null) return;
+    if (p instanceof PlaceholderNode) return;
 
     if (info.planUseCount > parentUseCount) {
       info.reuse = true;
