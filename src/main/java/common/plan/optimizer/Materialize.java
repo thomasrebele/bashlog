@@ -37,7 +37,9 @@ public class Materialize implements Optimizer {
       }
       List<Info> info = nodesToInfo.get(old);
       if (info != null) {
-        Comparator<Info> cmp = new Comparator<Info>() {
+        info.get(0).plan.height();
+        Comparator<Info> cmp = Comparator.comparing((i) -> -i.plan.height());
+        cmp.thenComparing(new Comparator<Info>() {
 
           @Override
           public int compare(Info i1, Info i2) {
@@ -45,7 +47,7 @@ public class Materialize implements Optimizer {
             if (i2.plan.contains(i1.plan)) return 1;
             return 0;
           }
-        } //
+        })
             .thenComparingInt(i -> i.depth) //
             .thenComparingInt(i -> System.identityHashCode(i));
 
@@ -240,7 +242,7 @@ public class Materialize implements Optimizer {
           " crc:" + calledRecursions.size() + //
           " " + (reuse() ? "reuse" : "     ") + //
           " " + (useCount() < 0 ? "-" : useCount()) + "x " + //
-          (reuseAt() != null ? " at " + reuseAt().hash() : "");
+          (reuseAt() != null ? " at " + reuseAt().hash() : "") + "  " + plan.toString();
     }
   }
 

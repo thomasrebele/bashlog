@@ -266,4 +266,9 @@ public interface PlanNode {
   default boolean equals(Object other, Map<PlanNode, PlanNode> assumedEqualities) {
     return equals(other);
   }
+
+  default int height() {
+    if (children().size() == 0) return 0;
+    return children().stream().mapToInt(c -> c.height()).max().getAsInt() + 1;
+  }
 }
