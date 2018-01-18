@@ -55,7 +55,7 @@ public class BashlogCompiler {
   private List<List<Optimizer>> stages = Arrays.asList(//
       Arrays.asList(new SimplifyRecursion(), new PushDownJoin(), new ReorderJoinLinear(), new PushDownFilterAndProject(), new SimplifyRecursion(),
           new PushDownFilterAndProject()),
-      Arrays.asList(/*new CombineFilter(false),*/ r -> r.transform(this::transform), new BashlogOptimizer(), new MultiOutput(), new Materialize()));
+      Arrays.asList(r -> r.transform(this::transform), new BashlogOptimizer(), new MultiOutput(), new CombineFilter(false), new Materialize()));
 
   public BashlogCompiler(PlanNode planNode) {
     if (planNode == null) {
