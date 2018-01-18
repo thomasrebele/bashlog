@@ -31,6 +31,13 @@ public interface PlanNode {
   List<PlanNode> children();
 
   /**
+   * Children which should be printed by toPrettyString()
+   */
+  default List<PlanNode> childrenForPrettyString() {
+    return children();
+  }
+
+  /**
    * Whether the plan always returns zero rows as result. This should only be the case with UnionNode
    */
   default boolean isEmpty() {
@@ -242,7 +249,7 @@ public interface PlanNode {
    */
   default void toPrettyString(StringBuilder stringBuilder, String prefixHead, String prefixOther, BiFunction<PlanNode, String, String> fn) {
     stringBuilder.append(hash()).append(fn.apply(this, " " + prefixHead + operatorString() + " arity " + getArity())).append("\n");
-    List<PlanNode> args = children();
+    List<PlanNode> args = childrenForPrettyString();
     for (int i = 0; i < args.size(); i++) {
       PlanNode arg = args.get(i);
       boolean last = i == args.size() - 1;

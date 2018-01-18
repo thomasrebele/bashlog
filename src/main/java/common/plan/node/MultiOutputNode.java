@@ -93,7 +93,12 @@ public class MultiOutputNode implements PlanNode {
 
   @Override
   public List<PlanNode> children() {
-    return Arrays.asList(leafPlan, mainPlan); //Stream.concat(reusedPlans.stream(), Stream.of(mainPlan)).collect(Collectors.toList());
+    return Arrays.asList(leafPlan, mainPlan); //
+  }
+
+  @Override
+  public List<PlanNode> childrenForPrettyString() {
+    return Stream.concat(reusedPlans.stream(), Stream.of(mainPlan)).collect(Collectors.toList());
   }
 
   @Override

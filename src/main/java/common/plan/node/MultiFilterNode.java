@@ -4,6 +4,7 @@ import common.Tools;
 
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class MultiFilterNode implements PlanNode {
 
@@ -59,6 +60,11 @@ public class MultiFilterNode implements PlanNode {
   @Override
   public List<PlanNode> children() {
     return Arrays.asList(table);
+  }
+
+  @Override
+  public List<PlanNode> childrenForPrettyString() {
+    return Stream.concat(children.stream(), Stream.of(table)).collect(Collectors.toList());
   }
 
   @Override
