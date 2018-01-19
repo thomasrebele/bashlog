@@ -10,11 +10,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import common.Evaluator;
+import common.FactsSet;
+import common.SimpleFactsSet;
 import common.parser.ParserReader;
 import common.parser.Program;
 import common.parser.Rule;
-import flinklog.FactsSet;
-import flinklog.SimpleFactsSet;
 import javatools.filehandlers.TSVWriter;
 
 /** Execute bashlog from java */

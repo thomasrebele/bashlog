@@ -12,7 +12,7 @@ import javatools.administrative.CallStack;
 /** Helper class for parsing. It provides convenience methods for reading characters from a string, for example names, literals (numbers, strings), and character sequences */
 public class ParserReader {
 
-  private static final Logger LOG = LoggerFactory.getLogger(FlinkEvaluator.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ParserReader.class);
 
   /** The complete string we parse */
   private String input;

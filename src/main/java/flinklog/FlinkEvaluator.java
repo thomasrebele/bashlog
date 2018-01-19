@@ -1,6 +1,8 @@
 package flinklog;
 
 import common.Evaluator;
+import common.FactsSet;
+import common.SimpleFactsSet;
 import common.parser.*;
 import common.plan.LogicalPlanBuilder;
 import common.plan.node.*;

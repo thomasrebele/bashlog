@@ -1,4 +1,4 @@
-package bashlog.web;
+package bashlogweb;
 
 import java.io.IOException;
 

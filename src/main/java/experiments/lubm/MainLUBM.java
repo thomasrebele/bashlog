@@ -1,9 +1,9 @@
 package experiments.lubm;
 
+import common.FactsSet;
+import common.SimpleFactsSet;
 import common.parser.Program;
-import flinklog.FactsSet;
 import flinklog.FlinkEvaluator;
-import flinklog.SimpleFactsSet;
 
 import java.io.IOException;
 import java.nio.file.Files;

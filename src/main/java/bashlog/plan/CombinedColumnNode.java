@@ -2,8 +2,7 @@ package bashlog.plan;
 
 import java.util.Arrays;
 import java.util.List;
-
-import org.apache.flink.shaded.org.apache.curator.shaded.com.google.common.base.Objects;
+import java.util.Objects;
 
 import common.plan.node.PlanNode;
 
@@ -47,7 +46,7 @@ public class CombinedColumnNode implements PlanNode {
 
   @Override
   public boolean equals(Object obj) {
-    return obj instanceof CombinedColumnNode && Objects.equal(child, ((CombinedColumnNode) obj).child)
+    return obj instanceof CombinedColumnNode && Objects.equals(child, ((CombinedColumnNode) obj).child)
         && Arrays.equals(columns, ((CombinedColumnNode) obj).columns);
   }
 

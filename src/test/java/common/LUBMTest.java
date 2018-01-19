@@ -13,7 +13,6 @@ import org.junit.Test;
 import common.parser.Program;
 import experiments.lubm.BashlogLUBM;
 import experiments.lubm.generator.Tsv3Writer;
-import flinklog.SimpleFactsSet;
 import javatools.filehandlers.TSVFile;
 import yago4.Tools;
 

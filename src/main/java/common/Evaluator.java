@@ -3,7 +3,6 @@ package common;
 import java.util.Set;
 
 import common.parser.Program;
-import flinklog.FactsSet;
 
 public interface Evaluator {
 

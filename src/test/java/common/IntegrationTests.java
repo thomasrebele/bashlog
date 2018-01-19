@@ -2,8 +2,7 @@ package common;
 
 import common.parser.ParserReader;
 import common.parser.Program;
-import flinklog.FactsSet;
-import flinklog.SimpleFactsSet;
+
 import org.junit.Assert;
 import org.junit.Test;
 
