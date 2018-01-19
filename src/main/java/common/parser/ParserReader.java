@@ -62,8 +62,28 @@ public class ParserReader {
     int until = input.indexOf('\n', pos);
     if (until < 0) until = input.length();
 
-    String error = "error in " + method + ": expected \"" + (expect.length == 1 ? expect[0] : Arrays.toString(expect)) + "\"";
-    error += " at line " + line + ": " + input.substring(act, pos) + "__>" + input.substring(pos, until);
+    StringBuilder context = new StringBuilder().append(input.substring(act, pos));
+    int len = context.lastIndexOf("\n");
+    len = len < 0 ? context.length() : len;
+    System.out.println("len " + len);
+    context.append("\n");
+    for(int i=0; i<len; i++) {
+    	context.append("_");
+    }
+    context.append("^").append("\nL here\n").append(input.substring(pos, until));
+    
+    // construct error message
+    StringBuilder expected = new StringBuilder();
+    for(int i=0; i<expect.length; i++) {
+    	if(i > 0 ) {
+    	    expected.append(expect.length - i == 1 ? "\", or \"" : "\", \"");
+    	}
+    	expected.append(expect[i]);
+    }
+    
+    String error = "error: expected \"" + expected + "\" at line " + line + ":\n\n";
+    error += context;
+    error += "\n\n (src: " + method + ")";
     throw new ParseException(error);
   }
 

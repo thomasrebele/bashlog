@@ -38,14 +38,17 @@ public class Rule implements Parseable {
     switch (found) {
       case ":-":
       case "<-":
-        do {
+loop:   do {
           CompoundTerm b = CompoundTerm.read(pr, variables);
           if (b == null) return null;
           body.add(b);
-          if (pr.consume(".") != null) {
+          switch(pr.expect(",", ".")) {
+          case ",":
             break;
+          case ".":
+            break loop;
           }
-        } while (pr.expect(",") != null);
+        } while (true);
         break;
       case ":~":
       case "<~":
