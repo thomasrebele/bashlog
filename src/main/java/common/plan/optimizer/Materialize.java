@@ -56,7 +56,6 @@ public class Materialize implements Optimizer {
 
         PlanNode mat = node;
         for (Info i : info) {
-          System.err.println("materialize at " + i.materializeAt.operatorString());
           PlanNode newReusedPlan = i.plan.transform((o, pn, p) -> {
             // compare with 'old' node, as plan tree might have changed due to preceding materializations
             if (o.equals(i.plan)) return pn;

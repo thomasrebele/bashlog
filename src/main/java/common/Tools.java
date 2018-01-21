@@ -1,5 +1,11 @@
 package common;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.nio.charset.Charset;
 import java.util.*;
 
 public class Tools {
@@ -112,6 +118,25 @@ public class Tools {
 
   public static int[] addToElements(int[] projection, int shift) {
     return Arrays.stream(projection).map(i -> i + shift).toArray();
+  }
+
+  /**
+   * Returns the content of the (UTF-8 encoded) file as string. Linebreaks
+   * are encoded as unix newlines (\n)
+   *
+   * @param file  File to get String content from
+   * @return      String content of file.
+   * @throws IOException
+   */
+  public static String getFileContent(File file) throws IOException {
+    StringBuilder sb = new StringBuilder();
+    BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(file), Charset.forName("UTF-8")));
+    for (String line = reader.readLine(); line != null; line = reader.readLine()) {
+      sb.append(line);
+      sb.append('\n');
+    }
+    reader.close();
+    return sb.toString();
   }
 
 }

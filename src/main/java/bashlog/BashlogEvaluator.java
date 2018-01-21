@@ -15,7 +15,7 @@ import common.SimpleFactsSet;
 import common.parser.ParserReader;
 import common.parser.Program;
 import common.parser.Rule;
-import javatools.filehandlers.TSVWriter;
+import common.TSVWriter;
 
 /** Execute bashlog from java */
 public class BashlogEvaluator implements Evaluator {

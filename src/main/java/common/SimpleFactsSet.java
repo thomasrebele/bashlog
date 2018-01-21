@@ -10,7 +10,6 @@ import java.util.stream.Stream;
 import common.parser.CompoundTerm;
 import common.parser.Constant;
 import common.parser.ParserReader;
-import javatools.filehandlers.FileUtils;
 
 public class SimpleFactsSet implements FactsSet {
 
@@ -29,7 +28,7 @@ public class SimpleFactsSet implements FactsSet {
   }
 
   public void loadFile(Path path) throws IOException {
-    ParserReader pr = new ParserReader(FileUtils.getFileContent(path.toFile()));
+    ParserReader pr = new ParserReader(Tools.getFileContent(path.toFile()));
     while (true) {
       pr.skipComments();
       if (pr.peek() == null) return;

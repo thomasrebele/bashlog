@@ -6,7 +6,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import javatools.filehandlers.FileUtils;
+import common.Tools;
 
 /**
  * Parses datalog
@@ -30,7 +30,7 @@ public class Program implements Parseable {
 
   public static Program loadFile(String path) throws IOException {
     File f = new File(path).getAbsoluteFile();
-    String content = FileUtils.getFileContent(f);
+    String content = Tools.getFileContent(f);
     return read(new ParserReader(content));
   }
 

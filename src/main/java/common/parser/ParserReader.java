@@ -1,13 +1,12 @@
 package common.parser;
 
-import java.util.Arrays;
 import java.util.function.BiFunction;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import flinklog.FlinkEvaluator;
-import javatools.administrative.CallStack;
+import common.CallStack;
+
 
 /** Helper class for parsing. It provides convenience methods for reading characters from a string, for example names, literals (numbers, strings), and character sequences */
 public class ParserReader {
@@ -62,15 +61,11 @@ public class ParserReader {
     int until = input.indexOf('\n', pos);
     if (until < 0) until = input.length();
 
-    StringBuilder context = new StringBuilder().append(input.substring(act, pos));
-    int len = context.lastIndexOf("\n");
-    len = len < 0 ? context.length() : len;
-    System.out.println("len " + len);
-    context.append("\n");
-    for(int i=0; i<len; i++) {
+    StringBuilder context = new StringBuilder().append(input.substring(act, until)).append("\n");
+    for(int i=0; i<(pos-act); i++) {
     	context.append("_");
     }
-    context.append("^").append("\nL here\n").append(input.substring(pos, until));
+    context.append("^").append("\nL here\n");
     
     // construct error message
     StringBuilder expected = new StringBuilder();
