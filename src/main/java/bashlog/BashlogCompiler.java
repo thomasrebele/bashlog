@@ -50,6 +50,9 @@ public class BashlogCompiler {
   /** Save debug information (query plans)*/
   private String debug = "";
 
+  private boolean profile = false;
+
+  /** Stores the compiled bash script */
   private String bash = null;
 
   private List<List<Optimizer>> stages = Arrays.asList(//
@@ -105,14 +108,20 @@ public class BashlogCompiler {
     header.append("mkdir -p tmp\n");
     header.append("rm tmp/*\n");
     // use mawk if possible for better performance
-    header.append("if [ \"$awk\" == \"\" ]; then if type mawk > /dev/null; then awk=\"mawk\"; else awk=\"awk\"; fi fi\n");
+    header.append("if type mawk > /dev/null; then awk=\"mawk\"; else awk=\"awk\"; fi\n");
     // tweak sort
     header.append("sort=\"sort -S64M --parallel=2 \"\n\n");
+
+    if (profile) {
+      header.append("PATH=$PATH:.\n");
+      header.append("if type mawk > /dev/null; then awk=\"ttime mawk\"; else awk=\"ttime awk\"; fi\n");
+      header.append("sort=\"ttime sort -S64M --parallel=2 \"\n\n");
+    }
 
     System.out.println(debugInfo());
 
     Bash e = compile(root);
-    String result = header.toString() + e.generate();
+    String result = header.toString() + e.generate(profile);
 
     System.out.println(result);
     System.out.println("\n\n---------------------------------\n");
@@ -204,6 +213,8 @@ public class BashlogCompiler {
       if (children.size() == 1) return children.get(0);
       // use sort union, so sort all inputs
       return children.stream().map(i -> (PlanNode) new SortNode(i, null)).reduce(PlanNode.empty(u.getArity()), PlanNode::union);
+      
+      //return p;
 
     } else if (p instanceof BuiltinNode) {
       // instead of "<(cat file)", use file directly
@@ -306,6 +317,7 @@ public class BashlogCompiler {
     colRight = j.getRightProjection()[0] + 1;
 
     Bash.Command result = new Bash.Command("join");
+    if (profile) result = new Bash.Command("ttime join");
     result.arg(additionalArgs);
     result.arg("-t $'\\t'");
     result.arg("-1 " + colLeft);
@@ -653,7 +665,8 @@ public class BashlogCompiler {
       result.cmd("[ -s " + deltaFile + " ]; \n");
       result.cmd("do continue; done\n");
       result.cmd("rm").file(deltaFile).file(newDeltaFile).wrap("", "\n");
-      result.cmd("cat").file(fullFile);
+      if (profile) result.cmd("ttime cat").file(fullFile);
+      else result.cmd("cat").file(fullFile);
       return result;
 
     } else if (planNode instanceof PlaceholderNode) {
