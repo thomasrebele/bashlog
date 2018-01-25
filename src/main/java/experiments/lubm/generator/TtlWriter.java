@@ -15,9 +15,9 @@ public class TtlWriter implements Writer {
   PrintWriter writer;
 
   public TtlWriter(String path) throws FileNotFoundException {
-    new File(path).mkdirs();
+    new File(path).getAbsoluteFile().getParentFile().mkdirs();
     this.path = path;
-    writer = new PrintWriter(path + "all.ttl");
+    writer = new PrintWriter(path);
     writer.write("@base <http://swat.cse.lehigh.edu/onto/univ-bench.owl#> .\n");
     writer.write("@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>.\n");
     writer.write("@prefix ub: <http://swat.cse.lehigh.edu/onto/univ-bench.owl#>.\n");
@@ -84,8 +84,10 @@ public class TtlWriter implements Writer {
   public static void main(String[] args) throws FileNotFoundException {
     if (args.length == 0) args = new String[] { "1" };
     int univNum = Integer.parseInt(args[0]);
-    int startIndex = 0;
-    int seed = 0;
-    generate(univNum, 0, 0, PATH + "/" + univNum + "/");
+    String path = PATH + "/" + univNum + "/" + "all.ttl";
+    if (args.length >= 2) {
+      path = args[1];
+    }
+    generate(univNum, 0, 0, path);
   }
 }
