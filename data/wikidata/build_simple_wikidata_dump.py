@@ -15,23 +15,6 @@ def parse_triples(file_name):
                 print(parts)
 
 
-predicates_map = {
-    'P17': 'hasCountry',
-    'P19': 'hasBirthPlace',
-    'P20': 'hasDeathPlace',
-    'P21': 'hasGender',
-    'P22': 'hasFather',
-    'P25': 'hasMother',
-    'P26': 'hasSpouse',
-    'P27': 'hasNationality',
-    'P40': 'hasChild',
-    'P131': 'isLocatedIn',
-    'P150': 'containsLocation',
-    'P3373': 'hasSibling',
-    'P3448': 'hasStepParent'
-}
-
-
 def main(input_file):
     with open('all-triples.txt', 'wt') as fp:
         for (s, p, o) in parse_triples(input_file):
