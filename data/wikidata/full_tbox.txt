@@ -1,4 +1,7 @@
-triple(S,P,O) :~ cat "data/wikidata/all-triples.txt"
+% cat "data/wikidata/all-triples.txt"
+
+triple(S,P,O) :~ cat $1
+
 inCountry(X,Y) :- triple(X, "<http://www.wikidata.org/prop/direct/P17>", Y) .
 hasBirthPlace(X,Y) :- triple(X, "<http://www.wikidata.org/prop/direct/P19>", Y) .
 hasDeathPlace(X,Y) :- triple(X, "<http://www.wikidata.org/prop/direct/P20>", Y) .

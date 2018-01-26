@@ -1,6 +1,6 @@
-typeFile(C,X,Y,Z) :~ cat "data/yago/yagoSimpleTypes.tsv"
+typeFile(C,X,Y,Z) :~ cat $2 
 type(X,Z) :- typeFile(C,X,"rdf:type",Z) .
-taxonomy(C,X,Y,Z) :~ cat "data/yago/yagoSimpleTaxonomy.tsv"
+taxonomy(C,X,Y,Z) :~ cat $1 
 subClassOf(X,Z) :- taxonomy(C,X,"rdfs:subClassOf",Z) .
 type(X,Z) :- type(X,Y), subClassOf(Y,Z) .
 

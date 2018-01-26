@@ -50,7 +50,7 @@ public class BashlogCompiler {
   /** Save debug information (query plans)*/
   private String debug = "";
 
-  private boolean profile = false;
+  private boolean profile;
 
   /** Stores the compiled bash script */
   private String bash = null;
@@ -62,9 +62,14 @@ public class BashlogCompiler {
           new MultiOutput(), /*new CombineFilter(false),*/ new Materialize(), new CombineFilter(false)));
 
   public BashlogCompiler(PlanNode planNode) {
+    this(planNode, false);
+  }
+
+  public BashlogCompiler(PlanNode planNode, boolean profile) {
     if (planNode == null) {
       throw new IllegalArgumentException("cannot compile an empty plan");
     }
+    this.profile = profile;
     root = planNode;
     debug += "orig\n";
     debug += root.toPrettyString() + "\n";
@@ -115,6 +120,8 @@ public class BashlogCompiler {
 
     if (profile) {
       header.append("PATH=$PATH:.\n");
+      header.append("mkdir /tmp/ttime/\n");
+      header.append("rm /tmp/ttime/*\n");
       header.append("if type mawk > /dev/null; then awk=\"ttime mawk\"; else awk=\"ttime awk\"; fi\n");
       header.append("sort=\"ttime sort -S64M --parallel=2 \"\n\n");
     }
