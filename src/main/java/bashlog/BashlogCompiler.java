@@ -58,7 +58,8 @@ public class BashlogCompiler {
   private List<List<Optimizer>> stages = Arrays.asList(//
       Arrays.asList(new SimplifyRecursion(), new PushDownJoin(), new ReorderJoinLinear(), new PushDownFilterAndProject(), new SimplifyRecursion(),
           new PushDownFilterAndProject()),
-      Arrays.asList(r -> r.transform(this::transform), new BashlogOptimizer(), new MultiOutput(), new CombineFilter(false), new Materialize()));
+      Arrays.asList(r -> r.transform(this::transform), new BashlogOptimizer(),
+          new MultiOutput(), /*new CombineFilter(false),*/ new Materialize(), new CombineFilter(false)));
 
   public BashlogCompiler(PlanNode planNode) {
     if (planNode == null) {
@@ -207,14 +208,14 @@ public class BashlogCompiler {
       return new SortRecursionNode(new SortNode(r.getExitPlan(), null), new SortNode(r.getRecursivePlan(), null), r.getDelta(), r.getFull());
 
     } else if (p instanceof UnionNode) {
-      UnionNode u = (UnionNode) p;
+      /*UnionNode u = (UnionNode) p;
       List<PlanNode> children = u.children();
       if (children.size() == 0) return u;
       if (children.size() == 1) return children.get(0);
       // use sort union, so sort all inputs
-      return children.stream().map(i -> (PlanNode) new SortNode(i, null)).reduce(PlanNode.empty(u.getArity()), PlanNode::union);
+      return children.stream().map(i -> (PlanNode) new SortNode(i, null)).reduce(PlanNode.empty(u.getArity()), PlanNode::union);*/
       
-      //return p;
+      return p;
 
     } else if (p instanceof BuiltinNode) {
       // instead of "<(cat file)", use file directly
@@ -635,7 +636,14 @@ public class BashlogCompiler {
       if (planNode.children().size() == 0) {
         return new Bash.Command("echo").arg("-n");
       } else {
-        Bash.Command result = new Bash.Command("$sort").arg("-u").arg("-m");
+        /*Bash.Command result = new Bash.Command("$sort").arg("-u").arg("-m");
+        for (PlanNode child : ((UnionNode) planNode).getChildren()) {
+          result.file(compile(child));
+        }
+        return result;*/
+
+        Bash.Command result = new Bash.Command("cat");
+        if (profile) result = new Bash.Command("ttime cat");
         for (PlanNode child : ((UnionNode) planNode).getChildren()) {
           result.file(compile(child));
         }
