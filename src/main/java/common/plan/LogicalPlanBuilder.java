@@ -6,20 +6,14 @@ import common.plan.node.BuiltinNode;
 import common.plan.node.JoinNode;
 import common.plan.node.PlanNode;
 import common.plan.node.RecursionNode;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class LogicalPlanBuilder {
-
-  private static final Logger LOGGER = LoggerFactory.getLogger(LogicalPlanBuilder.class);
-
   private Set<String> builtin;
   private Set<String> relationsToOutput;
-
   private Map<RelationWithDeltaNodes, PlanNode> planForRelation;
   private Program program;
 
@@ -203,45 +197,48 @@ public class LogicalPlanBuilder {
     return body.node.project(projection, resultConstants);
   }
 
-  private NodeWithMask group(NodeWithMask nm1, NodeWithMask nm2, boolean antiJoin) {
-    int size = Math.max(nm1.node.getArity(), nm2.node.getArity());
-    int[] colLeft = new int[size];
-    int[] colRight = new int[size];
+  private NodeWithMask group(NodeWithMask nmLeft, NodeWithMask nmRight, boolean antiJoin) {
+    int size = Math.max(nmLeft.node.getArity(), nmRight.node.getArity());
+    int[] joinProjectionLeft = new int[size];
+    int[] joinProjectionRight = new int[size];
 
     int count = 0;
-    boolean[] done = new boolean[nm2.colToVar.length];
-    for (int i = 0; i < nm1.colToVar.length; i++) {
-      int var = nm1.colToVar[i];
+    boolean[] done = new boolean[nmRight.colToVar.length];
+    for (int i = 0; i < nmLeft.colToVar.length; i++) {
+      int var = nmLeft.colToVar[i];
       if (var < 0) continue;
-      int col2 = nm2.varToCol[var];
+      int col2 = nmRight.varToCol[var];
       if (col2 >= 0) {
-        colLeft[count] = i;
-        colRight[count++] = col2;
+        joinProjectionLeft[count] = i;
+        joinProjectionRight[count] = col2;
+        count++;
         done[col2] = true;
       }
     }
-    for (int i = 0; i < nm2.colToVar.length; i++) {
+    for (int i = 0; i < nmRight.colToVar.length; i++) {
       if (done[i]) continue;
-      int var = nm2.colToVar[i];
+      int var = nmRight.colToVar[i];
       if (var < 0) continue;
-      int col1 = nm1.varToCol[var];
-      if (col1 < 0 && !antiJoin) {
-        nm1.varToCol[var] = nm1.colToVar.length + i;
-      }
+      int col1 = nmLeft.varToCol[var];
       if (col1 >= 0) {
-        colRight[count] = i;
-        colLeft[count++] = col1;
+        joinProjectionRight[count] = i;
+        joinProjectionLeft[count] = col1;
+        count++;
+      } else {
+        if (!antiJoin) {
+          nmLeft.varToCol[var] = nmLeft.colToVar.length + i;
+        }
       }
     }
 
-    colLeft = Arrays.copyOfRange(colLeft, 0, count);
-    colRight = Arrays.copyOfRange(colRight, 0, count);
+    joinProjectionLeft = Arrays.copyOfRange(joinProjectionLeft, 0, count);
+    joinProjectionRight = Arrays.copyOfRange(joinProjectionRight, 0, count);
     if (antiJoin) {
-      PlanNode jn = nm1.node.antiJoin(nm2.node.project(colRight), colLeft);
-      return new NodeWithMask(jn, nm1.colToVar, nm1.varToCol);
+      PlanNode jn = nmLeft.node.antiJoin(nmRight.node.project(joinProjectionRight), joinProjectionLeft);
+      return new NodeWithMask(jn, nmLeft.colToVar, nmLeft.varToCol);
     } else {
-      PlanNode jn = nm1.node.join(nm2.node, colLeft, colRight);
-      return new NodeWithMask(jn, Tools.concat(nm1.colToVar, nm2.colToVar), nm1.varToCol);
+      PlanNode jn = nmLeft.node.join(nmRight.node, joinProjectionLeft, joinProjectionRight);
+      return new NodeWithMask(jn, Tools.concat(nmLeft.colToVar, nmRight.colToVar), nmLeft.varToCol);
     }
   }
 
