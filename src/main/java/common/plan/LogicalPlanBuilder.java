@@ -1,6 +1,5 @@
 package common.plan;
 
-import common.Tools;
 import common.parser.*;
 import common.plan.node.BuiltinNode;
 import common.plan.node.JoinNode;
@@ -206,7 +205,9 @@ public class LogicalPlanBuilder {
     boolean[] done = new boolean[nmRight.colToVar.length];
     for (int i = 0; i < nmLeft.colToVar.length; i++) {
       int var = nmLeft.colToVar[i];
-      if (var < 0) continue;
+      if (var < 0) {
+        continue;
+      }
       int col2 = nmRight.varToCol[var];
       if (col2 >= 0) {
         joinProjectionLeft[count] = i;
@@ -216,30 +217,64 @@ public class LogicalPlanBuilder {
       }
     }
     for (int i = 0; i < nmRight.colToVar.length; i++) {
-      if (done[i]) continue;
+      if (done[i]) {
+        continue;
+      }
       int var = nmRight.colToVar[i];
-      if (var < 0) continue;
+      if (var < 0) {
+        continue;
+      }
       int col1 = nmLeft.varToCol[var];
       if (col1 >= 0) {
         joinProjectionRight[count] = i;
         joinProjectionLeft[count] = col1;
         count++;
-      } else {
-        if (!antiJoin) {
-          nmLeft.varToCol[var] = nmLeft.colToVar.length + i;
+      }
+    }
+    joinProjectionLeft = Arrays.copyOfRange(joinProjectionLeft, 0, count);
+    joinProjectionRight = Arrays.copyOfRange(joinProjectionRight, 0, count);
+
+    //Compute final projection that drops duplicates variables
+    int maxArity = nmLeft.node.getArity() + nmRight.node.getArity();
+    int[] finalProjection = new int[maxArity];
+    int[] finalVarToCol = new int[nmLeft.varToCol.length];
+    int[] finalColToVar = new int[maxArity];
+    Arrays.fill(finalColToVar, -1);
+    Arrays.fill(finalVarToCol, -1);
+    int finalCount = 0;
+    for (int i = 0; i < nmLeft.colToVar.length; i++) {
+      int var = nmLeft.colToVar[i];
+      if (var < 0) {
+        continue;
+      }
+      if (finalVarToCol[var] < 0) {
+        finalProjection[finalCount] = i;
+        finalColToVar[finalCount] = var;
+        finalVarToCol[var] = finalCount;
+        finalCount++;
+      }
+    }
+    if (!antiJoin) {
+      for (int i = 0; i < nmRight.colToVar.length; i++) {
+        int var = nmRight.colToVar[i];
+        if (var < 0) {
+          continue;
+        }
+        if (finalVarToCol[var] < 0) {
+          finalProjection[finalCount] = i + nmLeft.node.getArity();
+          finalColToVar[finalCount] = var;
+          finalVarToCol[var] = finalCount;
+          finalCount++;
         }
       }
     }
+    finalProjection = Arrays.copyOfRange(finalProjection, 0, finalCount);
+    finalColToVar = Arrays.copyOfRange(finalColToVar, 0, finalCount);
 
-    joinProjectionLeft = Arrays.copyOfRange(joinProjectionLeft, 0, count);
-    joinProjectionRight = Arrays.copyOfRange(joinProjectionRight, 0, count);
-    if (antiJoin) {
-      PlanNode jn = nmLeft.node.antiJoin(nmRight.node.project(joinProjectionRight), joinProjectionLeft);
-      return new NodeWithMask(jn, nmLeft.colToVar, nmLeft.varToCol);
-    } else {
-      PlanNode jn = nmLeft.node.join(nmRight.node, joinProjectionLeft, joinProjectionRight);
-      return new NodeWithMask(jn, Tools.concat(nmLeft.colToVar, nmRight.colToVar), nmLeft.varToCol);
-    }
+    PlanNode jn = antiJoin
+            ? nmLeft.node.antiJoin(nmRight.node.project(joinProjectionRight), joinProjectionLeft)
+            : nmLeft.node.join(nmRight.node, joinProjectionLeft, joinProjectionRight);
+    return new NodeWithMask(jn.project(finalProjection), finalColToVar, finalVarToCol);
   }
 
   private static class NodeWithMask {
