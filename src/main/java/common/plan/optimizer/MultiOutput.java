@@ -86,12 +86,10 @@ public class MultiOutput implements Optimizer {
    * Analyze the structure of the plan
    * @param p
    * @param depth depth of p
-   * @param outerRecursions recursions that contain p
-   * @param innerRecursions will contain recursions contained in p (at the end of the function call)
-   * @param calledRecursions will contain recursions whose delta/full nodes are contained in p (at the end of the function call)
    */
   private PlanNode analyzeStructure(PlanNode p, int depth) {
-    if (p.children().size() == 0) {
+    // TODO: multioutput for placeholders
+    if (p.children().size() == 0 && !(p instanceof PlaceholderNode)) {
       planToInfo.computeIfAbsent(p, k -> new Info());
       return p;
     }
@@ -105,7 +103,7 @@ public class MultiOutput implements Optimizer {
     else {
       for (PlanNode c : p.children()) {
         PlanNode leaf = analyzeStructure(c, depth + 1);
-        if (leaf != null) {
+        if (leaf != null && leaf != c) {
           Info i = planToInfo.computeIfAbsent(leaf, k -> new Info());
           i.leaf = leaf;
           i.plans.add(c);
