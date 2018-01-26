@@ -13,9 +13,6 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-/**
- * TODO: support recursion f(x,z) <- f(x,y), f(y,z). (join with full)
- */
 public class LogicalPlanBuilder {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(LogicalPlanBuilder.class);
@@ -132,9 +129,9 @@ public class LogicalPlanBuilder {
             variablesEncoding.computeIfAbsent(arg, (key) -> variablesEncoding.size())
     );
 
-    NodeWithMask body = rule.body.stream().sorted((a, b) ->
-            a.negated && !b.negated ? 1 : -1
-    ).map(term -> {
+    List<NodeWithMask> positiveNodes = new ArrayList<>();
+    List<NodeWithMask> negativeNodes = new ArrayList<>();
+    rule.body.forEach(term -> {
       int[] colToVar = new int[term.args.length];
       int[] varToCol = new int[variablesEncoding.size()];
       Arrays.fill(colToVar, -1);
@@ -171,51 +168,19 @@ public class LogicalPlanBuilder {
         }
       }
 
-      return new NodeWithMask(termNode, colToVar, varToCol, term.negated);
-    }).reduce((nm1, nm2) -> {
-      int size = Math.max(nm1.node.getArity(), nm2.node.getArity());
-      int[] colLeft = new int[size];
-      int[] colRight = new int[size];
-
-      int count = 0;
-      boolean[] done = new boolean[nm2.colToVar.length];
-      for (int i = 0; i < nm1.colToVar.length; i++) {
-        int var = nm1.colToVar[i];
-        if (var < 0) continue;
-        int col2 = nm2.varToCol[var];
-        if (col2 >= 0) {
-          colLeft[count] = i;
-          colRight[count++] = col2;
-          done[col2] = true;
-        }
-      }
-      for (int i = 0; i < nm2.colToVar.length; i++) {
-        if (done[i]) continue;
-        int var = nm2.colToVar[i];
-        if (var < 0) continue;
-        int col1 = nm1.varToCol[var];
-        if (col1 < 0 && !nm2.isNegated) {
-          nm1.varToCol[var] = nm1.colToVar.length + i;
-        }
-        if (col1 >= 0) {
-          colRight[count] = i;
-          colLeft[count++] = col1;
-        }
-      }
-
-      colLeft = Arrays.copyOfRange(colLeft, 0, count);
-      colRight = Arrays.copyOfRange(colRight, 0, count);
-      if(nm1.isNegated) {
-        LOGGER.warn("All terms of this rule are negated: " + rule);
-        return new NodeWithMask(PlanNode.empty(0), new int[]{}, new int[]{}, false);
-      } else if(nm2.isNegated) {
-        PlanNode jn = nm1.node.antiJoin(nm2.node.project(colRight), colLeft);
-        return new NodeWithMask(jn, nm1.colToVar, nm1.varToCol, false);
+      if (term.negated) {
+        negativeNodes.add(new NodeWithMask(termNode, colToVar, varToCol));
       } else {
-        PlanNode jn = nm1.node.join(nm2.node, colLeft, colRight);
-        return new NodeWithMask(jn, Tools.concat(nm1.colToVar, nm2.colToVar), nm1.varToCol, false);
+        positiveNodes.add(new NodeWithMask(termNode, colToVar, varToCol));
       }
-    }).orElseThrow(() -> new UnsupportedOperationException("rule without body: " + rule.toString()));
+    });
+
+    NodeWithMask positive = positiveNodes.stream()
+            .reduce((nm1, nm2) -> group(nm1, nm2, false))
+            .orElseThrow(() -> new UnsupportedOperationException("rule without positive body: " + rule.toString()));
+    NodeWithMask body = negativeNodes.stream().reduce((nm1, nm2) -> group(nm1, nm2, false))
+            .map(negations -> group(positive, negations, true))
+            .orElse(positive);
 
     if (builtin.contains(rule.head.name)) {
       return body.node;
@@ -238,19 +203,58 @@ public class LogicalPlanBuilder {
     return body.node.project(projection, resultConstants);
   }
 
+  private NodeWithMask group(NodeWithMask nm1, NodeWithMask nm2, boolean antiJoin) {
+    int size = Math.max(nm1.node.getArity(), nm2.node.getArity());
+    int[] colLeft = new int[size];
+    int[] colRight = new int[size];
+
+    int count = 0;
+    boolean[] done = new boolean[nm2.colToVar.length];
+    for (int i = 0; i < nm1.colToVar.length; i++) {
+      int var = nm1.colToVar[i];
+      if (var < 0) continue;
+      int col2 = nm2.varToCol[var];
+      if (col2 >= 0) {
+        colLeft[count] = i;
+        colRight[count++] = col2;
+        done[col2] = true;
+      }
+    }
+    for (int i = 0; i < nm2.colToVar.length; i++) {
+      if (done[i]) continue;
+      int var = nm2.colToVar[i];
+      if (var < 0) continue;
+      int col1 = nm1.varToCol[var];
+      if (col1 < 0 && !antiJoin) {
+        nm1.varToCol[var] = nm1.colToVar.length + i;
+      }
+      if (col1 >= 0) {
+        colRight[count] = i;
+        colLeft[count++] = col1;
+      }
+    }
+
+    colLeft = Arrays.copyOfRange(colLeft, 0, count);
+    colRight = Arrays.copyOfRange(colRight, 0, count);
+    if (antiJoin) {
+      PlanNode jn = nm1.node.antiJoin(nm2.node.project(colRight), colLeft);
+      return new NodeWithMask(jn, nm1.colToVar, nm1.varToCol);
+    } else {
+      PlanNode jn = nm1.node.join(nm2.node, colLeft, colRight);
+      return new NodeWithMask(jn, Tools.concat(nm1.colToVar, nm2.colToVar), nm1.varToCol);
+    }
+  }
+
   private static class NodeWithMask {
 
     private PlanNode node;
 
     private int[] colToVar, varToCol;
 
-    private boolean isNegated;
-
-    NodeWithMask(PlanNode node, int[] colToVar, int[] varToCol, boolean isNegated) {
+    NodeWithMask(PlanNode node, int[] colToVar, int[] varToCol) {
       this.node = node;
       this.colToVar = colToVar;
       this.varToCol = varToCol;
-      this.isNegated = isNegated;
     }
   }
 
