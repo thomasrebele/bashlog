@@ -1,12 +1,12 @@
 package common.plan.optimizer;
 
+import java.util.*;
+
 import common.plan.node.*;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
-
+/**
+ * Combine a union of selections/projections on one subplan to a single node
+ */
 public class CombineFilter implements Optimizer {
 
   private boolean condenseNonUnionFilter = false;
@@ -17,15 +17,17 @@ public class CombineFilter implements Optimizer {
 
   @Override
   public PlanNode apply(PlanNode t) {
-    return t.transform((node) -> {
+    return t.transform((old, node, parent) -> {
       if (node.getClass() == UnionNode.class) {
         UnionNode u = (UnionNode) node;
 
+        // collect plans within projections/selections
         Map<PlanNode, Set<PlanNode>> innerToFiltered = new HashMap<>();
         for (PlanNode c : u.children()) {
           innerToFiltered.computeIfAbsent(getInnerTable(c), k -> new HashSet<>()).add(c);
         }
 
+        // replace by a multi filter node
         return innerToFiltered.entrySet().stream().map(e -> {
           boolean isMultiFilter = e.getValue().size() > 1;
           if (condenseNonUnionFilter && !isMultiFilter && e.getValue().size() == 1) {

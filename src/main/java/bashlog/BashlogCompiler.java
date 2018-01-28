@@ -60,7 +60,8 @@ public class BashlogCompiler {
   private List<List<Optimizer>> stages = Arrays.asList(//
       Arrays.asList(new SimplifyRecursion(), new PushDownJoin(), new ReorderJoinLinear(), new PushDownFilterAndProject(), new SimplifyRecursion(),
           new PushDownFilterAndProject()),
-      Arrays.asList(r -> r.transform(this::transform), new BashlogOptimizer(), new MultiOutput(), new CombineFilter(false), new Materialize()));
+      Arrays.asList(r -> r.transform(this::transform), new BashlogOptimizer(), new MultiOutput(), new CombineFilter(false), new Materialize(),
+          new CombineFilter(false)));
 
   public BashlogCompiler(PlanNode planNode) {
     if (planNode == null) {
@@ -313,7 +314,9 @@ public class BashlogCompiler {
     if (supportsUniq) {
       cmd.arg("-u");
     }
-    return result;
+    cmd.file(prev);
+
+    return waitFor(cmd, s.children());
   }
 
   /** Sort left and right tree, and join with 'join' command */
@@ -513,7 +516,7 @@ public class BashlogCompiler {
 
         String matFile = "tmp/mat" + tmpFileIndex++;
         placeholderToFilename.putIfAbsent((PlaceholderNode) node, matFile);
-        arg.append(awkLine(plan, matFile));
+        awkLine(plan, matFile, arg);
       }
       cmd.arg(arg.toString()).arg("'");
       cmd.file(compile(mo.getLeaf()));
@@ -551,7 +554,13 @@ public class BashlogCompiler {
       cmd.arg(sb.toString());
       return result;
 
-    } else if (planNode instanceof ProjectNode) {
+    } else if (planNode instanceof ProjectNode || planNode instanceof EqualityFilterNode) {
+      StringBuilder awk = new StringBuilder();
+      PlanNode inner = awkLine(planNode, null, awk);
+      return new Bash.Command(AWK).arg(awk.toString()).arg("'").file(compile(inner));
+    }
+
+    /*else if (planNode instanceof ProjectNode) {
       // TODO: filtering of duplicates might be necessary
       ProjectNode p = ((ProjectNode) planNode);
       Bash prev = compile(p.getTable());
@@ -559,15 +568,15 @@ public class BashlogCompiler {
       Bash.Command cmd = result.cmd(AWK);
       cmd.arg("{ print " + awkProject(p) + "}'");
       return result;
-
+    
     } else if (planNode instanceof EqualityFilterNode) {
       Bash.Command cmd = new Bash.Command(AWK);
       cmd.arg(awkEquality((EqualityFilterNode) planNode));
       cmd.arg(" { print $0 }' ");
       cmd.file(compile(((EqualityFilterNode) planNode).getTable()));
       return cmd;
-
-    } else if (planNode instanceof MultiFilterNode) {
+    
+    }*/ else if (planNode instanceof MultiFilterNode) {
       MultiFilterNode m = (MultiFilterNode) planNode;
       Bash.Command cmd = new Bash.Command(AWK);
 
@@ -621,7 +630,7 @@ public class BashlogCompiler {
 
       // process remaining filter nodes
       for (PlanNode c : remaining) {
-        arg.append(awkLine(c, null));
+        awkLine(c, null, arg);
       }
       arg.append("' ");
       cmd.arg(arg.toString());
@@ -721,15 +730,12 @@ public class BashlogCompiler {
   }
 
   /**
-   * 
+   * Translate select/project to awk, and return first plan that cannot be translated this way
    * @param plan consisting of selections and (at most one) projections
    * @param output if null output to stdout, otherwise output to file
    * @return
    */
-  private String awkLine(PlanNode plan, String output) {
-    StringBuilder arg = new StringBuilder();
-    // do we need this actually?
-    plan = new PushDownFilterAndProject().apply(plan);
+  private PlanNode awkLine(PlanNode plan, String output, StringBuilder arg) {
     ProjectNode p = null;
     List<String> conditions = new ArrayList<>();
     do {
@@ -755,7 +761,7 @@ public class BashlogCompiler {
       arg.append(" >> \"").append(output).append("\"");
     }
     arg.append("} ");
-    return arg.toString();
+    return plan;
   }
 
   private <T> String joinStr(Collection<T> outCols, String delimiter) {
