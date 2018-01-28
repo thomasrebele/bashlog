@@ -52,24 +52,21 @@ public class BashlogCompiler {
 
   private boolean profile;
 
+  private boolean parallelMaterialization = true;
+
   /** Stores the compiled bash script */
   private String bash = null;
 
   private List<List<Optimizer>> stages = Arrays.asList(//
       Arrays.asList(new SimplifyRecursion(), new PushDownJoin(), new ReorderJoinLinear(), new PushDownFilterAndProject(), new SimplifyRecursion(),
           new PushDownFilterAndProject()),
-      Arrays.asList(r -> r.transform(this::transform), new BashlogOptimizer(),
-          new MultiOutput(), /*new CombineFilter(false),*/ new Materialize(), new CombineFilter(false)));
+      Arrays.asList(new CombineFilter(false), r -> r.transform(this::transform), new BashlogOptimizer(),
+          /*new MultiOutput(),*/ /*new CombineFilter(false),*/ new Materialize()/*, new CombineFilter(false)*/));
 
   public BashlogCompiler(PlanNode planNode) {
-    this(planNode, false);
-  }
-
-  public BashlogCompiler(PlanNode planNode, boolean profile) {
     if (planNode == null) {
       throw new IllegalArgumentException("cannot compile an empty plan");
     }
-    this.profile = profile;
     root = planNode;
     debug += "orig\n";
     debug += root.toPrettyString() + "\n";
@@ -135,6 +132,10 @@ public class BashlogCompiler {
     System.out.println("\n\n---------------------------------\n");
 
     return result;
+  }
+
+  public void enableProfiling() {
+    this.profile = true;
   }
 
   public String debugInfo() {
@@ -419,12 +420,14 @@ public class BashlogCompiler {
 
   private Bash waitFor(Bash bash, List<PlanNode> children) {
     Bash result = bash;
-    for (PlanNode child : children) {
-      if (child instanceof PlaceholderNode) {
-        PlanNode parent = ((PlaceholderNode) child).getParent();
-        if (parent instanceof MaterializationNode) {
-          String matFile = matNodeToFilename.get(parent);
-          result = new Bash.Command("flock").arg("-s " + matFile + " ").other(result);
+    if (parallelMaterialization) {
+      for (PlanNode child : children) {
+        if (child instanceof PlaceholderNode) {
+          PlanNode parent = ((PlaceholderNode) child).getParent();
+          if (parent instanceof MaterializationNode) {
+            String matFile = matNodeToFilename.get(parent);
+            result = new Bash.Command("flock").arg("-s " + matFile + " ").other(result);
+          }
         }
       }
     }
@@ -484,8 +487,13 @@ public class BashlogCompiler {
 
       Bash reused = compile(m.getReusedPlan());
       if (asFile) {
-        reused = reused.wrap("(flock 1; (", "; \\\n flock --unlock 1)& )");
-        result.add(reused.wrap("", " 1> " + matFile));
+        if (parallelMaterialization) {
+          reused = reused.wrap("(flock 1; (", "; \\\n flock --unlock 1)& )");
+          reused = reused.wrap("", " 1> " + matFile);
+        } else {
+          reused = reused.wrap("", " > " + matFile);
+        }
+        result.add(reused);
       } else {
         throw new UnsupportedOperationException();
       }
