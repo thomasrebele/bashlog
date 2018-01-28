@@ -372,15 +372,15 @@ public class BashlogCompiler {
     Bash prev = compile(rn.getRecursivePlan());
     //setMinusInMemory(fullFile, sb);
     Bash delta = setMinusSorted(prev, fullFile);
-    delta = delta.wrap("", " > " + newDeltaFile + "\n");
+    delta = delta.wrap("", " > " + newDeltaFile + ";");
 
     Bash.CommandSequence result = new Bash.CommandSequence();
     result.add(delta);
     result.info(rn, "continued");
-    result.cmd("mv").file(newDeltaFile).file(deltaFile).arg("; \n");
+    result.cmd("mv").file(newDeltaFile).file(deltaFile).arg("; ");
     result.cmd("$sort")//
         .arg("-u").arg("--merge").arg("-o")//
-        .file(fullFile).file(fullFile).file(deltaFile);
+        .file(fullFile).file(fullFile).file(deltaFile).arg("; ");
 
     return result;
   }
