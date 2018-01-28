@@ -380,7 +380,7 @@ public class BashlogCompiler {
     result.cmd("mv").file(newDeltaFile).file(deltaFile).arg("; \n");
     result.cmd("$sort")//
         .arg("-u").arg("--merge").arg("-o")//
-        .file(fullFile).file(fullFile).file(new Bash.Command("$sort").file(deltaFile));
+        .file(fullFile).file(fullFile).file(deltaFile);
 
     return result;
   }
