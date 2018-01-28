@@ -2,7 +2,6 @@ package common;
 
 import common.parser.ParserReader;
 import common.parser.Program;
-
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -26,15 +25,15 @@ public class IntegrationTests {
   }
 
   @Test
-  public void testBad() throws Exception {
-    Program program = Program.read(new ParserReader("bad(X,X) :- parent(X,X)."));
+  public void testSameArgument() throws Exception {
+    Program program = Program.read(new ParserReader("bad() :- parent(X,X)."));
     SimpleFactsSet facts = new SimpleFactsSet();
-    facts.add("dummy/2", "bob", "alice");
-    facts.add("dummy/2", "charly", "alice");
+    facts.add("parent/2", "bob", "alice");
+    facts.add("parent/2", "charly", "alice");
 
-    FactsSet result = eval.evaluate(program, facts, Tools.set("bad/2"));
+    FactsSet result = eval.evaluate(program, facts, Tools.set("bad/0"));
 
-    Assert.assertEquals(0, result.getByRelation("bad/2").count());
+    Assert.assertEquals(0, result.getByRelation("bad/0").count());
   }
 
   @Test
@@ -159,5 +158,17 @@ public class IntegrationTests {
 
     FactsSet result = eval.evaluate(program, facts, Tools.set("a/2"));
     Assert.assertEquals(1, result.getByRelation("a/2").count());
+  }
+
+  @Test
+  public void negationSharedNegativeVariable() throws Exception {
+    Program program = Program.read(new ParserReader("t(X) :- p(X), not q(X,Y), not r(X,Y)."));
+    SimpleFactsSet facts = new SimpleFactsSet();
+    facts.add("p/1", "1");
+    facts.add("q/2", "1", "2");
+    facts.add("r/2", "1", "3");
+
+    FactsSet result = eval.evaluate(program, facts, Tools.set("t/1"));
+    Assert.assertEquals(1, result.getByRelation("t/1").count());
   }
 }
