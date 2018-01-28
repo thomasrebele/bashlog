@@ -385,23 +385,21 @@ public class BashlogCompiler {
     return result;
   }
 
-  private String awkEquality(EqualityFilterNode planNode) {
-    StringBuilder sb = new StringBuilder();
+  private void awkEquality(EqualityFilterNode planNode, StringBuilder init, StringBuilder cond) {
     if (planNode instanceof ConstantEqualityFilterNode) {
       ConstantEqualityFilterNode n = (ConstantEqualityFilterNode) planNode;
-      sb.append("$");
-      sb.append(n.getField() + 1);
-      sb.append(" == \"");
-      sb.append(escape(n.getValue().toString()));
-      sb.append("\"");
+      cond.append("$");
+      cond.append(n.getField() + 1);
+      cond.append(" == \"");
+      cond.append(escape(n.getValue().toString()));
+      cond.append("\"");
     } else if (planNode instanceof VariableEqualityFilterNode) {
       VariableEqualityFilterNode n = (VariableEqualityFilterNode) planNode;
-      sb.append("$");
-      sb.append(n.getField1() + 1);
-      sb.append(" == $");
-      sb.append(n.getField2() + 1);
+      cond.append("$");
+      cond.append(n.getField1() + 1);
+      cond.append(" == $");
+      cond.append(n.getField2() + 1);
     }
-    return sb.toString();
   }
 
   private String awkProject(ProjectNode p) {
@@ -506,6 +504,7 @@ public class BashlogCompiler {
 
     } else if (planNode instanceof MultiOutputNode) {
       Bash.CommandSequence result = new Bash.CommandSequence();
+      Bash.Command touch = result.cmd("touch");
       Bash.Command cmd = result.cmd(AWK);
       MultiOutputNode mo = (MultiOutputNode) planNode;
 
@@ -515,6 +514,7 @@ public class BashlogCompiler {
         PlanNode plan = plans.get(i), node = nodes.get(i);
 
         String matFile = "tmp/mat" + tmpFileIndex++;
+        touch.file(matFile);
         placeholderToFilename.putIfAbsent((PlaceholderNode) node, matFile);
         awkLine(plan, matFile, arg);
       }
@@ -684,9 +684,9 @@ public class BashlogCompiler {
 
       result.add(recursionSorted(rn, fullFile, deltaFile, newDeltaFile));
       //recursionInMemory(rn, sb, indent, fullFile, deltaFile, newDeltaFile);
-      result.cmd("[ -s " + deltaFile + " ]; \n");
+      result.cmd("[ -s " + deltaFile + " ]; ");
       result.cmd("do continue; done\n");
-      result.cmd("rm").file(deltaFile).file(newDeltaFile).wrap("", "\n");
+      result.cmd("rm").file(deltaFile).wrap("", "\n");
       if (profile) result.cmd("ttime cat").file(fullFile);
       else result.cmd("cat").file(fullFile);
       return result;
@@ -737,6 +737,7 @@ public class BashlogCompiler {
    */
   private PlanNode awkLine(PlanNode plan, String output, StringBuilder arg) {
     ProjectNode p = null;
+    List<String> init = new ArrayList<>();
     List<String> conditions = new ArrayList<>();
     do {
       if (plan instanceof ProjectNode) {
@@ -744,12 +745,19 @@ public class BashlogCompiler {
         p = (ProjectNode) plan;
         plan = p.getTable();
       } else if (plan instanceof EqualityFilterNode) {
-        conditions.add(awkEquality((EqualityFilterNode) plan));
+        StringBuilder initLine = new StringBuilder(), condLine = new StringBuilder();
+        awkEquality((EqualityFilterNode) plan, initLine, condLine);
+        conditions.add(condLine.toString());
         plan = ((EqualityFilterNode) plan).getTable();
       } else {
         break;
       }
     } while (true);
+    if (init.size() > 0) {
+      arg.append("BEGIN { ");
+      arg.append(init.stream().collect(Collectors.joining(" ")));
+      arg.append(" }");
+    }
     arg.append(conditions.stream().collect(Collectors.joining(" && ")));
     arg.append(" { print ");
     if (p == null) {
