@@ -117,7 +117,7 @@ public class BashlogCompiler {
     // use mawk if possible for better performance
     header.append("if type mawk > /dev/null; then awk=\"mawk\"; else awk=\"awk\"; fi\n");
     // tweak sort
-    header.append("sort=\"sort -S64M --parallel=2 \"\n\n");
+    header.append("sort=\"sort -S25% --parallel=2 \"\n\n");
 
     if (profile) {
       header.append("PATH=$PATH:.\n");
@@ -225,7 +225,8 @@ public class BashlogCompiler {
       if (children.size() == 0) return u;
       if (children.size() == 1) return children.get(0);
       // use sort union, so sort all inputs
-      return children.stream().map(i -> (PlanNode) new SortNode(i, null)).reduce(PlanNode.empty(u.getArity()), PlanNode::union);
+      //return children.stream().map(i -> (PlanNode) new SortNode(i, null)).reduce(PlanNode.empty(u.getArity()), PlanNode::union);
+      return u;
 
     } else if (p instanceof BuiltinNode) {
       // instead of "<(cat file)", use file directly
@@ -533,7 +534,7 @@ public class BashlogCompiler {
         String matFile = "tmp/mat" + tmpFileIndex++;
         touch.file(matFile);
         placeholderToFilename.putIfAbsent((PlaceholderNode) node, matFile);
-        awkLine(plan, matFile, arg);
+        simpleAwkLine(plan, matFile, arg);
       }
       cmd.arg(arg.toString()).arg("'");
       cmd.file(compile(mo.getLeaf()));
@@ -573,7 +574,13 @@ public class BashlogCompiler {
 
     } else if (planNode instanceof ProjectNode || planNode instanceof EqualityFilterNode) {
       StringBuilder awk = new StringBuilder();
-      PlanNode inner = awkLine(planNode, null, awk);
+      PlanNode inner = simpleAwkLine(planNode, null, awk);
+
+      StringBuilder advAwk = new StringBuilder();
+      if (complexAwkLine(Arrays.asList(planNode), null, advAwk).isEmpty()) {
+        awk = advAwk;
+      }
+
       return new Bash.Command(AWK).arg(awk.toString()).arg("'").file(compile(inner));
     }
 
@@ -597,57 +604,12 @@ public class BashlogCompiler {
       MultiFilterNode m = (MultiFilterNode) planNode;
       Bash.Command cmd = new Bash.Command(AWK);
 
-      // replace value-filters by associative array lookup
-      // first, collect all filters that can be combined
-      PushDownFilterAndProject pushdown = new PushDownFilterAndProject();
-      Map<List<Integer>, Map<List<Integer>, List<List<Comparable<?>>>>> outputColToFilteredColToValues = new HashMap<>();
-      List<PlanNode> remaining = m.getFilter().stream().map(pushdown::apply).filter(pn -> {
-        Map<Integer, Comparable<?>> filterCols = new TreeMap<>();
-        int[] outputCols = getCols(pn, filterCols);
-        if (outputCols == null || filterCols.size() == 0) return true;
-
-        outputColToFilteredColToValues.computeIfAbsent( //
-            Arrays.stream(outputCols).boxed().collect(Collectors.toList()), //
-            k -> new HashMap<>()) //
-            .computeIfAbsent(new ArrayList<>(filterCols.keySet()), k -> new ArrayList<>())//
-            .add(new ArrayList<Comparable<?>>(filterCols.values()));
-
-        return false;
-      }).collect(Collectors.toList());
-
       StringBuilder arg = new StringBuilder();
-      if (outputColToFilteredColToValues.size() > 0) {
-        // create arrays outCOLS_condCOLS[VAL] = "1";
-        // where COLS looks like 0c1c2
-
-        arg.append("BEGIN { ");
-        outputColToFilteredColToValues.forEach((outCols, map) -> {
-          map.forEach((filterCols, values) -> {
-            values.forEach(vals -> {
-              arg.append("out").append(joinStr(outCols, "c"));
-              arg.append("_cond").append(joinStr(filterCols, "c"));
-              arg.append("[\"").append(joinStr(vals, "\" FS \"")).append("\"] = \"1\"; ");
-            });
-          });
-        });
-        arg.append(" } ");
-
-        // filter lines using arrays
-        outputColToFilteredColToValues.forEach((outCols, map) -> {
-          arg.append("(");
-          arg.append(map.keySet().stream().map(filterCols -> {
-            return (String) "(" + joinStr(filterCols.stream().map(i -> "$" + (i + 1)), " FS ") + ")" + //
-            " in out" + joinStr(outCols, "c") + "_cond" + joinStr(filterCols, "c");
-          }).collect(Collectors.joining(" || ")));
-
-          arg.append(") ");
-          arg.append("{ print ").append(joinStr(outCols.stream().map(i -> "$" + (i + 1)), " FS ")).append(" } ");
-        });
-      }
+      List<PlanNode> remaining = complexAwkLine(m.getFilter(), null, arg);
 
       // process remaining filter nodes
       for (PlanNode c : remaining) {
-        awkLine(c, null, arg);
+        simpleAwkLine(c, null, arg);
       }
       arg.append("' ");
       cmd.arg(arg.toString());
@@ -674,7 +636,12 @@ public class BashlogCompiler {
       if (planNode.children().size() == 0) {
         return new Bash.Command("echo").arg("-n");
       } else {
-        Bash.Command result = new Bash.Command("$sort").arg("-u").arg("-m");
+        /*Bash.Command result = new Bash.Command("$sort").arg("-u").arg("-m");
+        for (PlanNode child : ((UnionNode) planNode).getChildren()) {
+          result.file(compile(child));
+        }
+        return result;*/
+        Bash.Command result = new Bash.Command("$sort").arg("-u");
         for (PlanNode child : ((UnionNode) planNode).getChildren()) {
           result.file(compile(child));
         }
@@ -752,7 +719,7 @@ public class BashlogCompiler {
    * @param output if null output to stdout, otherwise output to file
    * @return
    */
-  private PlanNode awkLine(PlanNode plan, String output, StringBuilder arg) {
+  private PlanNode simpleAwkLine(PlanNode plan, String output, StringBuilder arg) {
     ProjectNode p = null;
     List<String> init = new ArrayList<>();
     List<String> conditions = new ArrayList<>();
@@ -789,6 +756,63 @@ public class BashlogCompiler {
     return plan;
   }
 
+  /**
+   * Build an AWK program that uses hash table look up instead of "==" if conditions
+   * @param plans containing all the same leaf (sub-tree)
+   * @param output which file the output should be written
+   * @param awkProg accumulator for the awk program
+   * @return remaining all plan nodes that couldn't be processed that way
+   */
+  private List<PlanNode> complexAwkLine(Collection<PlanNode> plans, String output, StringBuilder awkProg) {
+    // replace value-filters by associative array lookup
+    // first, collect all filters that can be combined
+    Map<List<Integer>, Map<List<Integer>, List<List<Comparable<?>>>>> outputColToFilteredColToValues = new HashMap<>();
+    List<PlanNode> remaining = plans.stream().filter(pn -> {
+      Map<Integer, Comparable<?>> filterCols = new TreeMap<>();
+      List<Integer> outputCols = new ArrayList<>();
+      getCols(pn, outputCols, filterCols);
+      if (outputCols == null || filterCols.size() == 0) return true;
+
+      outputColToFilteredColToValues.computeIfAbsent( //
+          outputCols, //
+          k -> new HashMap<>()) //
+          .computeIfAbsent(new ArrayList<>(filterCols.keySet()), k -> new ArrayList<>())//
+          .add(new ArrayList<Comparable<?>>(filterCols.values()));
+
+      return false;
+    }).collect(Collectors.toList());
+
+    if (outputColToFilteredColToValues.size() > 0) {
+      // create arrays outCOLS_condCOLS[VAL] = "1";
+      // where COLS looks like 0c1c2
+
+      awkProg.append("BEGIN { ");
+      outputColToFilteredColToValues.forEach((outCols, map) -> {
+        map.forEach((filterCols, values) -> {
+          values.forEach(vals -> {
+            awkProg.append("out").append(joinStr(outCols, "c"));
+            awkProg.append("_cond").append(joinStr(filterCols, "c"));
+            awkProg.append("[\"").append(joinStr(vals, "\" FS \"")).append("\"] = \"1\"; ");
+          });
+        });
+      });
+      awkProg.append(" } ");
+
+      // filter lines using arrays
+      outputColToFilteredColToValues.forEach((outCols, map) -> {
+        awkProg.append("(");
+        awkProg.append(map.keySet().stream().map(filterCols -> {
+          return (String) "(" + joinStr(filterCols.stream().map(i -> "$" + (i + 1)), " FS ") + ")" + //
+          " in out" + joinStr(outCols, "c") + "_cond" + joinStr(filterCols, "c");
+        }).collect(Collectors.joining(" || ")));
+
+        awkProg.append(") ");
+        awkProg.append("{ print ").append(joinStr(outCols.stream().map(i -> "$" + (i + 1)), " FS ")).append(" } ");
+      });
+    }
+    return remaining;
+  }
+
   private <T> String joinStr(Collection<T> outCols, String delimiter) {
     return joinStr(outCols.stream(), delimiter);
   }
@@ -797,18 +821,29 @@ public class BashlogCompiler {
     return outCols.map(t -> t.toString()).collect(Collectors.joining(delimiter));
   }
 
-  private int[] getCols(PlanNode node, Map<Integer, Comparable<?>> filterCols) {
+  /**
+   * Get projection array, and columns and constants for filters
+   * @param node
+   * @param projCols accumulator
+   * @param filterCols accumulator
+   * @return inner plan node
+   */
+  private PlanNode getCols(PlanNode node, List<Integer> projCols, Map<Integer, Comparable<?>> filterCols) {
     if (node instanceof ConstantEqualityFilterNode) {
       ConstantEqualityFilterNode eq = (ConstantEqualityFilterNode) node;
       filterCols.put(eq.getField(), eq.getValue());
-      return getCols(eq.getTable(), filterCols);
+      return getCols(eq.getTable(), projCols, filterCols);
+    }
+    if (node instanceof VariableEqualityFilterNode) {
+      // make getCols return null (checked below)
+      return null;
     }
     if (node instanceof ProjectNode) {
-      ProjectNode p = (ProjectNode) node;
-      int[] cols = getCols(p.getTable(), filterCols);
       // may only have one projection!
-      if (cols != null) throw new UnsupportedOperationException(((ProjectNode) node).getTable().toString());
-      return p.getProjection();
+      if (!projCols.isEmpty()) throw new UnsupportedOperationException(((ProjectNode) node).getTable().toString());
+      ProjectNode p = (ProjectNode) node;
+      Arrays.stream(p.getProjection()).forEach(i -> projCols.add(i));
+      return getCols(p.getTable(), projCols, filterCols);
     }
     return null;
   }
