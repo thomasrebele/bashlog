@@ -52,7 +52,11 @@ public class BashlogCompiler {
 
   private boolean profile;
 
-  private boolean parallelMaterialization = false;
+  public static enum ParallelMaterializationMethod {
+    NONE, FLOCK, PIPE
+  }
+
+  private ParallelMaterializationMethod parallelMaterialization = ParallelMaterializationMethod.PIPE;
 
   /** Stores the compiled bash script */
   private String bash = null;
@@ -418,13 +422,17 @@ public class BashlogCompiler {
 
   private Bash waitFor(Bash bash, List<PlanNode> children) {
     Bash result = bash;
-    if (parallelMaterialization) {
+    if (parallelMaterialization != ParallelMaterializationMethod.NONE) {
       for (PlanNode child : children) {
         if (child instanceof PlaceholderNode) {
           PlanNode parent = ((PlaceholderNode) child).getParent();
           if (parent instanceof MaterializationNode) {
             String matFile = matNodeToFilename.get(parent);
-            result = new Bash.Command("flock").arg("-s " + matFile + " ").other(result);
+            if (parallelMaterialization == ParallelMaterializationMethod.FLOCK) {
+              result = new Bash.Command("flock").arg("-s " + matFile + " ").other(result);
+            } else if (parallelMaterialization == ParallelMaterializationMethod.PIPE) {
+              result = new Bash.Command("cat").arg(matFile.replace("tmp/", "tmp/lock_")).arg("1>&2").arg("; ").other(result);
+            }
           }
         }
       }
@@ -485,9 +493,18 @@ public class BashlogCompiler {
 
       Bash reused = compile(m.getReusedPlan());
       if (asFile) {
-        if (parallelMaterialization) {
+        if (parallelMaterialization == ParallelMaterializationMethod.FLOCK) {
           reused = reused.wrap("(flock 1; (", "; \\\n flock --unlock 1)& )");
           reused = reused.wrap("", " 1> " + matFile);
+        } else if (parallelMaterialization == ParallelMaterializationMethod.PIPE) {
+          String lockFile = matFile.replaceAll("tmp/", "tmp/lock_");
+          String doneFile = matFile.replaceAll("tmp/", "tmp/done_");
+          reused = reused.wrap("mkfifo " + lockFile + "; ( ", //
+              " > " + matFile + //
+                  "; mv " + lockFile + " " + doneFile + //
+                  "; cat " + doneFile + " > /dev/null & " + //
+                  "exec 3> " + doneFile + "; exec 3>&-;" + //
+                  " ) & ");
         } else {
           reused = reused.wrap("", " > " + matFile);
         }
