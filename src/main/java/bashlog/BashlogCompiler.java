@@ -534,6 +534,9 @@ public class BashlogCompiler {
         String matFile = "tmp/mat" + tmpFileIndex++;
         touch.file(matFile);
         placeholderToFilename.putIfAbsent((PlaceholderNode) node, matFile);
+
+        //TODO: if there are more conditions on one output file:
+        // if (!complexAwkLine(Arrays.asList(plan), matFile, arg).isEmpty()) { ... }
         simpleAwkLine(plan, matFile, arg);
       }
       cmd.arg(arg.toString()).arg("'");
@@ -790,6 +793,9 @@ public class BashlogCompiler {
       outputColToFilteredColToValues.forEach((outCols, map) -> {
         map.forEach((filterCols, values) -> {
           values.forEach(vals -> {
+            if (output != null) {
+              awkProg.append(output.replace("tmp/", ""));
+            }
             awkProg.append("out").append(joinStr(outCols, "c"));
             awkProg.append("_cond").append(joinStr(filterCols, "c"));
             awkProg.append("[\"").append(joinStr(vals, "\" FS \"")).append("\"] = \"1\"; ");
@@ -802,12 +808,22 @@ public class BashlogCompiler {
       outputColToFilteredColToValues.forEach((outCols, map) -> {
         awkProg.append("(");
         awkProg.append(map.keySet().stream().map(filterCols -> {
-          return (String) "(" + joinStr(filterCols.stream().map(i -> "$" + (i + 1)), " FS ") + ")" + //
-          " in out" + joinStr(outCols, "c") + "_cond" + joinStr(filterCols, "c");
+          String condition = (String) "(" + joinStr(filterCols.stream().map(i -> "$" + (i + 1)), " FS ") + ")" + //
+          " in ";
+          if (output != null) {
+            condition += output.replace("tmp/", "");
+          }
+          condition += "out" + joinStr(outCols, "c") + "_cond" + joinStr(filterCols, "c");
+
+          return condition;
         }).collect(Collectors.joining(" || ")));
 
         awkProg.append(") ");
-        awkProg.append("{ print ").append(joinStr(outCols.stream().map(i -> "$" + (i + 1)), " FS ")).append(" } ");
+        awkProg.append("{ print ").append(joinStr(outCols.stream().map(i -> "$" + (i + 1)), " FS "));
+        if (output != null) {
+          awkProg.append(" >> \"").append(output).append("\"");
+        }
+        awkProg.append(" } ");
       });
     }
     return remaining;
