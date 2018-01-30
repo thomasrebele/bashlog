@@ -32,7 +32,6 @@ public class Materialize implements Optimizer {
       }
     });
 
-    System.out.println(t.toPrettyString());
     return t.transform((old, node, parent) -> {
       if (nodesToReuseNode.containsKey(old)) {
         return nodesToReuseNode.get(old);

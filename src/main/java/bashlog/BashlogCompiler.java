@@ -127,13 +127,8 @@ public class BashlogCompiler {
       header.append("sort=\"ttime sort -S64M --parallel=2 \"\n\n");
     }
 
-    System.out.println(debugInfo());
-
     Bash e = compile(root);
     String result = header.toString() + e.generate(profile);
-
-    System.out.println(result);
-    System.out.println("\n\n---------------------------------\n");
 
     return result;
   }

@@ -26,17 +26,6 @@ public class MultiOutput implements Optimizer {
       i.createMultiOutputNode = i.plans.size() > 1;
     });
 
-    System.out.println();
-    planToInfo.forEach((k, v) -> {
-      System.out.println(k.toPrettyString());
-      System.out.println(v.createMultiOutputNode);
-    });
-    nodesToReuseNode.forEach((k, v) -> {
-      System.out.println(k.toPrettyString());
-      System.out.println("to " + v.toPrettyString());
-    });
-    System.out.println();
-
     HashMap<PlanNode, List<Info>> nodesToInfo = new HashMap<>();
     planToInfo.forEach((p, i) -> {
       if (i.createMultiOutputNode) {
