@@ -92,7 +92,7 @@ public class PlaceholderNode implements PlanNode {
 
   @Override
   public String operatorString() {
-    return operatorString;
+    return operatorString + (parent != null && !operatorString.contains(" for ") ? " for " + parent.operatorString() : "");
   }
 
   /** Walk through the plan and collect outer nodes that have a place holder in the plan */

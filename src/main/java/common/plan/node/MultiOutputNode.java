@@ -31,7 +31,7 @@ public class MultiOutputNode implements PlanNode {
       if (reuseNodeBuilders == null) throw new IllegalStateException("already built!");
       MultiOutputNode result = new MultiOutputNode(mainPlan, leafPlan, reusedPlans, reuseNodeBuilders, null);
       for (int i = 0; i < reusedPlans.size(); i++) {
-        String op = result.operatorString() + " reuse " + i + " (" + result.reusedPlans.get(i).hash() + ")";
+        String op = "reuse " + i + " (" + result.reusedPlans.get(i).hash() + ")";
         reuseNodeBuilders.get(i).build(result, op);
       }
       return result;
