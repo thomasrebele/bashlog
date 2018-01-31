@@ -161,14 +161,41 @@ public class IntegrationTests {
   }
 
   @Test
-  public void negationSharedNegativeVariable() throws Exception {
-    Program program = Program.read(new ParserReader("t(X) :- p(X), not q(X,Y), not r(X,Y)."));
+  public void negationMultipleVars() throws Exception {
+    Program program = Program.read(new ParserReader("a(X,Y) :- not c(X,Y), b(X, Y)."));
     SimpleFactsSet facts = new SimpleFactsSet();
-    facts.add("p/1", "1");
-    facts.add("q/2", "1", "2");
-    facts.add("r/2", "1", "3");
+    facts.add("b/2", "1", "2");
+    facts.add("b/2", "2", "3");
+    facts.add("c/2", "2", "3");
 
-    FactsSet result = eval.evaluate(program, facts, Tools.set("t/1"));
-    Assert.assertEquals(1, result.getByRelation("t/1").count());
+    FactsSet result = eval.evaluate(program, facts, Tools.set("a/2"));
+    Assert.assertEquals(1, result.getByRelation("a/2").count());
+  }
+
+  @Test
+  public void multipleNegations() throws Exception {
+    Program program = Program.read(new ParserReader("a(X,Y) :- b(X, Y), not c(X), not d(Y)."));
+    SimpleFactsSet facts = new SimpleFactsSet();
+    facts.add("b/2", "1", "2");
+    facts.add("b/2", "2", "3");
+    facts.add("b/2", "2", "4");
+    facts.add("c/1", "1");
+    facts.add("d/1", "3");
+
+    FactsSet result = eval.evaluate(program, facts, Tools.set("a/2"));
+    Assert.assertEquals(1, result.getByRelation("a/2").count());
+  }
+
+  @Test
+  public void negationBounded() throws Exception {
+    Program program = Program.read(new ParserReader("a(X,Y) :- b(X, Y), not c(X, Z), d(Z)."));
+    SimpleFactsSet facts = new SimpleFactsSet();
+    facts.add("b/2", "1", "2");
+    facts.add("b/2", "2", "3");
+    facts.add("c/2", "1", "3");
+    facts.add("d/1", "3");
+
+    FactsSet result = eval.evaluate(program, facts, Tools.set("a/2"));
+    Assert.assertEquals(1, result.getByRelation("a/2").count());
   }
 }
