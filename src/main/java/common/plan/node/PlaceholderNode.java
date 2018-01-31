@@ -3,6 +3,9 @@ package common.plan.node;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import bashlog.plan.SortNode;
+import bashlog.plan.SortRecursionNode;
+
 public class PlaceholderNode implements PlanNode {
 
   protected PlanNode parent;
@@ -100,12 +103,14 @@ public class PlaceholderNode implements PlanNode {
     HashMap<PlanNode, Boolean> nodeToContained = new HashMap<>();
 
     plan.transform(pn -> {
-      nodeToContained.put(plan, true);
+      nodeToContained.put(pn, true);
+
       if (pn instanceof PlaceholderNode) {
         nodeToContained.putIfAbsent(((PlaceholderNode) pn).getParent(), false);
       }
       return pn;
     });
+
     return nodeToContained.entrySet().stream().filter(e -> !e.getValue()).map(e -> e.getKey()).collect(Collectors.toSet());
   }
 

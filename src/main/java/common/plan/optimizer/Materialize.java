@@ -17,12 +17,17 @@ public class Materialize implements Optimizer {
   @Override
   public PlanNode apply(PlanNode t) {
     planToInfo = new HashMap<>();
+    // determine which plan nodes to materialize
     analyzeStructure(t, 0, new ArrayList<>(), new HashSet<>(), new HashSet<>());
     analyzeReuse(t, 1);
     analyzeMaterialize(t, false);
     //print(t);
 
+    // store for every node, which plans should be materialized just above them
     HashMap<PlanNode, List<Info>> nodesToInfo = new HashMap<>();
+    // replace all these sub plans with their respective reuse node
+    // stores the original sub plans
+    // (the hash values of the newly built plans changed, as parts of their plan were replaced)
     HashMap<PlanNode, PlanNode> nodesToReuseNode = new HashMap<>();
     planToInfo.forEach((p, i) -> {
       if (i.reuse()) {

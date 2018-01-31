@@ -6,6 +6,9 @@ import java.util.*;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  * A plan node (like a union or a join) following relational algebra.
  * Create a new implementation of this interface to create a new kind of node.
@@ -14,6 +17,8 @@ import java.util.function.Function;
  * LogicalPlanBuilder builds a plan from a Program
  */
 public interface PlanNode {
+
+  static final Logger LOG = LoggerFactory.getLogger(PlanNode.class);
 
   /**
    * Number of columns of the resulting table
@@ -270,10 +275,20 @@ public interface PlanNode {
     return hash;
   }
 
+  /**
+   * Determine whether two plans are equal
+   * @param other
+   * @param assumedEqualities
+   * @return true if equal
+   */
   default boolean equals(Object other, Map<PlanNode, PlanNode> assumedEqualities) {
+    // TODO: check whether method is implemented by necessary classes
     return equals(other);
   }
 
+  /**
+   * Height of this plan tree
+   */
   default int height() {
     if (children().size() == 0) return 0;
     return children().stream().mapToInt(c -> c.height()).max().getAsInt() + 1;

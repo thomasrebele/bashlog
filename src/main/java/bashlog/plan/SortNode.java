@@ -2,6 +2,7 @@ package bashlog.plan;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 import common.Tools;
@@ -29,7 +30,7 @@ public class SortNode implements PlanNode {
 
   @Override
   public String toString() {
-    return operatorString() + "(" + child + ")";
+    return toPrettyString(); //operatorString() + "(" + child + ")";
   }
 
   @Override
@@ -46,9 +47,12 @@ public class SortNode implements PlanNode {
     return sortColumns;
   }
 
-  @Override
-  public boolean equals(Object obj) {
-    return obj instanceof SortNode && Objects.equals(child, ((SortNode) obj).child) && Arrays.equals(sortColumns, ((SortNode) obj).sortColumns);
+  public boolean equals(Object obj, Map<PlanNode, PlanNode> assumedEqualities) {
+    if (!(obj.getClass() == getClass())) {
+      return false;
+    }
+    SortNode node = (SortNode) obj;
+    return Arrays.equals(sortColumns, node.sortColumns) && child.equals(node.child, assumedEqualities);
   }
 
   @Override
