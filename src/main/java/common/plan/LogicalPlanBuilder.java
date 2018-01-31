@@ -26,8 +26,7 @@ public class LogicalPlanBuilder {
   }
 
   private static <T, U> Map<T, U> withEntry(Map<T, U> map, T key, U value) {
-    Map<T, U> clone = new HashMap<>();
-    clone.putAll(map);
+    Map<T, U> clone = new HashMap<>(map);
     clone.put(key, value);
     return clone;
   }
@@ -171,9 +170,7 @@ public class LogicalPlanBuilder {
     NodeWithMask positive = positiveNodes.stream()
             .reduce((nm1, nm2) -> group(nm1, nm2, false))
             .orElseThrow(() -> new UnsupportedOperationException("rule without positive body: " + rule.toString()));
-    NodeWithMask body = negativeNodes.stream().reduce((nm1, nm2) -> group(nm1, nm2, false))
-            .map(negations -> group(positive, negations, true))
-            .orElse(positive);
+    NodeWithMask body = negativeNodes.stream().reduce(positive, (nm1, nm2) -> group(nm1, nm2, true));
 
     if (builtin.contains(rule.head.name)) {
       return body.node;
