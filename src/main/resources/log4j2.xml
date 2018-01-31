@@ -18,9 +18,6 @@
 			</Filters>
 		</Console>
 		
-		<!-- <File name="Regexes" fileName="output/regexes.log" immediateFlush="false" append="false">
-			<PatternLayout pattern="%d{yyy-MM-dd HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
-		</File> -->
 	</Appenders>
 	<Loggers>
 		<Root level="info">
@@ -29,12 +26,10 @@
 		</Root>
 		<!-- change level for classes -->
 		<Logger name="yago4.predicates.Predicate" level="debug" additivity="false">
-			<AppenderRef ref="Regexes"/>
 			<AppenderRef ref="Console"/>
 			<AppenderRef ref="ErrConsole" />
 		</Logger>
 		<Logger name="yago4.predicates.builtin.Sub" level="debug" additivity="false">
-			<AppenderRef ref="Regexes"/>
 			<AppenderRef ref="Console"/>
 			<AppenderRef ref="ErrConsole" />
 		</Logger>
