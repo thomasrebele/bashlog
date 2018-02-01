@@ -4,4 +4,5 @@ query2(X) :- type(X, "<wordnet_person_100007846>") .
 query3(X) :- hasParent(X, "<Louis_XIV_of_France>") .
 query4(X) :- hasAncestor(X, "<Louis_XIV_of_France>") .
 query5(X) :- hasBirthPlace(X, Y), isLocatedIn(Y, "<Andorra>") .
-query6(X) :- hasDeathPlace(X, Y), not hasBirthPlace(X, Z) .
+query6birthPlaceExists(X) :- hasBirthPlace(X, Y) .
+query6(X) :- hasDeathPlace(X, Y), not query6birthPlaceExists(X) .

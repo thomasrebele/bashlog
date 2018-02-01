@@ -4,4 +4,5 @@ query2(X) :- type(X, "<http://www.wikidata.org/entity/Q215627>") .
 query3(X) :- hasFather(X, "<http://www.wikidata.org/entity/Q7742>") .
 query4(X) :- hasAncestor(X, "<http://www.wikidata.org/entity/Q7742>") .
 query5(X) :- hasBirthPlace(X, Y), inCountry(Y, "<http://www.wikidata.org/entity/Q228>") .
-query6(X) :- hasDeathPlace(X, Y), not hasBirthPlace(X, Z) .
+query6birthPlaceExists(X) :- hasBirthPlace(X,Y) .
+query6(X) :- hasDeathPlace(X, Y), not query6birthPlaceExists(X) .
