@@ -181,9 +181,6 @@ public class Materialize implements Optimizer {
      */
     final Set<PlanNode> calledRecursions = new HashSet<>();
 
-    /** Outer plan nodes whose placeholder occurs in plan */
-    final Set<PlanNode> placeholderParents = new HashSet<>();
-
     /** If reuse, either materialize output to file, or create named pipes and fill them with tee */
     private boolean reuse = false;
 
@@ -207,7 +204,7 @@ public class Materialize implements Optimizer {
     }
 
     boolean reuse() {
-      return reuse && !(plan instanceof BuiltinNode || plan instanceof TSVFileNode);
+      return reuse && !(plan instanceof BuiltinNode || plan instanceof TSVFileNode || plan instanceof PlaceholderNode);
     }
 
     /** Get node with the deepest depth, and store depth in 2nd parameter */
