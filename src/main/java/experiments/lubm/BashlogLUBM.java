@@ -88,8 +88,10 @@ public class BashlogLUBM {
 
     String scriptDir = "experiments/edbt2017/lubm/bashlog/";
     String sqlDir = "experiments/edbt2017/lubm/sql/";
+    String nodbSqlDir = "experiments/edbt2017/lubm/nodb_sql/";
     new File(scriptDir).mkdirs();
     new File(sqlDir).mkdirs();
+    new File(nodbSqlDir).mkdirs();
     for (int i = 0; i < 14; i++) {
       Program p = lubmProgram3("~/extern/data/bashlog/lubm/$1/", "data/lubm");
       String relation = queries[i];
@@ -106,8 +108,10 @@ public class BashlogLUBM {
         });
 
         String sql = new SqllogCompiler().compile(sqlProg, new HashSet<>(Arrays.asList("allFacts/3")), relation);
+        String noDBSql = new SqllogCompiler(true, true).compile(sqlProg, new HashSet<>(Arrays.asList("allFacts/3")), relation);
         Files.write(Paths.get(scriptDir + "query" + (i + 1) + ".sh"), script.getBytes());
         Files.write(Paths.get(sqlDir + "query" + (i + 1) + ".sql"), sql.getBytes());
+        Files.write(Paths.get(nodbSqlDir + "query" + (i + 1) + ".sql"), noDBSql.getBytes());
       } catch (Exception e) {
         throw new RuntimeException("in query " + (i + 1), e);
       }

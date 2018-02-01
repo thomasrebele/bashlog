@@ -20,8 +20,28 @@ public class SqllogCompiler {
   private static final Set<String> BUILDS_IN = Collections.singleton("sql_table");
   private static final List<Optimizer> OPTIMIZERS = Arrays.asList(new SimplifyRecursion(), new ReorderJoinLinear(), new PushDownFilterAndProject());
 
+  private static final String TABLE_ALIAS_PREFIX = "T";
+
   private Map<PlanNode, String> closureTables = new HashMap<>();
   private int count = 0;
+
+  /* Compability mode for NoDB */
+  /** Use WITH T1 AS (...) instead of SELECT ... FROM ... AS T1 */
+  private final boolean useWithForAliases;
+
+  /* Compability mode for NoDB */
+  /** Use WITH RECURSIVE ... instead of WITH ..., RECURSIVE T1 ... */
+  private final boolean recursiveDirectlyAfterWith;
+
+  public SqllogCompiler() {
+    useWithForAliases = false;
+    recursiveDirectlyAfterWith = false;
+  }
+
+  public SqllogCompiler(boolean useWithForAliases, boolean recursiveDirectlyAfterWith) {
+    this.useWithForAliases = useWithForAliases;
+    this.recursiveDirectlyAfterWith = recursiveDirectlyAfterWith;
+  }
 
   public String compile(Program program, Set<String> relationsInTables, String relationToOutput) {
     relationsInTables.forEach(relation -> program.addRule(buildLoadRuleForRelation(relation)));
@@ -122,7 +142,10 @@ public class SqllogCompiler {
     String fields = IntStream.range(0, node.getArity())
             .mapToObj(i -> "C" + i)
             .collect(Collectors.joining(", "));
-    String recursion = "RECURSIVE " + closureTable + "(" + fields + ") AS ((" + exit.toString() + ") UNION ALL (" + rec.toString() + "))";
+    String recursion = closureTable + "(" + fields + ") AS ((" + exit.toString() + ") UNION ALL (" + rec.toString() + "))";
+    if (!recursiveDirectlyAfterWith) {
+      recursion = "RECURSIVE " + recursion;
+    }
 
     Select end = newTable(closureTable, node.getArity());
     end.recursions.add(recursion);
@@ -136,7 +159,7 @@ public class SqllogCompiler {
   private Select mapUnionNode(UnionNode node) {
     String union = node.getChildren().stream()
             .map(child -> "(" + mapPlanNode(child).toString() + ")")
-            .collect(Collectors.joining(" UNION ALL "));
+        .collect(Collectors.joining("\n UNION ALL "));
     return newTable("(" + union + ")", node.getArity());
   }
 
@@ -151,7 +174,7 @@ public class SqllogCompiler {
 
   private String newAlias() {
     count++;
-    return "T" + count;
+    return TABLE_ALIAS_PREFIX + count;
   }
 
   private <T> List<T> merge(List<T> a, List<T> b) {
@@ -168,13 +191,30 @@ public class SqllogCompiler {
 
   private Select newTable(String table, int arity) {
     String alias = newAlias();
+    if (table.trim().startsWith(TABLE_ALIAS_PREFIX)) {
+      alias = table;
+    }
+    String fAlias = alias;
+
     List<String> select = IntStream.range(0, arity)
-            .mapToObj(i -> toCol(alias, i))
+        .mapToObj(i -> toCol(fAlias, i))
             .collect(Collectors.toList());
-    return new Select(select, table + " AS " + alias);
+    if (useWithForAliases) {
+      Select s = new Select(select, alias);
+      if (table.trim().startsWith(TABLE_ALIAS_PREFIX)) {
+      } else if (table.trim().startsWith("(")) {
+        s.recursions.add(alias + " AS " + table + "");
+      } else {
+        s.recursions.add(alias + " AS (SELECT * FROM " + table + ")");
+      }
+      return s;
+    }
+    else {
+      return new Select(select, table + " AS " + alias);
+    }
   }
 
-  private static class Select {
+  private class Select {
     List<String> select;
     Set<String> from;
     Set<String> where = Collections.emptySet();
@@ -204,17 +244,25 @@ public class SqllogCompiler {
 
     @Override
     public String toString() {
+      return toString("");
+    }
+
+    public String toString(String prefix) {
       StringBuilder builder = new StringBuilder();
       if (!recursions.isEmpty()) {
-        builder.append("WITH ").append(String.join(", ", recursions));
+        builder.append("\n WITH ");
+        if (SqllogCompiler.this.recursiveDirectlyAfterWith) {
+          builder.append("RECURSIVE ");
+        }
+        builder.append(String.join(", ", recursions));
       }
       String selectColumns = IntStream.range(0, select.size()).mapToObj(i -> select.get(i) + " AS C" + i).collect(Collectors.joining(", "));
-      builder.append(" SELECT ").append(selectColumns)
+      builder.append("\n SELECT ").append(selectColumns)
               .append(" FROM ").append(String.join(", ", from));
       if (!where.isEmpty()) {
         builder.append(" WHERE ").append(String.join(" and ", where));
       }
-      return builder.toString().trim();
+      return builder.toString();
     }
   }
 }
