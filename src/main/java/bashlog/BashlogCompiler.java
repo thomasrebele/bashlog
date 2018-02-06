@@ -1,7 +1,6 @@
 package bashlog;
 
 import bashlog.command.Bash;
-import bashlog.command.Bash.Pipe;
 import bashlog.plan.*;
 import common.Tools;
 import common.parser.CompoundTerm;
@@ -52,11 +51,7 @@ public class BashlogCompiler {
 
   private boolean profile;
 
-  public static enum ParallelMaterializationMethod {
-    NONE, FLOCK, PIPE
-  }
-
-  private ParallelMaterializationMethod parallelMaterialization = ParallelMaterializationMethod.PIPE;
+  private boolean parallelMaterialization = true;
 
   /** Stores the compiled bash script */
   private String bash = null;
@@ -219,8 +214,6 @@ public class BashlogCompiler {
       List<PlanNode> children = u.children();
       if (children.size() == 0) return u;
       if (children.size() == 1) return children.get(0);
-      // use sort union, so sort all inputs
-      //return children.stream().map(i -> (PlanNode) new SortNode(i, null)).reduce(PlanNode.empty(u.getArity()), PlanNode::union);
       return u;
 
     } else if (p instanceof BuiltinNode) {
@@ -247,18 +240,6 @@ public class BashlogCompiler {
     return p;
   }
 
-  /** Awk colums used as key for join */
-  private static String keyMask(int[] columns) {
-    StringBuilder mask = new StringBuilder();
-    for (int i = 0; i < columns.length; i++) {
-      if (mask.length() > 0) mask.append(" FS ");
-      mask.append("$");
-      mask.append(columns[i] + 1);
-    }
-    return mask.toString();
-
-  }
-
   /** Escape string for usage in awk */
   private static String escape(String str) {
     return str.replaceAll("\"", "\\\"").replaceAll("'", "'\\''");
@@ -267,26 +248,6 @@ public class BashlogCompiler {
   final static String INDENT = "    ";
 
   final static String AWK = "$awk -v FS=$'\\t' '";
-
-  /** Awk command which caches the left subtree, and joins it with the right subtree */
-  private Bash leftHashJoin(JoinNode j, StringBuilder sb, String indent) {
-    Bash.Command cmd = new Bash.Command(AWK);
-    cmd.arg("NR==FNR { ");
-    cmd.arg("key = ");
-    cmd.arg(keyMask(j.getLeftProjection()));
-    cmd.arg("; h[key] = $0; ");
-    cmd.arg("next } \n");
-    cmd.arg(" { ");
-    cmd.arg("key = ");
-    cmd.arg(keyMask(j.getRightProjection()));
-    cmd.arg("; if (key in h) {");
-    cmd.arg(" print h[key] FS $0");
-    cmd.arg(" } }' \\\n");
-    cmd.file(compile(j.getLeft()));
-    cmd.arg(" \\\n");
-    cmd.file(compile(j.getRight()));
-    return cmd;
-  }
 
   /**
    * Sort the output of n on columns; might need to introduce a new column
@@ -351,15 +312,6 @@ public class BashlogCompiler {
     return result;
   }
 
-  /** Remove all lines from pipe that occur in filename */
-  private Bash setMinusInMemory(Bash prev, String filename) {
-    Bash.Pipe result = prev.pipe();
-    result.cmd("grep")//
-        .arg("-v").arg("-F").arg("-f")//
-        .file(filename);
-    return result;
-  }
-
   private Bash setMinusSorted(Bash prev, String filename) {
     Bash.Pipe result = prev.pipe();
     result.cmd("comm")//
@@ -418,15 +370,13 @@ public class BashlogCompiler {
 
   private Bash waitFor(Bash bash, List<PlanNode> children) {
     Bash result = bash;
-    if (parallelMaterialization != ParallelMaterializationMethod.NONE) {
+    if (parallelMaterialization) {
       for (PlanNode child : children) {
         if (child instanceof PlaceholderNode) {
           PlanNode parent = ((PlaceholderNode) child).getParent();
           if (parent instanceof MaterializationNode) {
             String matFile = matNodeToFilename.get(parent);
-            if (parallelMaterialization == ParallelMaterializationMethod.FLOCK) {
-              result = new Bash.Command("flock").arg("-s " + matFile + " ").other(result);
-            } else if (parallelMaterialization == ParallelMaterializationMethod.PIPE) {
+             if (parallelMaterialization ) {
               result = new Bash.Command("cat").arg(matFile.replace("tmp/", "tmp/lock_")).arg("1>&2").arg("; ").other(result);
             }
           }
@@ -434,19 +384,6 @@ public class BashlogCompiler {
       }
     }
     return result;
-  }
-
-  private Bash recursionInMemory(RecursionNode rn, String fullFile, String deltaFile, String newDeltaFile) {
-    // untested
-    Bash prev = compile(rn.getRecursivePlan());
-    prev = setMinusInMemory(prev, fullFile);
-    Bash.Pipe pipe = prev.pipe();
-    pipe.cmd("tee").arg("-a").file(fullFile);
-    pipe.wrap("", " > " + newDeltaFile + "\n");
-    Bash.CommandSequence cmd = new Bash.CommandSequence();
-    cmd.add(pipe);
-    cmd.cmd("mv").file(newDeltaFile).file(deltaFile);
-    return cmd;
   }
 
   private Bash compile(PlanNode planNode) {
@@ -469,30 +406,9 @@ public class BashlogCompiler {
       asFile = true;
       result.info(planNode, "");
 
-      /*if (!asFile) {
-        matNodeToCount.put(m, new AtomicInteger(0));
-        Bash.Command cmd = result.cmd("mkfifo");
-        ctx.append("mkfifo");
-        for (int i = 0; i < m.getReuseCount(); i++) {
-          cmd.file(matFile + "_" + i);
-          ctx.append(" " + matFile + "_" + i);
-        }
-        ctx.append("\n");
-      }
-      //...
-         for (int i = 0; i < m.getReuseCount(); i++) {
-          ctx.append(i < m.getReuseCount() - 1 ? " | tee " : " > ");
-          ctx.append(matFile + "_" + i);
-          ctx.append(" &");
-        }     
-      */
-
       Bash reused = compile(m.getReusedPlan());
       if (asFile) {
-        if (parallelMaterialization == ParallelMaterializationMethod.FLOCK) {
-          reused = reused.wrap("(flock 1; (", "; \\\n flock --unlock 1)& )");
-          reused = reused.wrap("", " 1> " + matFile);
-        } else if (parallelMaterialization == ParallelMaterializationMethod.PIPE) {
+        if (parallelMaterialization ) {
           String lockFile = matFile.replaceAll("tmp/", "tmp/lock_");
           String doneFile = matFile.replaceAll("tmp/", "tmp/done_");
           reused = reused.wrap("mkfifo " + lockFile + "; ( ", //
@@ -581,24 +497,7 @@ public class BashlogCompiler {
 
       return new Bash.Command(AWK).arg(awk.toString()).arg("'").file(compile(inner));
     }
-
-    /*else if (planNode instanceof ProjectNode) {
-      // TODO: filtering of duplicates might be necessary
-      ProjectNode p = ((ProjectNode) planNode);
-      Bash prev = compile(p.getTable());
-      Pipe result = new Bash.Pipe(prev);
-      Bash.Command cmd = result.cmd(AWK);
-      cmd.arg("{ print " + awkProject(p) + "}'");
-      return result;
-    
-    } else if (planNode instanceof EqualityFilterNode) {
-      Bash.Command cmd = new Bash.Command(AWK);
-      cmd.arg(awkEquality((EqualityFilterNode) planNode));
-      cmd.arg(" { print $0 }' ");
-      cmd.file(compile(((EqualityFilterNode) planNode).getTable()));
-      return cmd;
-    
-    }*/ else if (planNode instanceof MultiFilterNode) {
+    else if (planNode instanceof MultiFilterNode) {
       MultiFilterNode m = (MultiFilterNode) planNode;
       Bash.Command cmd = new Bash.Command(AWK);
 
@@ -634,11 +533,6 @@ public class BashlogCompiler {
       if (planNode.children().size() == 0) {
         return new Bash.Command("echo").arg("-n");
       } else {
-        /*Bash.Command result = new Bash.Command("$sort").arg("-u").arg("-m");
-        for (PlanNode child : ((UnionNode) planNode).getChildren()) {
-          result.file(compile(child));
-        }
-        return result;*/
         Bash.Command result = new Bash.Command("$sort").arg("-u");
         for (PlanNode child : ((UnionNode) planNode).getChildren()) {
           result.file(compile(child));
@@ -665,7 +559,6 @@ public class BashlogCompiler {
       result.cmd("while \n");
 
       result.add(recursionSorted(rn, fullFile, deltaFile, newDeltaFile));
-      //recursionInMemory(rn, sb, indent, fullFile, deltaFile, newDeltaFile);
       result.cmd("[ -s " + deltaFile + " ]; ");
       result.cmd("do continue; done\n");
       result.cmd("rm").file(deltaFile).wrap("", "\n");
@@ -766,7 +659,8 @@ public class BashlogCompiler {
     // first, collect all filters that can be combined
     Map<List<Integer>, Map<List<Integer>, List<List<Comparable<?>>>>> outputColToFilteredColToValues = new HashMap<>();
     List<PlanNode> remaining = plans.stream().filter(pn -> {
-      Map<Integer, Comparable<?>> filterCols = new TreeMap<>();
+    	return true;
+      /*Map<Integer, Comparable<?>> filterCols = new TreeMap<>();
       List<Integer> outputCols = new ArrayList<>();
       getCols(pn, outputCols, filterCols);
       if (outputCols == null || filterCols.size() == 0) return true;
@@ -777,7 +671,7 @@ public class BashlogCompiler {
           .computeIfAbsent(new ArrayList<>(filterCols.keySet()), k -> new ArrayList<>())//
           .add(new ArrayList<Comparable<?>>(filterCols.values()));
 
-      return false;
+      return false;*/
     }).collect(Collectors.toList());
 
     if (outputColToFilteredColToValues.size() > 0) {

@@ -3,7 +3,6 @@ package bashlog.plan;
 import java.util.Arrays;
 
 import common.Tools;
-import common.plan.node.AntiJoinNode;
 import common.plan.node.PlanNode;
 
 /** Anti-Join two sorted inputs based on ONE column */
