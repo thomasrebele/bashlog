@@ -1,23 +1,19 @@
 package bashlog;
 
-import bashlog.command.Bash;
-import bashlog.plan.*;
-import bashlog.translation.AwkHelper;
-import bashlog.translation.Translator;
-import common.Tools;
-import common.parser.Constant;
-import common.parser.ParserReader;
-import common.parser.Program;
-import common.plan.LogicalPlanBuilder;
-import common.plan.node.*;
-import common.plan.optimizer.*;
+import java.io.IOException;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
+import bashlog.command.Bash;
+import bashlog.plan.SortNode;
+import bashlog.translation.Translator;
+import common.parser.Program;
+import common.plan.LogicalPlanBuilder;
+import common.plan.node.*;
+import common.plan.optimizer.*;
 
 /**
  * 
@@ -56,8 +52,6 @@ public class BashlogCompiler {
   
   private Map<Class<?>, Translator> translators = new HashMap<>();
 
-  
-  
   public BashlogCompiler(PlanNode planNode) {
     if (planNode == null) {
       throw new IllegalArgumentException("cannot compile an empty plan");
@@ -77,7 +71,6 @@ public class BashlogCompiler {
         new bashlog.translation.Sort(),
         new bashlog.translation.Union()
     ).forEach(t -> t.supports().forEach(c -> translators.put(c, t)));
-    
     
     root = planNode;
     debug += "orig\n";
@@ -106,6 +99,14 @@ public class BashlogCompiler {
     debug = "#" + debug.replaceAll("\n", "\n# ");
   }
 
+  public void registerPlaceholder(PlaceholderNode node, String file) {
+    placeholderToFilename.put(node, file);
+  }
+
+  public boolean parallelMaterialization() {
+    return parallelMaterialization;
+  }
+
   public int getNextIndex() {
     return tmpFileIndex.getAndIncrement();
   }
@@ -132,7 +133,7 @@ public class BashlogCompiler {
     header.append("sort=\"sort -S25% --parallel=2 \"\n\n");
 
     Bash e = compile(root);
-    String result = header.toString() + e.generate();
+    String result = header.toString() + e.generate() + "; rm tmp/*\n";
 
     return result;
   }
@@ -160,7 +161,7 @@ public class BashlogCompiler {
     return result;
   }
 
-   public Bash compile(PlanNode planNode) {
+  public Bash compile(PlanNode planNode) {
     return waitFor(compileIntern(planNode), planNode.children());
   }
 
@@ -188,32 +189,6 @@ public class BashlogCompiler {
     throw new UnsupportedOperationException("compilation of " + planNode.getClass() + " not yet supported");
   }
 
-  /**
-   * Get projection array, and columns and constants for filters
-   * @param node
-   * @param projCols accumulator
-   * @param filterCols accumulator
-   * @return inner plan node
-   */
-  private PlanNode getCols(PlanNode node, List<Integer> projCols, Map<Integer, Comparable<?>> filterCols) {
-    if (node instanceof ConstantEqualityFilterNode) {
-      ConstantEqualityFilterNode eq = (ConstantEqualityFilterNode) node;
-      filterCols.put(eq.getField(), eq.getValue());
-      return getCols(eq.getTable(), projCols, filterCols);
-    }
-    if (node instanceof VariableEqualityFilterNode) {
-      // make getCols return null (checked below)
-      return null;
-    }
-    if (node instanceof ProjectNode) {
-      // may only have one projection!
-      if (!projCols.isEmpty()) throw new UnsupportedOperationException(((ProjectNode) node).getTable().toString());
-      ProjectNode p = (ProjectNode) node;
-      Arrays.stream(p.getProjection()).forEach(i -> projCols.add(i));
-      return getCols(p.getTable(), projCols, filterCols);
-    }
-    return null;
-  }
 
   /** Transform datalog program and query relation to a bash script. */
   public static String compileQuery(Program p, String query) throws IOException {
@@ -236,14 +211,6 @@ public class BashlogCompiler {
     PlanNode pn = plan.get(query);
     BashlogCompiler bc = new BashlogCompiler(pn);
     return bc;
-  }
-
-  public void registerPlaceholder(PlaceholderNode node, String file) {
-    placeholderToFilename.put(node, file);
-  }
-
-  public boolean parallelMaterialization() {
-    return parallelMaterialization;
   }
 
   /*public static void main(String[] args) {

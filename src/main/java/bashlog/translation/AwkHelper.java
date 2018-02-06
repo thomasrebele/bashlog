@@ -1,10 +1,6 @@
 package bashlog.translation;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -58,6 +54,33 @@ public class AwkHelper {
 
   public static <T> String joinStr(Collection<T> outCols, String delimiter) {
     return joinStr(outCols.stream(), delimiter);
+  }
+
+  /**
+  * Get projection array, and columns and constants for filters
+  * @param node
+  * @param projCols accumulator
+  * @param filterCols accumulator
+  * @return inner plan node
+  */
+  private PlanNode getCols(PlanNode node, List<Integer> projCols, Map<Integer, Comparable<?>> filterCols) {
+    if (node instanceof ConstantEqualityFilterNode) {
+      ConstantEqualityFilterNode eq = (ConstantEqualityFilterNode) node;
+      filterCols.put(eq.getField(), eq.getValue());
+      return getCols(eq.getTable(), projCols, filterCols);
+    }
+    if (node instanceof VariableEqualityFilterNode) {
+      // make getCols return null (checked below)
+      return null;
+    }
+    if (node instanceof ProjectNode) {
+      // may only have one projection!
+      if (!projCols.isEmpty()) throw new UnsupportedOperationException(((ProjectNode) node).getTable().toString());
+      ProjectNode p = (ProjectNode) node;
+      Arrays.stream(p.getProjection()).forEach(i -> projCols.add(i));
+      return getCols(p.getTable(), projCols, filterCols);
+    }
+    return null;
   }
 
   /**

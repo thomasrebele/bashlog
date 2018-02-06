@@ -16,7 +16,6 @@ public class Materialization implements Translator {
     String matFile = "tmp/mat" + bc.getNextIndex();
     bc.registerPlaceholder(m.getReuseNode(), matFile);
     Bash.CommandSequence result = new Bash.CommandSequence();
-    result.comment(planNode, "");
     result.info(planNode, "");
 
     Bash reused = bc.compile(m.getReusedPlan());

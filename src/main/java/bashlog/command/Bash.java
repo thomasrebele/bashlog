@@ -2,20 +2,23 @@ package bashlog.command;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
-import bashlog.BashlogCompiler;
-import bashlog.plan.SortNode;
 import common.plan.node.PlanNode;
 
+/**
+ * Represent simple Bash scripts
+ */
 public interface Bash {
 
-  public static final String TAB = "   ";
+  public void generate(AutoIndent sb);
 
-  public enum Type {
-    PIPE, FILE
+  public default String generate() {
+    AutoIndent sb = new AutoIndent();
+    generate(sb);
+    return sb.generate();
   }
 
+  /** A bash command (and possibly arguments) */
   public static class Command implements Bash {
 
     String cmd; // command
@@ -31,6 +34,7 @@ public interface Bash {
       return this;
     }
 
+    /** Add the bash snippet as an argument. Creates a process substitution if necessary. */
     public Command file(Bash b) {
       if (b instanceof BashFile) {
         args.add(b);
@@ -66,6 +70,7 @@ public interface Bash {
     }
   }
 
+  /** Several commands */
   public static class CommandSequence implements Bash {
 
     String delimiter = "\n";
@@ -76,10 +81,6 @@ public interface Bash {
       Command c = new Command(cmd);
       this.commands.add(c);
       return c;
-    }
-    
-    public void comment(PlanNode planNode, String info) { 
-      this.commands.add(new Comment(planNode, info));
     }
 
     public void comment(String comment) {
@@ -117,6 +118,7 @@ public interface Bash {
 
   }
 
+  /** Command sequence where commands are connected with pipes */
   public class Pipe extends CommandSequence {
     public Pipe() {
       this.delimiter = " \\\n | ";
@@ -129,6 +131,7 @@ public interface Bash {
 
   }
 
+  /** Represents a file */
   public static class BashFile implements Bash {
 
     String path;
@@ -144,28 +147,11 @@ public interface Bash {
     }
   }
 
-  public static class Other implements Bash {
-    String text;
-
-    public Other(String text) {
-      this.text = text;
-    }
-
-    @Override
-    public void generate(AutoIndent sb) {
-      sb.append(text);
-    }
-  }
-
   public static class Comment implements Bash {
     String comment;
 
     public Comment(String info) {
       this.comment = info;
-    }
-
-    public Comment(PlanNode planNode, String info) {
-      this.comment = planNode.operatorString() + " " + info;
     }
 
     @Override
@@ -193,6 +179,22 @@ public interface Bash {
     }
   }
 
+  /** Anything that does not fit in the above classes */
+  public static class Other implements Bash {
+
+    String text;
+
+    public Other(String text) {
+      this.text = text;
+    }
+
+    @Override
+    public void generate(AutoIndent sb) {
+      sb.append(text);
+    }
+  }
+
+  /** Create a pipe based on the current snippet. Convenience method. */
   public default Pipe pipe() {
     if (this instanceof Pipe) return (Pipe) this;
     Pipe p = new Pipe();
@@ -200,18 +202,12 @@ public interface Bash {
     return p;
   }
 
+  /** Prepend and append strings to snippet. Convenience method. */
   public default Bash wrap(String prefix, String suffix) {
     return new Wrap(prefix, this, suffix);
   }
 
-  public void generate(AutoIndent sb);
-
-  public default String generate() {
-    AutoIndent sb = new AutoIndent();
-    generate(sb);
-    return sb.generate();
-  }
-
+  /** Add a comment at current position */
   public default Bash info(PlanNode node, String str) {
     CommandSequence result;
     if (this instanceof CommandSequence) {
@@ -219,7 +215,7 @@ public interface Bash {
     } else {
       result = new CommandSequence();
     }
-    result.comment(node, str);
+    result.comment(node.operatorString() + " " + str);
     return result;
   }
 
