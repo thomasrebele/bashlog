@@ -18,9 +18,9 @@ public class RecursionNode implements PlanNode {
 
   private PlanNode recursivePlan;
 
-  protected final PlanNode deltaNode = new PlaceholderNode(this, "delta");
+  protected final PlaceholderNode deltaNode = new PlaceholderNode(this, "delta");
 
-  protected final PlanNode fullNode = new PlaceholderNode(this, "full");
+  protected final PlaceholderNode fullNode = new PlaceholderNode(this, "full");
 
   /**
    * Constructs a recursion.
@@ -57,11 +57,11 @@ public class RecursionNode implements PlanNode {
     return recursivePlan;
   }
 
-  public PlanNode getDelta() {
+  public PlaceholderNode getDelta() {
     return deltaNode;
   }
 
-  public PlanNode getFull() {
+  public PlaceholderNode getFull() {
     return fullNode;
   }
 

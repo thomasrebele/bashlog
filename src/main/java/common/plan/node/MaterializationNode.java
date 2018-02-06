@@ -11,7 +11,7 @@ public class MaterializationNode implements PlanNode {
 
   private final PlanNode reusedPlan;
 
-  private final PlanNode reuseNode;
+  private final PlaceholderNode reuseNode;
 
   /** see {@link #getReuseCount()} */
   private final int reuseCount;
@@ -38,7 +38,7 @@ public class MaterializationNode implements PlanNode {
   }
 
   /** Use builder if possible */
-  protected MaterializationNode(PlanNode mainPlan, PlanNode reusedPlan, PlaceholderNode.Builder builder, PlanNode reuseNode, int reuseCount) {
+  protected MaterializationNode(PlanNode mainPlan, PlanNode reusedPlan, PlaceholderNode.Builder builder, PlaceholderNode reuseNode, int reuseCount) {
     // first initialize reuse node!
     if (builder != null) {
       builder.setParent(this);
@@ -71,7 +71,7 @@ public class MaterializationNode implements PlanNode {
     return mainPlan;
   }
 
-  public PlanNode getReuseNode() {
+  public PlaceholderNode getReuseNode() {
     return reuseNode;
   }
 
