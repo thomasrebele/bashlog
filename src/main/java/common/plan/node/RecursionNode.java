@@ -38,7 +38,7 @@ public class RecursionNode implements PlanNode {
   }
 
   /** Use exit plan and recursive plan. The delta is the one in the recursive plan. It will be replaced by a new delta. */
-  protected RecursionNode(PlanNode exitPlan, PlanNode recursivePlan, PlanNode delta, PlanNode full) {
+  public RecursionNode(PlanNode exitPlan, PlanNode recursivePlan, PlanNode delta, PlanNode full) {
     if (exitPlan.getArity() != recursivePlan.getArity()) {
       throw new IllegalArgumentException(
           "Exit and recursive plans should have the same arity." + "Here: " + exitPlan.getArity() + " vs " + recursivePlan.getArity());

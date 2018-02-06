@@ -207,7 +207,7 @@ public class BashlogCompiler {
     } else if (p instanceof RecursionNode) {
       // use sorted recursion
       RecursionNode r = (RecursionNode) p;
-      return new SortRecursionNode(new SortNode(r.getExitPlan(), null), new SortNode(r.getRecursivePlan(), null), r.getDelta(), r.getFull());
+      return new RecursionNode(new SortNode(r.getExitPlan(), null), new SortNode(r.getRecursivePlan(), null), r.getDelta(), r.getFull());
 
     } else if (p instanceof UnionNode) {
       UnionNode u = (UnionNode) p;
@@ -540,7 +540,7 @@ public class BashlogCompiler {
         return result;
       }
 
-    } else if (planNode instanceof SortRecursionNode) {
+    } else if (planNode instanceof RecursionNode) {
       RecursionNode rn = (RecursionNode) planNode;
       int idx = tmpFileIndex++;
       String deltaFile = "tmp/delta" + idx;

@@ -3,9 +3,6 @@ package common.plan.node;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import bashlog.plan.SortNode;
-import bashlog.plan.SortRecursionNode;
-
 public class PlaceholderNode implements PlanNode {
 
   protected PlanNode parent;
