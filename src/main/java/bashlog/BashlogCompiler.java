@@ -5,7 +5,6 @@ import bashlog.plan.*;
 import bashlog.translation.AwkHelper;
 import bashlog.translation.Translator;
 import common.Tools;
-import common.parser.CompoundTerm;
 import common.parser.Constant;
 import common.parser.ParserReader;
 import common.parser.Program;
@@ -71,9 +70,13 @@ public class BashlogCompiler {
     
     // register translators
     Arrays.asList(
-      new bashlog.translation.Sort(),
-      new bashlog.translation.MultiFilter(),
-      new bashlog.translation.ProjectFilter()
+        new bashlog.translation.Builtin(),
+        new bashlog.translation.CombineColumns(),
+        new bashlog.translation.FileInput(),
+        new bashlog.translation.MultiFilter(),
+        new bashlog.translation.ProjectFilter(),
+        new bashlog.translation.Sort(),
+        new bashlog.translation.Union()
     ).forEach(t -> t.supports().forEach(c -> translators.put(c, t)));
     
     
@@ -347,13 +350,9 @@ public class BashlogCompiler {
       placeholderToFilename.putIfAbsent(m.getReuseNode(), matFile);
       Bash.CommandSequence result = new Bash.CommandSequence();
       result.comment(planNode, "");
-
-      boolean asFile = m.getReuseCount() <= 1;
-      asFile = true;
       result.info(planNode, "");
 
       Bash reused = compile(m.getReusedPlan());
-      if (asFile) {
         if (parallelMaterialization ) {
           String lockFile = matFile.replaceAll("tmp/", "tmp/lock_");
           String doneFile = matFile.replaceAll("tmp/", "tmp/done_");
@@ -367,9 +366,6 @@ public class BashlogCompiler {
           reused = reused.wrap("", " > " + matFile);
         }
         result.add(reused);
-      } else {
-        throw new UnsupportedOperationException();
-      }
 
       if (!(m.getMainPlan() instanceof MaterializationNode)) {
         result.other("\n# plan");
@@ -410,49 +406,6 @@ public class BashlogCompiler {
       SortJoinNode j = (SortJoinNode) planNode;
       //leftHashJoin(j, sb, indent);
       return sortJoin(j, "");
-
-    } else if (planNode instanceof CombinedColumnNode) {
-      CombinedColumnNode c = (CombinedColumnNode) planNode;
-      Bash prev = compile(c.getTable());
-
-      Bash.Pipe result = new Bash.Pipe(prev);
-      Bash.Command cmd = result.cmd(AwkHelper.AWK);
-      StringBuilder sb = new StringBuilder();
-      sb.append("{ print $0 FS ");
-      for (int i = 0; i < c.getColumns().length; i++) {
-        if (i > 0) {
-          sb.append(" \"\\002\" ");
-        }
-        sb.append("$" + (c.getColumns()[i] + 1));
-      }
-      sb.append("}'");
-      cmd.arg(sb.toString());
-      return result;
-
-    } else if (planNode instanceof BuiltinNode) {
-      CompoundTerm ct = ((BuiltinNode) planNode).compoundTerm;
-      if ("bash_command".equals(ct.name)) {
-        String command = ((Constant<?>) ct.args[0]).getValue().toString();
-        // remove newline from command
-        return new Bash.Command(command.trim());
-      } else {
-        throw new UnsupportedOperationException("predicate not supported: " + ct.getRelation());
-      }
-
-    } else if (planNode instanceof TSVFileNode) {
-      TSVFileNode file = (TSVFileNode) planNode;
-      return new Bash.BashFile(file.getPath());
-
-    } else if (planNode instanceof UnionNode) {
-      if (planNode.children().size() == 0) {
-        return new Bash.Command("echo").arg("-n");
-      } else {
-        Bash.Command result = new Bash.Command("$sort").arg("-u");
-        for (PlanNode child : ((UnionNode) planNode).getChildren()) {
-          result.file(compile(child));
-        }
-        return result;
-      }
 
     } else if (planNode instanceof RecursionNode) {
       RecursionNode rn = (RecursionNode) planNode;
@@ -500,8 +453,7 @@ public class BashlogCompiler {
       }
     }
     // fallback
-    LOG.error("compilation of " + planNode.getClass() + " not yet supported");
-    return null;
+    throw new UnsupportedOperationException("compilation of " + planNode.getClass() + " not yet supported");
   }
 
   /**
