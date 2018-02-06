@@ -30,7 +30,7 @@ public class BashlogCompiler {
   final static String INDENT = "    ";
 
   /** Current index for temporary files. Increment when using it! */
-  int tmpFileIndex = 0;
+  AtomicInteger tmpFileIndex = new AtomicInteger();
 
   /** Maps a materialization node to its temporary file. Reuse nodes use the filename of the materialized relation. */
   Map<PlaceholderNode, String> placeholderToFilename = new HashMap<>();
@@ -69,8 +69,11 @@ public class BashlogCompiler {
         new bashlog.translation.CombineColumns(),
         new bashlog.translation.FileInput(),
         new bashlog.translation.Join(),
+        new bashlog.translation.Materialization(),
         new bashlog.translation.MultiFilter(),
+        new bashlog.translation.MultiOutput(),
         new bashlog.translation.ProjectFilter(),
+        new bashlog.translation.Recursion(),
         new bashlog.translation.Sort(),
         new bashlog.translation.Union()
     ).forEach(t -> t.supports().forEach(c -> translators.put(c, t)));
@@ -101,6 +104,10 @@ public class BashlogCompiler {
       }
     }
     debug = "#" + debug.replaceAll("\n", "\n# ");
+  }
+
+  public int getNextIndex() {
+    return tmpFileIndex.getAndIncrement();
   }
 
   public String compile() {
@@ -238,31 +245,6 @@ public class BashlogCompiler {
     return p;
   }
 
-  private Bash setMinusSorted(Bash prev, String filename) {
-    Bash.Pipe result = prev.pipe();
-    result.cmd("comm")//
-        .arg("--nocheck-order").arg("-23").arg("-")//
-        .file(filename);
-    return result;
-  }
-
-  private Bash recursionSorted(RecursionNode rn, String fullFile, String deltaFile, String newDeltaFile) {
-    Bash prev = compile(rn.getRecursivePlan());
-    //setMinusInMemory(fullFile, sb);
-    Bash delta = setMinusSorted(prev, fullFile);
-    delta = delta.wrap("", " > " + newDeltaFile + ";");
-
-    Bash.CommandSequence result = new Bash.CommandSequence();
-    result.add(delta);
-    result.info(rn, "continued");
-    result.cmd("mv").file(newDeltaFile).file(deltaFile).arg("; ");
-    result.cmd("$sort")//
-        .arg("-u").arg("--merge").arg("-o")//
-        .file(fullFile).file(fullFile).file(deltaFile).arg("; ");
-
-    return result;
-  }
-
   Bash waitFor(Bash bash, List<PlanNode> children) {
     Bash result = bash;
     if (parallelMaterialization) {
@@ -296,86 +278,7 @@ public class BashlogCompiler {
       return t.translate(planNode, this);
     }
     
-    if (planNode instanceof MaterializationNode) {
-      MaterializationNode m = (MaterializationNode) planNode;
-      String matFile = "tmp/mat" + tmpFileIndex++;
-      placeholderToFilename.putIfAbsent(m.getReuseNode(), matFile);
-      Bash.CommandSequence result = new Bash.CommandSequence();
-      result.comment(planNode, "");
-      result.info(planNode, "");
-
-      Bash reused = compile(m.getReusedPlan());
-        if (parallelMaterialization ) {
-          String lockFile = matFile.replaceAll("tmp/", "tmp/lock_");
-          String doneFile = matFile.replaceAll("tmp/", "tmp/done_");
-          reused = reused.wrap("mkfifo " + lockFile + "; ( ", //
-              " > " + matFile + //
-                  "; mv " + lockFile + " " + doneFile + //
-                  "; cat " + doneFile + " > /dev/null & " + //
-                  "exec 3> " + doneFile + "; exec 3>&-;" + //
-                  " ) & ");
-        } else {
-          reused = reused.wrap("", " > " + matFile);
-        }
-        result.add(reused);
-
-      if (!(m.getMainPlan() instanceof MaterializationNode)) {
-        result.other("\n# plan");
-      }
-      result.add(compile(m.getMainPlan()));
-      return result;
-
-    } else if (planNode instanceof MultiOutputNode) {
-      Bash.CommandSequence result = new Bash.CommandSequence();
-      Bash.Command touch = result.cmd("touch");
-      Bash.Command cmd = result.cmd(AwkHelper.AWK);
-      MultiOutputNode mo = (MultiOutputNode) planNode;
-
-      StringBuilder arg = new StringBuilder();
-      List<PlanNode> plans = mo.reusedPlans(), nodes = mo.reuseNodes();
-      for (int i = 0; i < plans.size(); i++) {
-        PlanNode plan = plans.get(i), node = nodes.get(i);
-
-        String matFile = "tmp/mat" + tmpFileIndex++;
-        touch.file(matFile);
-        placeholderToFilename.putIfAbsent((PlaceholderNode) node, matFile);
-
-        //TODO: if there are more conditions on one output file:
-        // if (!complexAwkLine(Arrays.asList(plan), matFile, arg).isEmpty()) { ... }
-        AwkHelper.simpleAwkLine(plan, matFile, arg);
-      }
-      cmd.arg(arg.toString()).arg("'");
-      cmd.file(compile(mo.getLeaf()));
-      result.add(compile(mo.getMainPlan()));
-      return result;
-
-    } else if (planNode instanceof RecursionNode) {
-      RecursionNode rn = (RecursionNode) planNode;
-      int idx = tmpFileIndex++;
-      String deltaFile = "tmp/delta" + idx;
-      String newDeltaFile = "tmp/new" + idx;
-      String fullFile = "tmp/full" + idx;
-      placeholderToFilename.put(rn.getDelta(), deltaFile);
-      placeholderToFilename.put(rn.getFull(), fullFile);
-
-      Bash.CommandSequence result = new Bash.CommandSequence();
-      Bash b = compile(rn.getExitPlan());
-      Bash.Pipe pipe = b.pipe();
-      Bash.Command cmd = pipe.cmd("tee");
-      cmd.file(fullFile);
-      result.add(pipe.wrap("", " > " + deltaFile));
-
-      // "do while" loop in bash
-      result.cmd("while \n");
-
-      result.add(recursionSorted(rn, fullFile, deltaFile, newDeltaFile));
-      result.cmd("[ -s " + deltaFile + " ]; ");
-      result.cmd("do continue; done\n");
-      result.cmd("rm").file(deltaFile).wrap("", "\n");
-      result.cmd("cat").file(fullFile);
-      return result;
-
-    } else if (planNode instanceof PlaceholderNode) {
+    if (planNode instanceof PlaceholderNode) {
       PlanNode parent = ((PlaceholderNode) planNode).getParent();
       String file = placeholderToFilename.get(planNode);
       if (file == null) {
@@ -436,6 +339,14 @@ public class BashlogCompiler {
     PlanNode pn = plan.get(query);
     BashlogCompiler bc = new BashlogCompiler(pn);
     return bc;
+  }
+
+  public void registerPlaceholder(PlaceholderNode node, String file) {
+    placeholderToFilename.put(node, file);
+  }
+
+  public boolean parallelMaterialization() {
+    return parallelMaterialization;
   }
 
   /*public static void main(String[] args) {
