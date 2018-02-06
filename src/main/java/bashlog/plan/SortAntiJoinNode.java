@@ -19,7 +19,7 @@ public class SortAntiJoinNode extends SortJoinNode {
 
   @Override
   public String operatorString() {
-    return super.operatorString().replaceFirst("_", "_sort_") + " out " + Arrays.toString(outputProjection);
+    return super.operatorString().replaceFirst("join_", "antijoin_sort_") + " out " + Arrays.toString(outputProjection);
   }
 
   @Override
@@ -28,15 +28,6 @@ public class SortAntiJoinNode extends SortJoinNode {
         new SortAntiJoinNode(getLeft().transform(fn, this), getRight().transform(fn, this), getLeftProjection(),
             outputProjection),
         originalParent);
-  }
-
-  public int[] getOutputProjection() {
-    return outputProjection;
-  }
-
-  @Override
-  public int getArity() {
-    return outputProjection.length;
   }
 
 }

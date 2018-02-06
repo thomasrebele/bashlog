@@ -71,6 +71,7 @@ public class BashlogCompiler {
         new bashlog.translation.Builtin(),
         new bashlog.translation.CombineColumns(),
         new bashlog.translation.FileInput(),
+        new bashlog.translation.Join(),
         new bashlog.translation.MultiFilter(),
         new bashlog.translation.ProjectFilter(),
         new bashlog.translation.Sort(),
@@ -240,39 +241,6 @@ public class BashlogCompiler {
     return p;
   }
 
-  /** Sort left and right tree, and join with 'join' command */
-  private Bash sortJoin(SortJoinNode j) {
-    int colLeft, colRight;
-    colLeft = j.getLeftProjection()[0] + 1;
-    colRight = j.getRightProjection()[0] + 1;
-
-    Bash.Command result = new Bash.Command("join");
-    if (j instanceof SortAntiJoinNode) {
-      result.arg(" -v 1 ");
-    }
-    result.arg("-t $'\\t'");
-    result.arg("-1 " + colLeft);
-    result.arg("-2 " + colRight);
-
-    StringBuilder outCols = new StringBuilder();
-    for (int i = 0; i < j.getOutputProjection().length; i++) {
-      if (i > 0) {
-        outCols.append(",");
-      }
-      int dst = j.getOutputProjection()[i];
-      if (dst < j.getLeft().getArity()) {
-        outCols.append("1." + (dst + 1));
-      } else {
-        outCols.append("2." + (dst - j.getLeft().getArity() + 1));
-      }
-    }
-    result.arg("-o " + outCols);
-
-    result.file(compile(j.getLeft()));
-    result.file(compile(j.getRight()));
-    return result;
-  }
-
   private Bash setMinusSorted(Bash prev, String filename) {
     Bash.Pipe result = prev.pipe();
     result.cmd("comm")//
@@ -383,10 +351,6 @@ public class BashlogCompiler {
       cmd.file(compile(mo.getLeaf()));
       result.add(compile(mo.getMainPlan()));
       return result;
-
-    } else if (planNode instanceof SortJoinNode) {
-      SortJoinNode j = (SortJoinNode) planNode;
-      return sortJoin(j);
 
     } else if (planNode instanceof RecursionNode) {
       RecursionNode rn = (RecursionNode) planNode;
