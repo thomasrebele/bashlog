@@ -32,9 +32,6 @@ public class BashlogCompiler {
   /** Current index for temporary files. Increment when using it! */
   int tmpFileIndex = 0;
 
-  /** Maps a materialization node to its use count. Applies only if materialized a finite number of times */
-  Map<MaterializationNode, AtomicInteger> matNodeToCount = new HashMap<>();
-
   /** Maps a materialization node to its temporary file. Reuse nodes use the filename of the materialized relation. */
   Map<PlaceholderNode, String> placeholderToFilename = new HashMap<>();
 
@@ -380,21 +377,12 @@ public class BashlogCompiler {
 
     } else if (planNode instanceof PlaceholderNode) {
       PlanNode parent = ((PlaceholderNode) planNode).getParent();
-      if (parent instanceof RecursionNode || parent instanceof MultiOutputNode) {
-        String file = placeholderToFilename.get(planNode);
-        return new Bash.BashFile(file);
-      } else if (parent instanceof MaterializationNode) {
-        String matFile = placeholderToFilename.get(planNode);
-        if (matFile == null) {
-          placeholderToFilename.forEach((m, f) -> System.err.println(m.operatorString() + "  " + f));
-          throw new IllegalStateException("no file assigned to " + planNode.operatorString() + " for materialization " + parent.operatorString());
-        }
-        AtomicInteger useCount = matNodeToCount.get(parent);
-        if (useCount != null) {
-          matFile = matFile + "_" + useCount.getAndIncrement();
-        }
-        return new Bash.BashFile(matFile);
+      String file = placeholderToFilename.get(planNode);
+      if (file == null) {
+        placeholderToFilename.forEach((m, f) -> System.err.println(m.operatorString() + "  " + f));
+        throw new IllegalStateException("no file assigned to " + planNode.operatorString() + " for " + parent.operatorString());
       }
+      return new Bash.BashFile(file);
     }
     // fallback
     throw new UnsupportedOperationException("compilation of " + planNode.getClass() + " not yet supported");
