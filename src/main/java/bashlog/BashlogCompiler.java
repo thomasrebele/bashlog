@@ -46,8 +46,6 @@ public class BashlogCompiler {
   /** Save debug information (query plans)*/
   private String debug = "";
 
-  private boolean profile;
-
   private boolean parallelMaterialization = true;
 
   /** Stores the compiled bash script */
@@ -128,22 +126,10 @@ public class BashlogCompiler {
     // tweak sort
     header.append("sort=\"sort -S25% --parallel=2 \"\n\n");
 
-    if (profile) {
-      header.append("PATH=$PATH:.\n");
-      header.append("mkdir /tmp/ttime/\n");
-      header.append("rm /tmp/ttime/*\n");
-      header.append("if type mawk > /dev/null; then awk=\"ttime mawk\"; else awk=\"ttime awk\"; fi\n");
-      header.append("sort=\"ttime sort -S64M --parallel=2 \"\n\n");
-    }
-
     Bash e = compile(root);
-    String result = header.toString() + e.generate(profile);
+    String result = header.toString() + e.generate();
 
     return result;
-  }
-
-  public void enableProfiling() {
-    this.profile = true;
   }
 
   public String debugInfo() {
@@ -255,14 +241,15 @@ public class BashlogCompiler {
   }
 
   /** Sort left and right tree, and join with 'join' command */
-  private Bash sortJoin(SortJoinNode j, String additionalArgs) {
+  private Bash sortJoin(SortJoinNode j) {
     int colLeft, colRight;
     colLeft = j.getLeftProjection()[0] + 1;
     colRight = j.getRightProjection()[0] + 1;
 
     Bash.Command result = new Bash.Command("join");
-    if (profile) result = new Bash.Command("ttime join");
-    result.arg(additionalArgs);
+    if (j instanceof SortAntiJoinNode) {
+      result.arg(" -v 1 ");
+    }
     result.arg("-t $'\\t'");
     result.arg("-1 " + colLeft);
     result.arg("-2 " + colRight);
@@ -397,15 +384,9 @@ public class BashlogCompiler {
       result.add(compile(mo.getMainPlan()));
       return result;
 
-    } else if (planNode instanceof SortAntiJoinNode) {
-      // check for sort anti join node first, as it's also a sort join node
-      SortAntiJoinNode j = (SortAntiJoinNode) planNode;
-      return sortJoin(j, " -v 1 ");
-
     } else if (planNode instanceof SortJoinNode) {
       SortJoinNode j = (SortJoinNode) planNode;
-      //leftHashJoin(j, sb, indent);
-      return sortJoin(j, "");
+      return sortJoin(j);
 
     } else if (planNode instanceof RecursionNode) {
       RecursionNode rn = (RecursionNode) planNode;
@@ -430,8 +411,7 @@ public class BashlogCompiler {
       result.cmd("[ -s " + deltaFile + " ]; ");
       result.cmd("do continue; done\n");
       result.cmd("rm").file(deltaFile).wrap("", "\n");
-      if (profile) result.cmd("ttime cat").file(fullFile);
-      else result.cmd("cat").file(fullFile);
+      result.cmd("cat").file(fullFile);
       return result;
 
     } else if (planNode instanceof PlaceholderNode) {

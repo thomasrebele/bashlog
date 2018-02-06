@@ -47,15 +47,15 @@ public interface Bash {
     }
 
     @Override
-    public void generate(AutoIndent sb, boolean profile) {
+    public void generate(AutoIndent sb) {
       sb.append(cmd);
       for (Bash b : args) {
         sb.append(" ");
         if (b == null) sb.append("NULL");
-        else if (b instanceof Other || b instanceof BashFile) b.generate(sb, false);
+        else if (b instanceof Other || b instanceof BashFile) b.generate(sb);
         else {
           sb.append("\\\n");
-          b.generate(sb, false);
+          b.generate(sb);
         }
       }
     }
@@ -87,7 +87,7 @@ public interface Bash {
     }
 
     @Override
-    public void generate(AutoIndent sb, boolean profile) {
+    public void generate(AutoIndent sb) {
       boolean first = true;
       for (Bash b : commands) {
         if (!first) {
@@ -98,12 +98,11 @@ public interface Bash {
 
         if (b == null) sb.append("NULL");
         else if (b instanceof BashFile) {
-          if (profile) sb.append("ttime ");
           sb.append("cat ");
-          b.generate(sb, false);
+          b.generate(sb);
         }
         else {
-          b.generate(sb, false);
+          b.generate(sb);
         }
       }
     }
@@ -140,7 +139,7 @@ public interface Bash {
     }
 
     @Override
-    public void generate(AutoIndent sb, boolean profile) {
+    public void generate(AutoIndent sb) {
       sb.append(path);
     }
   }
@@ -153,7 +152,7 @@ public interface Bash {
     }
 
     @Override
-    public void generate(AutoIndent sb, boolean profile) {
+    public void generate(AutoIndent sb) {
       sb.append(text);
     }
   }
@@ -170,7 +169,7 @@ public interface Bash {
     }
 
     @Override
-    public void generate(AutoIndent sb, boolean profile) {
+    public void generate(AutoIndent sb) {
       //sb.append(" `# " + comment + "` \\\n");
     }
   }
@@ -187,9 +186,9 @@ public interface Bash {
     }
 
     @Override
-    public void generate(AutoIndent sb, boolean profile) {
+    public void generate(AutoIndent sb) {
       sb.append(prefix);
-      content.generate(sb.indent(), false);
+      content.generate(sb.indent());
       sb.append(suffix);
     }
   }
@@ -205,11 +204,11 @@ public interface Bash {
     return new Wrap(prefix, this, suffix);
   }
 
-  public void generate(AutoIndent sb, boolean profile);
+  public void generate(AutoIndent sb);
 
-  public default String generate(boolean profile) {
+  public default String generate() {
     AutoIndent sb = new AutoIndent();
-    generate(sb, profile);
+    generate(sb);
     return sb.generate();
   }
 
