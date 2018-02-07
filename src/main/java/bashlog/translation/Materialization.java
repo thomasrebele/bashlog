@@ -3,7 +3,7 @@ package bashlog.translation;
 import java.util.Arrays;
 import java.util.List;
 
-import bashlog.BashlogCompiler;
+import bashlog.CompilerInternals;
 import bashlog.command.Bash;
 import common.plan.node.MaterializationNode;
 import common.plan.node.PlanNode;
@@ -11,7 +11,7 @@ import common.plan.node.PlanNode;
 public class Materialization implements Translator {
 
   @Override
-  public Bash translate(PlanNode planNode, BashlogCompiler bc) {
+  public Bash translate(PlanNode planNode, CompilerInternals bc) {
     MaterializationNode m = (MaterializationNode) planNode;
     String matFile = "tmp/mat" + bc.getNextIndex();
     bc.registerPlaceholder(m.getReuseNode(), matFile);

@@ -3,7 +3,7 @@ package bashlog.translation;
 import java.util.Arrays;
 import java.util.List;
 
-import bashlog.BashlogCompiler;
+import bashlog.CompilerInternals;
 import bashlog.command.Bash;
 import common.plan.node.ConstantEqualityFilterNode;
 import common.plan.node.PlanNode;
@@ -13,7 +13,7 @@ import common.plan.node.VariableEqualityFilterNode;
 public class ProjectFilter implements Translator {
 
   @Override
-  public Bash translate(PlanNode planNode, BashlogCompiler bc) {
+  public Bash translate(PlanNode planNode, CompilerInternals bc) {
       StringBuilder awk = new StringBuilder();
       PlanNode inner = AwkHelper.simpleAwkLine(planNode, null, awk);
 

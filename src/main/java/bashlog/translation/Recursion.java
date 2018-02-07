@@ -4,6 +4,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import bashlog.BashlogCompiler;
+import bashlog.CompilerInternals;
 import bashlog.command.Bash;
 import common.plan.node.PlanNode;
 import common.plan.node.RecursionNode;
@@ -18,7 +19,7 @@ public class Recursion implements Translator {
     return result;
   }
 
-  private Bash recursionSorted(BashlogCompiler bc, RecursionNode rn, String fullFile, String deltaFile, String newDeltaFile) {
+  private Bash recursionSorted(CompilerInternals bc, RecursionNode rn, String fullFile, String deltaFile, String newDeltaFile) {
     Bash prev = bc.compile(rn.getRecursivePlan());
     //setMinusInMemory(fullFile, sb);
     Bash delta = setMinusSorted(prev, fullFile);
@@ -36,7 +37,7 @@ public class Recursion implements Translator {
   }
 
   @Override
-  public Bash translate(PlanNode planNode, BashlogCompiler bc) {
+  public Bash translate(PlanNode planNode, CompilerInternals bc) {
     RecursionNode rn = (RecursionNode) planNode;
     int idx = bc.getNextIndex();
     String deltaFile = "tmp/delta" + idx;

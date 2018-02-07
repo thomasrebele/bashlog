@@ -3,7 +3,7 @@ package bashlog.translation;
 import java.util.Arrays;
 import java.util.List;
 
-import bashlog.BashlogCompiler;
+import bashlog.CompilerInternals;
 import bashlog.command.Bash;
 import common.plan.node.MultiOutputNode;
 import common.plan.node.PlaceholderNode;
@@ -12,7 +12,7 @@ import common.plan.node.PlanNode;
 public class MultiOutput implements Translator {
 
   @Override
-  public Bash translate(PlanNode planNode, BashlogCompiler bc) {
+  public Bash translate(PlanNode planNode, CompilerInternals bc) {
     Bash.CommandSequence result = new Bash.CommandSequence();
     Bash.Command touch = result.cmd("touch");
     Bash.Command cmd = result.cmd(AwkHelper.AWK);

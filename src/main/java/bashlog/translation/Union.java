@@ -3,7 +3,7 @@ package bashlog.translation;
 import java.util.Arrays;
 import java.util.List;
 
-import bashlog.BashlogCompiler;
+import bashlog.CompilerInternals;
 import bashlog.command.Bash;
 import common.plan.node.PlanNode;
 import common.plan.node.UnionNode;
@@ -11,7 +11,7 @@ import common.plan.node.UnionNode;
 public class Union implements Translator {
 
   @Override
-  public Bash translate(PlanNode planNode, BashlogCompiler bc) {
+  public Bash translate(PlanNode planNode, CompilerInternals bc) {
     if (planNode.children().size() == 0) {
       return new Bash.Command("echo").arg("-n");
     } else {

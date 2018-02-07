@@ -3,7 +3,7 @@ package bashlog.translation;
 import java.util.Arrays;
 import java.util.List;
 
-import bashlog.BashlogCompiler;
+import bashlog.CompilerInternals;
 import bashlog.command.Bash;
 import bashlog.plan.SortAntiJoinNode;
 import bashlog.plan.SortJoinNode;
@@ -12,7 +12,7 @@ import common.plan.node.PlanNode;
 public class Join implements Translator {
 
   @Override
-  public Bash translate(PlanNode planNode, BashlogCompiler bc) {
+  public Bash translate(PlanNode planNode, CompilerInternals bc) {
     SortJoinNode j = (SortJoinNode) planNode;
     int colLeft, colRight;
     colLeft = j.getLeftProjection()[0] + 1;

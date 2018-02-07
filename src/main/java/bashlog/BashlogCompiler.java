@@ -2,7 +2,6 @@ package bashlog;
 
 import java.io.IOException;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,7 +17,7 @@ import common.plan.node.*;
 import common.plan.optimizer.*;
 
 /**
- * 
+ * Transform an extended relational algebra plan to a bash script.
  * @author Thomas Rebele
  */
 public class BashlogCompiler {
@@ -27,24 +26,14 @@ public class BashlogCompiler {
 
   final static String INDENT = "    ";
 
-  /** Current index for temporary files. Increment when using it! */
-  AtomicInteger tmpFileIndex = new AtomicInteger();
-
-  /** Maps a materialization node to its temporary file. Reuse nodes use the filename of the materialized relation. */
-  Map<PlaceholderNode, String> placeholderToFilename = new HashMap<>();
-
   /** Query plan which should be translated */
   PlanNode root;
 
-  Map<PlanNode, Bash> cache = new HashMap<>();
-  
-  /** Save debug information (query plans)*/
-  private String debug = "";
-
-  private boolean parallelMaterialization = true;
-
   /** Stores the compiled bash script */
   private String bash = null;
+
+  /** Save debug information (query plans)*/
+  private String debug = "";
 
   private List<List<Optimizer>> stages = Arrays.asList(//
       Arrays.asList(new SimplifyRecursion(), new PushDownJoin(), new ReorderJoinLinear(), new PushDownFilterAndProject(), new SimplifyRecursion(),
@@ -52,6 +41,7 @@ public class BashlogCompiler {
       Arrays.asList(new BashlogPlan(), new BashlogOptimizer(), new MultiOutput(), new CombineFilter(false), new Materialize(),
           new CombineFilter(false)));
   
+
   private Map<Class<?>, Translator> translators = new HashMap<>();
 
   public BashlogCompiler(PlanNode planNode) {
@@ -101,18 +91,6 @@ public class BashlogCompiler {
     debug = "#" + debug.replaceAll("\n", "\n# ");
   }
 
-  public void registerPlaceholder(PlaceholderNode node, String file) {
-    placeholderToFilename.put(node, file);
-  }
-
-  public boolean parallelMaterialization() {
-    return parallelMaterialization;
-  }
-
-  public int getNextIndex() {
-    return tmpFileIndex.getAndIncrement();
-  }
-
   public String compile() {
     if (bash == null) {
       bash = compile("", true);
@@ -134,7 +112,8 @@ public class BashlogCompiler {
     // tweak sort
     header.append("sort=\"sort -S25% --parallel=2 \"\n\n");
 
-    Bash e = compile(root);
+    CompilerInternals bc = new CompilerInternals(translators);
+    Bash e = bc.compile(root);
     String result = header.toString() + e.generate() + "; rm tmp/*\n";
 
     return result;
@@ -143,54 +122,6 @@ public class BashlogCompiler {
   public String debugInfo() {
     return debug;
   }
-
-
-  Bash waitFor(Bash bash, List<PlanNode> children) {
-    Bash result = bash;
-    if (parallelMaterialization) {
-      for (PlanNode child : children) {
-        if (child instanceof PlaceholderNode) {
-          PlanNode parent = ((PlaceholderNode) child).getParent();
-          if (parent instanceof MaterializationNode) {
-            String matFile = placeholderToFilename.get(child);
-             if (parallelMaterialization ) {
-              result = new Bash.Command("cat").arg(matFile.replace("tmp/", "tmp/lock_")).arg("1>&2").arg("; ").other(result);
-            }
-          }
-        }
-      }
-    }
-    return result;
-  }
-
-  public Bash compile(PlanNode planNode) {
-    return waitFor(compileIntern(planNode), planNode.children());
-  }
-
-  /**
-   * @param planNode
-   * @return
-   */
-  private Bash compileIntern(PlanNode planNode) {
-    if(cache.containsKey(planNode)) return cache.get(planNode);
-    Translator t = translators.get(planNode.getClass());
-    if(t != null) {
-      return t.translate(planNode, this);
-    }
-    
-    if (planNode instanceof PlaceholderNode) {
-      PlanNode parent = ((PlaceholderNode) planNode).getParent();
-      String file = placeholderToFilename.get(planNode);
-      if (file == null) {
-        placeholderToFilename.forEach((m, f) -> System.err.println(m.operatorString() + "  " + f));
-        throw new IllegalStateException("no file assigned to " + planNode.operatorString() + " for " + parent.operatorString());
-      }
-      return new Bash.BashFile(file);
-    }
-    // fallback
-    throw new UnsupportedOperationException("compilation of " + planNode.getClass() + " not yet supported");
-  }
-
 
   /** Transform datalog program and query relation to a bash script. */
   public static String compileQuery(Program p, String query) throws IOException {

@@ -3,7 +3,7 @@ package bashlog.translation;
 import java.util.Arrays;
 import java.util.List;
 
-import bashlog.BashlogCompiler;
+import bashlog.CompilerInternals;
 import bashlog.command.Bash;
 import bashlog.plan.SortNode;
 import common.plan.node.PlanNode;
@@ -11,7 +11,7 @@ import common.plan.node.PlanNode;
 public class Sort implements Translator {
 
 	@Override
-	public Bash translate(PlanNode p, BashlogCompiler bc) {
+	public Bash translate(PlanNode p, CompilerInternals bc) {
 		SortNode s = (SortNode)p;
 		int[] cols = s.sortColumns();
 		Bash prev = bc.compile(s.getTable());

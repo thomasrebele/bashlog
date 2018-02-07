@@ -3,7 +3,7 @@ package bashlog.translation;
 import java.util.Arrays;
 import java.util.List;
 
-import bashlog.BashlogCompiler;
+import bashlog.CompilerInternals;
 import bashlog.command.Bash;
 import bashlog.plan.TSVFileNode;
 import common.plan.node.PlanNode;
@@ -11,7 +11,7 @@ import common.plan.node.PlanNode;
 public class FileInput implements Translator {
 
   @Override
-  public Bash translate(PlanNode planNode, BashlogCompiler bc) {
+  public Bash translate(PlanNode planNode, CompilerInternals bc) {
     TSVFileNode file = (TSVFileNode) planNode;
     return new Bash.BashFile(file.getPath());
   }

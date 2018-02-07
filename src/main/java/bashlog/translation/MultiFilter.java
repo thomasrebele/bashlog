@@ -3,7 +3,7 @@ package bashlog.translation;
 import java.util.Arrays;
 import java.util.List;
 
-import bashlog.BashlogCompiler;
+import bashlog.CompilerInternals;
 import bashlog.command.Bash;
 import common.plan.node.MultiFilterNode;
 import common.plan.node.PlanNode;
@@ -11,7 +11,7 @@ import common.plan.node.PlanNode;
 public class MultiFilter implements Translator {
 
   @Override
-  public Bash translate(PlanNode planNode, BashlogCompiler bc) {
+  public Bash translate(PlanNode planNode, CompilerInternals bc) {
       MultiFilterNode m = (MultiFilterNode) planNode;
       Bash.Command cmd = new Bash.Command(AwkHelper.AWK);
 
