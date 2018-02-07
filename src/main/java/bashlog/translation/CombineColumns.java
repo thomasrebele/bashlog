@@ -8,6 +8,7 @@ import bashlog.command.Bash;
 import bashlog.plan.CombinedColumnNode;
 import common.plan.node.PlanNode;
 
+/** Translate a combine column to an AWK command */
 public class CombineColumns implements Translator {
 
   @Override

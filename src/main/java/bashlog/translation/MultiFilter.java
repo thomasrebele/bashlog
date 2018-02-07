@@ -8,6 +8,10 @@ import bashlog.command.Bash;
 import common.plan.node.MultiFilterNode;
 import common.plan.node.PlanNode;
 
+/**
+ * Translate multi filter plan to one AWK command.
+ * A multi filter are (a union of) filters, projections on the same plan, that build one single plan.
+ */
 public class MultiFilter implements Translator {
 
   @Override

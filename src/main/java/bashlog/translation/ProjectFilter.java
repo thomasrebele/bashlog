@@ -10,6 +10,7 @@ import common.plan.node.PlanNode;
 import common.plan.node.ProjectNode;
 import common.plan.node.VariableEqualityFilterNode;
 
+/** Translates projects and filters to an AWK command */
 public class ProjectFilter implements Translator {
 
   @Override

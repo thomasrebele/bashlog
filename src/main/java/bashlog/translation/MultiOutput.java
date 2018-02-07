@@ -9,6 +9,10 @@ import common.plan.node.MultiOutputNode;
 import common.plan.node.PlaceholderNode;
 import common.plan.node.PlanNode;
 
+/**
+ * Translates a multi output plan to one single AWK command.
+ * A multi output executes several projections and filters (of several branches) that operate on one input plan.
+ */
 public class MultiOutput implements Translator {
 
   @Override

@@ -8,6 +8,7 @@ import bashlog.command.Bash;
 import common.plan.node.PlanNode;
 import common.plan.node.UnionNode;
 
+/** Translates a union node to a sort command, which removes duplicates */
 public class Union implements Translator {
 
   @Override

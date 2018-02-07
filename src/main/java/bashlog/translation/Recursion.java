@@ -9,6 +9,7 @@ import bashlog.command.Bash;
 import common.plan.node.PlanNode;
 import common.plan.node.RecursionNode;
 
+/** Translates a recursion node to a bash while loop */
 public class Recursion implements Translator {
 
   private Bash setMinusSorted(Bash prev, String filename) {

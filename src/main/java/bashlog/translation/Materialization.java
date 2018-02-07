@@ -8,6 +8,9 @@ import bashlog.command.Bash;
 import common.plan.node.MaterializationNode;
 import common.plan.node.PlanNode;
 
+/** 
+ * Translate a materialization node. The command is just executed and its output stored in a file.
+ */
 public class Materialization implements Translator {
 
   @Override

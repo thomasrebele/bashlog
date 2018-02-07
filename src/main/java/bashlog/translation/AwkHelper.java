@@ -10,6 +10,7 @@ import common.plan.node.PlanNode;
 import common.plan.node.ProjectNode;
 import common.plan.node.VariableEqualityFilterNode;
 
+/** Stores helper functions that are used during bashlog compilation */
 public class AwkHelper {
 
   /** Escape string for usage in awk */

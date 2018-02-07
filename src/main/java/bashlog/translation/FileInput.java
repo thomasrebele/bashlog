@@ -8,6 +8,7 @@ import bashlog.command.Bash;
 import bashlog.plan.TSVFileNode;
 import common.plan.node.PlanNode;
 
+/** Translate a file to a file */
 public class FileInput implements Translator {
 
   @Override

@@ -11,6 +11,7 @@ import common.plan.node.MaterializationNode;
 import common.plan.node.PlaceholderNode;
 import common.plan.node.PlanNode;
 
+/** Stores information that is needed during the translation. For the translation you need to use BashlogCompiler. */
 public class CompilerInternals {
 
   private final Map<Class<?>, Translator> translators;
@@ -25,16 +26,22 @@ public class CompilerInternals {
 
   Map<PlanNode, Bash> cache = new HashMap<>();
 
+  /** 
+   * Constructor
+   * @param translators map from a node class to its translator
+   */
   CompilerInternals(Map<Class<?>, Translator> translators) {
     this.translators = translators;
   }
 
-  public void registerPlaceholder(PlaceholderNode node, String file) {
-    placeholderToFilename.put(node, file);
-  }
-
+  /** Whether the resulting bash script will materialize multiple plans in parallel */
   public boolean parallelMaterialization() {
     return parallelMaterialization;
+  }
+
+  /** Indicates that plan *node* should take its input from *file* */
+  public void registerPlaceholder(PlaceholderNode node, String file) {
+    placeholderToFilename.put(node, file);
   }
 
   /** Next index for temporary files (materialized, delta, full) */
@@ -70,7 +77,7 @@ public class CompilerInternals {
   /**
    * Translate a relational algebra plan to a bash snippet
    * @param planNode
-   * @return
+   * @return bash snippet
    */
   public Bash compile(PlanNode planNode) {
     if (cache.containsKey(planNode)) return cache.get(planNode);

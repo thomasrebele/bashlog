@@ -8,6 +8,7 @@ import bashlog.command.Bash;
 import bashlog.plan.SortNode;
 import common.plan.node.PlanNode;
 
+/** Translates a sort node to a sort command */
 public class Sort implements Translator {
 
 	@Override
