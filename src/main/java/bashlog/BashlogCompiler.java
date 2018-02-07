@@ -8,6 +8,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import bashlog.command.Bash;
+import bashlog.plan.BashlogOptimizer;
+import bashlog.plan.BashlogPlan;
 import bashlog.plan.SortNode;
 import bashlog.translation.Translator;
 import common.parser.Program;
