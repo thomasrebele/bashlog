@@ -9,7 +9,6 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import bashlog.BashlogCompiler;
-import bashlog.BashlogEvaluator;
 import common.parser.ParseException;
 import common.parser.ParserReader;
 import common.parser.Program;

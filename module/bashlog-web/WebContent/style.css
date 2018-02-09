@@ -1,0 +1,78 @@
+
+header {
+	background-color: #ccccff;
+	position: fixed;
+	left:0;
+	right:0;
+	top:0;
+	padding: 5px;
+	text-align: center;
+	
+	border-color: #aaaaee;
+	border-width: 0px 0px 2px 0px;
+	border-style: solid;
+	border-radius: 0px 0px 5px 5px;
+}
+
+main {
+	padding: 70px 20px 20px;
+}
+
+/* HolyGrail: https://philipwalton.github.io/solved-by-flexbox/demos/holy-grail/ */
+.grail, .grail-body { display: flex; flex-direction: column; }
+.grail-content { flex: 1; }
+.grail-nav { order: -1; }
+@media ( min-width : 500px) {
+	.grail-body { flex-direction: row; flex: 1; }
+	.grail-content { flex: 1; }
+	.grail-nav { /* 10em is the width of the columns */ flex: 0 0 10em; margin: 0 10px 0 10px ;}
+}
+
+
+.cell {
+	padding: 10px;
+}
+
+.column {
+	float: left;
+	width: 45%;
+	margin-right: 2vw;
+	margin-left: 2px;
+}
+
+/* Clear floats after the columns */
+.row:after {
+	content: "";
+	display: table;
+	clear: both;
+}
+
+textarea {
+	padding: 10px;
+	width: 85%; 
+	height: 40vh;
+	
+	border-radius: 5px;
+	border: 1px gray solid;
+}
+
+/*div {
+	border: 1px dashed;
+}*/
+
+code {
+	font-family: monospace; 
+	white-space: pre-wrap;
+	padding: 10px;
+	margin: 5px;
+	background-color: #dddddd;
+	display: block;
+	
+	border-radius: 5px;
+	border: 1px gray solid;
+}
+
+code.inline {
+	display: inline-block;
+	padding: 5px;
+}
