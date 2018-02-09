@@ -11,11 +11,11 @@ header {
 	border-color: #aaaaee;
 	border-width: 0px 0px 2px 0px;
 	border-style: solid;
-	border-radius: 0px 0px 5px 5px;
+	border-radius: 0px 0px 9px 9px;
 }
 
 main {
-	padding: 70px 20px 20px;
+	padding: 70px 0px 0px;
 }
 
 /* HolyGrail: https://philipwalton.github.io/solved-by-flexbox/demos/holy-grail/ */
@@ -24,33 +24,23 @@ main {
 .grail-nav { order: -1; }
 @media ( min-width : 500px) {
 	.grail-body { flex-direction: row; flex: 1; }
-	.grail-content { flex: 1; }
-	.grail-nav { /* 10em is the width of the columns */ flex: 0 0 10em; margin: 0 10px 0 10px ;}
+	.grail-content { flex: 1; margin-left:40px; margin-right:40px; }
 }
 
-
-.cell {
-	padding: 10px;
+h1 {
+	font-weight: bold;
+	font-size: 20px;
 }
 
-.column {
-	float: left;
-	width: 45%;
-	margin-right: 2vw;
-	margin-left: 2px;
-}
-
-/* Clear floats after the columns */
-.row:after {
-	content: "";
-	display: table;
-	clear: both;
+h2 {
+	font-weight: bold;
+	font-size: 15px;
 }
 
 textarea {
 	padding: 10px;
-	width: 85%; 
-	height: 40vh;
+	width: 95%; 
+	height: 20vh;
 	
 	border-radius: 5px;
 	border: 1px gray solid;
@@ -65,7 +55,7 @@ code {
 	white-space: pre-wrap;
 	padding: 10px;
 	margin: 5px;
-	background-color: #dddddd;
+	background-color: #eeeeee;
 	display: block;
 	
 	border-radius: 5px;
@@ -74,5 +64,16 @@ code {
 
 code.inline {
 	display: inline-block;
-	padding: 5px;
+	padding: 3px 5px;
+	margin: 0px 2px;
+}
+
+button {
+	font-size: 15px;
+	background-color: #ccccff;
+	padding: 10px;
+	border-color: #aaaaee;
+	border-width: 2px;
+	border-style: solid;
+	border-radius: 12px;
 }

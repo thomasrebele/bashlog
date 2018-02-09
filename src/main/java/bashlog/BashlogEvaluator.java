@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory;
 import common.Evaluator;
 import common.FactsSet;
 import common.SimpleFactsSet;
+import common.parser.Parseable;
 import common.parser.ParserReader;
 import common.parser.Program;
 import common.parser.Rule;
@@ -117,7 +118,7 @@ public class BashlogEvaluator implements Evaluator {
 
     String src = "rule(X) :- rel1(X), rel2(Y), rel3(X,Y).\n cp(X,Y) :- rel1(X), rel2(Y). ";
     src += "rule2(X) :- rel3(X, Y), rel3(Z, W), rel1(X), rel2(W).";
-    Program p = Program.read(new ParserReader(src));
+    Program p = Program.read(new ParserReader(src), BashlogCompiler.BASHLOG_PARSER_FEATURES);
 
     SimpleFactsSet facts = new SimpleFactsSet();
     facts.add("rel1/1", "a");

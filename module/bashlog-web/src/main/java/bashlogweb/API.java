@@ -27,16 +27,32 @@ public class API extends HttpServlet {
   protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
     BufferedReader reader = req.getReader();
     String datalog = reader.lines().collect(Collectors.joining("\n"));
+    String bashlog = processQuery(datalog, req, resp);
 
+    if (bashlog != null) {
+      resp.setContentType("text/plain");
+      resp.getWriter().write(bashlog);
+      resp.getWriter().close();
+      return;
+    }
+
+    req.setAttribute("datalog", datalog);
+    req.getRequestDispatcher("api.jsp").forward(req, resp);
+  }
+
+  protected static String processQuery(String datalog, HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
     if (datalog != null) {
       Program p;
       String bashlog = null;
       try {
-        p = Program.read(new ParserReader(datalog));
+        p = Program.read(new ParserReader(datalog), BashlogCompiler.BASHLOG_PARSER_FEATURES);
         if (p.rules().size() > 0) {
-          String query = p.rules().get(p.rules().size() - 1).head.getRelation();
+          String query = null;
           if (req.getParameter("query") != null) {
             query = req.getParameter("query");
+          }
+          if(query == null || query.trim().isEmpty()) {
+            query = p.rules().get(p.rules().size() - 1).head.getRelation();
           }
           bashlog = BashlogCompiler.compileQuery(p, query);
         }
@@ -44,15 +60,9 @@ public class API extends HttpServlet {
         bashlog = e.getMessage();
       }
 
-      if (bashlog != null) {
-        resp.setContentType("text/plain");
-        resp.getWriter().write(bashlog);
-        resp.getWriter().close();
-        return;
-      }
-
+      return bashlog;
     }
-    req.setAttribute("datalog", datalog);
-    req.getRequestDispatcher("api.jsp").forward(req, resp);
+    return null;
   }
+
 }

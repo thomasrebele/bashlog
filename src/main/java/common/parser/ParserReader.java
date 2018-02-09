@@ -182,6 +182,18 @@ public class ParserReader {
   }
 
   public void error(String[] expect, String post) {
+    // construct error message
+    StringBuilder expected = new StringBuilder();
+    for (int i = 0; i < expect.length; i++) {
+      if (i > 0) {
+        expected.append(expect.length - i == 1 ? "\", or \"" : "\", \"");
+      }
+      expected.append(expect[i]);
+    }
+    error("expected \"" + expected + "\"", post);
+  }
+
+  public void error(String msg, String post) {
     // mark the position with "__>"
     int act = 0, line = 1;
     while (true) {
@@ -199,16 +211,7 @@ public class ParserReader {
     }
     context.append("^").append("\nL here\n");
 
-    // construct error message
-    StringBuilder expected = new StringBuilder();
-    for (int i = 0; i < expect.length; i++) {
-      if (i > 0) {
-        expected.append(expect.length - i == 1 ? "\", or \"" : "\", \"");
-      }
-      expected.append(expect[i]);
-    }
-
-    String error = "error: expected \"" + expected + "\" at line " + line + ":\n\n";
+    String error = "error: " + msg + ", at line " + line + ":\n\n";
     error += context;
     if (post == null) {
       post = "(src: " + CallStack.toString(new CallStack().ret().top()) + ")";

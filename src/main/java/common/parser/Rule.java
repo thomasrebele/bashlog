@@ -19,13 +19,13 @@ public class Rule implements Parseable {
     this(head, Arrays.asList(body));
   }
 
-  public static Rule read(ParserReader pr) {
+  public static Rule read(ParserReader pr, Set<String> supportedFeatures) {
     Map<String, Variable> variables = new HashMap<>();
 
     pr.skipComments();
     if (pr.peek() == null) return null;
     // parse head
-    CompoundTerm head = CompoundTerm.read(pr, variables);
+    CompoundTerm head = CompoundTerm.read(pr, variables, supportedFeatures);
     if (head == null) return null;
     // parse body
     List<CompoundTerm> body = new ArrayList<>();
@@ -39,7 +39,7 @@ public class Rule implements Parseable {
       case ":-":
       case "<-":
 loop:   do {
-          CompoundTerm b = CompoundTerm.read(pr, variables);
+          CompoundTerm b = CompoundTerm.read(pr, variables, supportedFeatures);
           if (b == null) {
             pr.error(new String[] {"expected: term(...)"}, null);
           }
@@ -87,13 +87,13 @@ loop:   do {
     /*r = read(new ParserReader("pred(a) :- trans(a,b), trans(b,_)."), null);
     System.out.println(r);*/
     ParserReader pr;
-    r = read(pr = new ParserReader("pred(A) :- pred2(a,b)."));
+    r = read(pr = new ParserReader("pred(A) :- pred2(a,b)."), Parseable.ALL_FEATURES);
     System.out.println(r);
     System.out.println("remaining: " + pr.peekLine());
-    r = read(pr = new ParserReader("pred(A) :- pred2([A,B])."));
+    r = read(pr = new ParserReader("pred(A) :- pred2([A,B])."), Parseable.ALL_FEATURES);
     System.out.println(r);
     System.out.println("remaining: " + pr.peekLine());
-    r = read(pr = new ParserReader("pred(A) :~ cat a.txt"));
+    r = read(pr = new ParserReader("pred(A) :~ cat a.txt"), Parseable.ALL_FEATURES);
     System.out.println(r);
   }
 

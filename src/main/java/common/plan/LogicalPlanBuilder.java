@@ -31,7 +31,7 @@ public class LogicalPlanBuilder {
     return clone;
   }
 
-  public Map<String, PlanNode> getPlanForProgram(Program program) {
+  public TreeMap<String, PlanNode> getPlanForProgram(Program program) {
     planForRelation = new HashMap<>();
     this.program = program;
 
@@ -40,7 +40,7 @@ public class LogicalPlanBuilder {
       program.rules().forEach(rule -> relationsToOutput.add(rule.head.getRelation()));
     }
 
-    Map<String, PlanNode> planNodes = new HashMap<>();
+    TreeMap<String, PlanNode> planNodes = new TreeMap<>();
     relationsToOutput.forEach(relation ->
             planNodes.put(relation, getPlanForRelation(relation, Collections.emptyMap()))
     );

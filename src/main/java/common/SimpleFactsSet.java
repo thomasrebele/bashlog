@@ -9,6 +9,7 @@ import java.util.stream.Stream;
 
 import common.parser.CompoundTerm;
 import common.parser.Constant;
+import common.parser.Parseable;
 import common.parser.ParserReader;
 
 public class SimpleFactsSet implements FactsSet {
@@ -32,7 +33,7 @@ public class SimpleFactsSet implements FactsSet {
     while (true) {
       pr.skipComments();
       if (pr.peek() == null) return;
-      CompoundTerm value = CompoundTerm.read(pr, Collections.emptyMap());
+      CompoundTerm value = CompoundTerm.read(pr, Collections.emptyMap(), Parseable.ALL_FEATURES);
       if (value != null && pr.consume(".") != null) {
         add(value);
       }

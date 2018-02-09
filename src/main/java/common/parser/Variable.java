@@ -1,6 +1,7 @@
 package common.parser;
 
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Stream;
 
 public class Variable extends Term implements Parseable {
@@ -16,7 +17,7 @@ public class Variable extends Term implements Parseable {
     return "var:" + name + "@" + ("" + System.identityHashCode(this)).substring(0, 3);
   }
 
-  public static Variable read(ParserReader pr, Map<String, Variable> varMap) {
+  public static Variable read(ParserReader pr, Map<String, Variable> varMap, Set<String> supportedFeatures) {
     pr.debug();
     pr.skipComments();
     if (pr.peek() == null) return null;

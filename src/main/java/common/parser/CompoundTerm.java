@@ -30,24 +30,24 @@ public class CompoundTerm extends Term implements Parseable {
   }
 
 
-  public static CompoundTerm read(ParserReader pr, Map<String, Variable> varMap) {
+  public static CompoundTerm read(ParserReader pr, Map<String, Variable> varMap, Set<String> supportedFeatures) {
     pr.debug();
     pr.skipComments();
     boolean negated = (pr.consume("not") != null);
     pr.skipComments();
     String name = pr.readName();
     if (name == null) return null;
-    return read(name, negated, pr, varMap);
+    return read(name, negated, pr, varMap, supportedFeatures);
   }
 
-  public static CompoundTerm read(String name, boolean negated, ParserReader pr, Map<String, Variable> varMap) {
+  public static CompoundTerm read(String name, boolean negated, ParserReader pr, Map<String, Variable> varMap, Set<String> supportedFeatures) {
     CompoundTerm a = new CompoundTerm(name, negated);
     pr.debug();
     Term v;
     pr.skipComments();
     List<Term> args = new ArrayList<>();
     if (pr.expect("(") != null) {
-      while ((v = Term.read(pr, varMap)) != null) {
+      while ((v = Term.read(pr, varMap, supportedFeatures)) != null) {
         args.add(v);
         pr.skipComments();
         if (pr.peek() == ')' || pr.expect(",") == null) {
@@ -88,13 +88,13 @@ public class CompoundTerm extends Term implements Parseable {
 
   public static void main(String[] args) {
     ParserReader pr;
-    CompoundTerm a = CompoundTerm.read(pr = new ParserReader("abc(\"a\")"), new HashMap<>());
+    CompoundTerm a = CompoundTerm.read(pr = new ParserReader("abc(\"a\")"), new HashMap<>(), Parseable.ALL_FEATURES);
     System.out.println(a);
     System.out.println("remaining: " + pr.peekLine());
-    a = CompoundTerm.read(pr = new ParserReader("abc(a)"), new HashMap<>());
+    a = CompoundTerm.read(pr = new ParserReader("abc(a)"), new HashMap<>(), Parseable.ALL_FEATURES);
     System.out.println(a);
     System.out.println("remaining: " + pr.peekLine());
-    a = CompoundTerm.read(pr = new ParserReader("abc(A)"), new HashMap<>());
+    a = CompoundTerm.read(pr = new ParserReader("abc(A)"), new HashMap<>(), Parseable.ALL_FEATURES);
     System.out.println(a);
     System.out.println("remaining: " + pr.peekLine());
     //System.out.println(YCompoundTerm.read("abc(\"a\", b)", new int[] { 0 }, new HashMap<>(), null));

@@ -40,7 +40,7 @@ public class Cmd {
     }
 
     // translate/compile
-    Program p = Program.loadFile(args.queryFile);
+    Program p = Program.loadFile(args.queryFile, BashlogCompiler.BASHLOG_PARSER_FEATURES);
     BashlogCompiler bc = BashlogCompiler.prepareQuery(p, args.queryPredicate);
     try {
       String bash = bc.compile("", false);

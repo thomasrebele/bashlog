@@ -1,21 +1,22 @@
 package common.parser;
 
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Stream;
 
 public abstract class Term implements Parseable, Comparable<Object> {
 
-  public static Term read(ParserReader pr, Map<String, Variable> varMap) {
+  public static Term read(ParserReader pr, Map<String, Variable> varMap, Set<String> supportedFeatures) {
     pr.debug();
     pr.skipComments();
     if (pr.peek() == null) return null;
 
     if (pr.peek() == '_' || Character.isUpperCase(pr.peek())) {
-      return Variable.read(pr, varMap);
+      return Variable.read(pr, varMap, supportedFeatures);
     }
 
     if (pr.peek() == '[') {
-      return TermList.read(pr, varMap);
+      return TermList.read(pr, varMap, supportedFeatures);
     }
 
     if (pr.peek() == '"' || pr.peek() == '\'') {
@@ -27,12 +28,15 @@ public abstract class Term implements Parseable, Comparable<Object> {
     }
 
     if (Character.isLowerCase(pr.peek())) {
+      if(!supportedFeatures.contains(Parseable.ATOMS)) {
+        pr.error("variables need to start with an uppercase character", null);
+      }
       Atom a = new Atom();
       a.name = pr.readName();
 
       pr.skipComments();
       if (pr.peek() == '(') {
-        return CompoundTerm.read(a.name, false, pr, varMap);
+        return CompoundTerm.read(a.name, false, pr, varMap, supportedFeatures);
       }
 
       return a;

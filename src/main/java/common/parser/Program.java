@@ -6,6 +6,8 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import com.typesafe.config.ConfigException.Parse;
+
 import common.Tools;
 
 /**
@@ -29,17 +31,25 @@ public class Program implements Parseable {
   private Map<String, List<Rule>> relationToRules = new HashMap<>();
 
   public static Program loadFile(String path) throws IOException {
+    return loadFile(path, Parseable.ALL_FEATURES);
+  }
+
+  public static Program loadFile(String path, Set<String> supportedFeatures) throws IOException {
     File f = new File(path).getAbsoluteFile();
     String content = Tools.getFileContent(f);
-    return read(new ParserReader(content));
+    return read(new ParserReader(content), supportedFeatures);
   }
 
   public static Program read(ParserReader pr) {
+    return read(pr, Parseable.ALL_FEATURES);
+  }
+
+  public static Program read(ParserReader pr, Set<String> supportedFeatures) {
     Program p = new Program();
     Rule r;
     do {
       pr.skipComments();
-      r = Rule.read(pr);
+      r = Rule.read(pr, supportedFeatures);
       if (r != null) {
         p.addRule(r);
       }
@@ -113,10 +123,10 @@ public class Program implements Parseable {
     return parents.stream().anyMatch(rel -> hasAncestor(rel, ancestor, newIgnoredRelations));
   }
 
-  public static Program program(String[] files) throws IOException {
+  public static Program program(String[] files, Set<String> supportedFeatures) throws IOException {
     Program p = new Program();
     for (String f : files) {
-      p.addRules(loadFile(f));
+      p.addRules(loadFile(f, supportedFeatures));
     }
     return p;
   }
@@ -129,7 +139,7 @@ public class Program implements Parseable {
   }
 
   public static void main(String[] args) throws IOException {
-    Program p = loadFile("data/rules.y4");
+    Program p = loadFile("data/rules.y4", Parseable.ALL_FEATURES);
     System.out.println(p.toString());
   }
 
