@@ -40,7 +40,9 @@ public class Rule implements Parseable {
       case "<-":
 loop:   do {
           CompoundTerm b = CompoundTerm.read(pr, variables);
-          if (b == null) return null;
+          if (b == null) {
+            pr.error(new String[] {"expected: term(...)"}, null);
+          }
           body.add(b);
           switch(pr.expect(",", ".")) {
           case ",":

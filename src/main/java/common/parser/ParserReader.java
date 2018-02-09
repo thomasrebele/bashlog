@@ -7,7 +7,6 @@ import org.slf4j.LoggerFactory;
 
 import common.CallStack;
 
-
 /** Helper class for parsing. It provides convenience methods for reading characters from a string, for example names, literals (numbers, strings), and character sequences */
 public class ParserReader {
 
@@ -50,36 +49,8 @@ public class ParserReader {
     }
     String method = CallStack.toString(new CallStack().ret().top());
 
-    // mark the position with "__>"
-    int act = 0, line = 1;
-    while (true) {
-      int next = input.indexOf('\n', act);
-      if (next < 0 || next > pos) break;
-      line++;
-      act = next + 1;
-    }
-    int until = input.indexOf('\n', pos);
-    if (until < 0) until = input.length();
-
-    StringBuilder context = new StringBuilder().append(input.substring(act, until)).append("\n");
-    for(int i=0; i<(pos-act); i++) {
-    	context.append("_");
-    }
-    context.append("^").append("\nL here\n");
-    
-    // construct error message
-    StringBuilder expected = new StringBuilder();
-    for(int i=0; i<expect.length; i++) {
-    	if(i > 0 ) {
-    	    expected.append(expect.length - i == 1 ? "\", or \"" : "\", \"");
-    	}
-    	expected.append(expect[i]);
-    }
-    
-    String error = "error: expected \"" + expected + "\" at line " + line + ":\n\n";
-    error += context;
-    error += "\n\n (src: " + method + ")";
-    throw new ParseException(error);
+    error(expect, "(src: " + method + ")");
+    return null;
   }
 
   /** Prints method and current position */
@@ -208,6 +179,45 @@ public class ParserReader {
       return d;
     }
     return i;
+  }
+
+  public void error(String[] expect, String post) {
+    // mark the position with "__>"
+    int act = 0, line = 1;
+    while (true) {
+      int next = input.indexOf('\n', act);
+      if (next < 0 || next > pos) break;
+      line++;
+      act = next + 1;
+    }
+    int until = input.indexOf('\n', pos);
+    if (until < 0) until = input.length();
+
+    StringBuilder context = new StringBuilder().append(input.substring(act, until)).append("\n");
+    for (int i = 0; i < (pos - act); i++) {
+      context.append("_");
+    }
+    context.append("^").append("\nL here\n");
+
+    // construct error message
+    StringBuilder expected = new StringBuilder();
+    for (int i = 0; i < expect.length; i++) {
+      if (i > 0) {
+        expected.append(expect.length - i == 1 ? "\", or \"" : "\", \"");
+      }
+      expected.append(expect[i]);
+    }
+
+    String error = "error: expected \"" + expected + "\" at line " + line + ":\n\n";
+    error += context;
+    if (post == null) {
+      post = "(src: " + CallStack.toString(new CallStack().ret().top()) + ")";
+    }
+    if (!post.isEmpty()) {
+      error += "\n\n " + post;
+    }
+
+    throw new ParseException(error);
   }
 
 }
