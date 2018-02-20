@@ -62,6 +62,12 @@ loop:   do {
         body.add(ct);
         break;
     }
+    Set<Variable> headVars = head.getVariables().collect(Collectors.toSet());
+    headVars.removeAll(body.stream().flatMap(ct -> ct.getVariables()).collect(Collectors.toList()));
+    if(headVars.size() > 0) {
+      pr.error("head variable(s) not used in body: " + headVars.stream().map(v -> v.name).collect(Collectors.joining(", ")), null);
+    }
+    
     return new Rule(head, body);
   }
 
