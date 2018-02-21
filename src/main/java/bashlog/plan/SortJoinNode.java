@@ -42,6 +42,7 @@ public class SortJoinNode extends JoinNode {
 
   @Override
   public boolean equals(Object obj, Map<PlanNode, PlanNode> assumedEqualities) {
+    if (this == obj) return true;
     if (!(obj.getClass() == getClass())) {
       return false;
     }

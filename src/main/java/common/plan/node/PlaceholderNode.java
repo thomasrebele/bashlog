@@ -72,6 +72,7 @@ public class PlaceholderNode implements PlanNode {
 
   @Override
   public boolean equals(Object obj,  Map<PlanNode,PlanNode> assumedEqualities) {
+    if (this == obj) return true;
     return assumedEqualities.getOrDefault(this, this) == obj;
   }
 

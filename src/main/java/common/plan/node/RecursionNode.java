@@ -84,6 +84,7 @@ public class RecursionNode implements PlanNode {
 
   @Override
   public boolean equals(Object obj, Map<PlanNode,PlanNode> assumedEqualities) {
+    if (this == obj) return true;
     if (!(obj.getClass() == getClass())) {
       return false;
     }

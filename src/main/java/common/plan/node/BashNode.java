@@ -44,10 +44,17 @@ public class BashNode implements PlanNode {
   }
 
   @Override
+  public boolean equals(Object obj) {
+    return equals(obj, Collections.emptyMap());
+  }
+
+  @Override
   public boolean equals(Object obj, Map<PlanNode, PlanNode> assumedEqualities) {
+    if(this == obj) return true;
     if (obj.getClass() != this.getClass()) {
       return false;
     }
+    
     BashNode node = (BashNode) obj;
     if (this.arity != node.arity || !this.commandParts.equals(node.commandParts) || children.size() != node.children.size()) return false;
     for (int i = 0; i < children.size(); i++) {
