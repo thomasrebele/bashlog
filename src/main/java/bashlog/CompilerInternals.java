@@ -1,9 +1,6 @@
 package bashlog;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import bashlog.command.Bash;
@@ -55,6 +52,21 @@ public class CompilerInternals {
   }
 
   /**
+   * Get placeholder descendants. Recursively for all children that were not translated.
+   * @param children
+   * @param accumulator
+   */
+  private void directPlaceholderDescendants(List<PlanNode> children, Set<PlanNode> accumulator) {
+    for (PlanNode c : children) {
+      if (c instanceof PlaceholderNode) {
+        accumulator.add(c);
+      } else if (!cache.containsKey(c)) {
+        directPlaceholderDescendants(c.children(), accumulator);
+      }
+    }
+  }
+
+  /**
    * Add a locking mechanism for materialization nodes.
    * This happens if the bash snippet directly uses a materialized file.
    * @param snippet
@@ -64,18 +76,19 @@ public class CompilerInternals {
   Bash waitFor(Bash snippet, List<PlanNode> children) {
     Bash result = snippet;
     if (parallelMaterialization) {
-      List<BashFile> files = new ArrayList<>();
-      snippet.directFiles(files);
+      // We need to wait if the command in snippet uses a materialized node directly
+      // Indirectly used files are treated at their respective snippet
+      // Some commands (e.g. ProjectFilter) might use more than one level of the plan tree, 
+      // and we need to check all files that are used by that snippet
+      HashSet<PlanNode> todo = new HashSet<>();
+      directPlaceholderDescendants(children, todo);
 
-      for (BashFile f : files) {
-        PlanNode child = filenameToPlaceholder.get(f.path());
-        if (child != null) {
-          PlanNode parent = ((PlaceholderNode) child).getParent();
-          if (parent instanceof MaterializationNode) {
-            String matFile = placeholderToFilename.get(child);
-            if (parallelMaterialization) {
-              result = new Bash.Command("cat").arg(matFile.replace("tmp/", "tmp/lock_")).arg("1>&2").arg("; ").other(result);
-            }
+      for (PlanNode child : todo) {
+        PlanNode parent = ((PlaceholderNode) child).getParent();
+        if (parent instanceof MaterializationNode) {
+          String matFile = placeholderToFilename.get(child);
+          if (parallelMaterialization) {
+            result = new Bash.Command("cat").arg(matFile.replace("tmp/", "tmp/lock_")).arg("1>&2").arg("; ").other(result);
           }
         }
       }
@@ -94,7 +107,9 @@ public class CompilerInternals {
     // apply corresponding translator if possible; also applies locking for parallel materialization
     Translator t = translators.get(planNode.getClass());
     if (t != null) {
-      return waitFor(t.translate(planNode, this), planNode.children());
+      Bash result = waitFor(t.translate(planNode, this), planNode.children());
+      cache.put(planNode, result);
+      return result;
     }
 
     // inject files for placeholder nodes
@@ -105,7 +120,9 @@ public class CompilerInternals {
         placeholderToFilename.forEach((m, f) -> System.err.println(m.operatorString() + "  " + f));
         throw new IllegalStateException("no file assigned to " + planNode.operatorString() + " for " + parent.operatorString());
       }
-      return new Bash.BashFile(file);
+      Bash result = new Bash.BashFile(file);
+      cache.put(planNode, result);
+      return result;
     }
     // fallback
     throw new UnsupportedOperationException("compilation of " + planNode.getClass() + " not yet supported");

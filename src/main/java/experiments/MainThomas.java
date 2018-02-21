@@ -11,8 +11,8 @@ import experiments.lubm.BashlogLUBM;
 public class MainThomas {
 
   public static void main(String[] args) throws IOException {
-    System.out.println("press key");
-    System.in.read();
+    /*System.out.println("press key");
+    System.in.read();*/
     profile();
   }
 
