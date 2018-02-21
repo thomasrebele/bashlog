@@ -54,13 +54,7 @@ loop:   do {
         break;
       case ":~":
       case "<~":
-        CompoundTerm ct = new CompoundTerm("bash_command");
-        pr.skipComments();
-        Constant<String> c = new Constant<>(pr.readLine());
-        TermList tl = new TermList(Arrays.stream(head.args).filter(t -> t instanceof Variable).toArray(Term[]::new));
-        ct.args = new Term[] { c, tl };
-        body.add(ct);
-        break;
+        return BashRule.read(pr, supportedFeatures, head);
     }
     Set<Variable> headVars = head.getVariables().collect(Collectors.toSet());
     headVars.removeAll(body.stream().flatMap(ct -> ct.getVariables()).collect(Collectors.toList()));

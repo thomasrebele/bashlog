@@ -91,25 +91,6 @@ public class BashlogPlan implements Optimizer {
       if (children.size() == 1) return children.get(0);
       return u;
 
-    } else if (p instanceof BuiltinNode) {
-      // instead of "<(cat file)", use file directly
-      BuiltinNode b = (BuiltinNode) p;
-      if ("bash_command".equals(b.compoundTerm.name)) {
-        String cmd = (String) ((Constant<?>) b.compoundTerm.args[0]).getValue();
-        if (cmd.startsWith("cat ")) {
-          ParserReader pr = new ParserReader(cmd);
-          pr.expect("cat ");
-          pr.skipWhitespace();
-          String file;
-          if (pr.peek() == '\"' || pr.peek() == '\'') file = pr.readString();
-          else file = pr.readWhile((c, s) -> !Character.isWhitespace(c));
-          pr.skipWhitespace();
-          if (pr.peek() == '\0') {
-            return new TSVFileNode(file, p.getArity());
-          }
-        }
-      }
-      // check whether bashlog supports builtin predicate b is done in compile(...)
     }
 
     return p;

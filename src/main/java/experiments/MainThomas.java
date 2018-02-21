@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 
 import bashlog.BashlogCompiler;
+import common.parser.ParserReader;
 import common.parser.Program;
 import experiments.lubm.BashlogLUBM;
 
@@ -52,5 +53,15 @@ public class MainThomas {
       });
       System.out.println(sc.compile(sqlProg, new HashSet<>(Arrays.asList("allFacts/3")), relation));*/
     }
+
+    //--------------------------------------------------------------------------------
+
+    String code = "rel(X,Y) :~ cat !old/2 \n" + //
+        "old(X,Y) :~ cat abc.txt \n";
+    p = Program.read(new ParserReader(code));
+    BashlogCompiler bc = BashlogCompiler.prepareQuery(p, "rel");
+    String bash = bc.compile();
+    System.out.println(bash);
+    System.out.println(bc.debugInfo());
   }
 }

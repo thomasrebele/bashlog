@@ -1,10 +1,7 @@
 package common.plan;
 
 import common.parser.*;
-import common.plan.node.BuiltinNode;
-import common.plan.node.JoinNode;
-import common.plan.node.PlanNode;
-import common.plan.node.RecursionNode;
+import common.plan.node.*;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -110,7 +107,22 @@ public class LogicalPlanBuilder {
     });
   }
 
+  private PlanNode getPlanForBashRule(BashRule bashRule, Map<String, PlanNode> deltaNodes) {
+    List<PlanNode> children = new ArrayList<>();
+
+    for (String rel : bashRule.relations) {
+      children.add(getPlanForRelation(rel, deltaNodes));
+    }
+
+    int arity = (int) bashRule.head.getVariables().count();
+    BashNode bn = new BashNode(bashRule.command, bashRule.commandParts, children, arity);
+    return bn;
+  }
+
   private PlanNode getPlanForRule(Rule rule, Map<String, PlanNode> deltaNodes) {
+    if (rule instanceof BashRule) {
+      return getPlanForBashRule((BashRule) rule, deltaNodes);
+    }
     //TODO: check if the rule is sane
     //Variables integer encoding
     Map<Term, Integer> variablesEncoding = new HashMap<>();

@@ -23,6 +23,16 @@ public class ParserReader {
     this.input = input;
   }
 
+  /** Parse string "input", starting at index 'pos' */
+  public ParserReader(String input, int pos) {
+    this.input = input;
+    this.pos = pos;
+  }
+
+  public int pos() {
+    return pos;
+  }
+
   /**
    * Skips comments and tries to find the expected string
    * @return the expected string if found, null otherwise
@@ -159,13 +169,19 @@ public class ParserReader {
     } while (peek() != null && peek() == '%');
   }
 
-  /** Read an integer or floating number. */
-  public Number readNumber() {
+  /** Read an integer number. */
+  public int readInteger() {
     int i = 0;
     while (Character.isDigit(peek())) {
       i *= 10;
       i += read() - '0';
     }
+    return i;
+  }
+
+  /** Read an integer or floating number. */
+  public Number readNumber() {
+    int i = readInteger();
     if (peek() == '.') {
       Double d = (double) i;
       int div = 1;
