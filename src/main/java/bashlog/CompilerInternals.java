@@ -79,10 +79,6 @@ public class CompilerInternals {
           }
         }
       }
-      String snip = snippet.generate(), res = result.generate();
-      if (snip.contains("tmp/mat") && !res.contains("cat tmp")) {
-        System.out.println("here");
-      }
     }
     return result;
   }

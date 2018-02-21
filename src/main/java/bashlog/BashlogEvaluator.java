@@ -64,6 +64,7 @@ public class BashlogEvaluator implements Evaluator {
       if (debug) {
         System.out.println(query);
       }
+      LOG.debug("running " + relation);
       long start = System.nanoTime();
       Process proc = run.exec(new String[] { "/bin/bash", "-c", query });
       BufferedReader br = new BufferedReader(new InputStreamReader(proc.getInputStream()));

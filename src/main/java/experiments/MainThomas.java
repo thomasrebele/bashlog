@@ -5,14 +5,18 @@ import java.io.IOException;
 import java.nio.file.Files;
 
 import bashlog.BashlogCompiler;
-import common.parser.ParserReader;
 import common.parser.Program;
 import experiments.lubm.BashlogLUBM;
 
 public class MainThomas {
 
   public static void main(String[] args) throws IOException {
+    System.out.println("press key");
+    System.in.read();
+    profile();
+  }
 
+  public static void profile() throws IOException {
     // reach
     /*Program p = new Program().loadFile("experiments/edbt2017/reach/bashlog/query-com-orkut.ungraph.txt.gz.txt");
     BashlogCompiler bc = BashlogCompiler.prepareQuery(p, "reach/1");
@@ -28,7 +32,7 @@ public class MainThomas {
     //relation = "takesCourse/2";
     //relation = BashlogLUBM.queries[2];
     //for (int i = 1; i <= 14; i++) {
-    for (int i = 3; i <= 3; i++) {
+    for (int i = 9; i <= 9; i++) {
       relation = BashlogLUBM.queries[i - 1];
       p.rulesForRelation(relation).forEach(r -> System.out.println(r));
       BashlogCompiler bc = BashlogCompiler.prepareQuery(p, relation);

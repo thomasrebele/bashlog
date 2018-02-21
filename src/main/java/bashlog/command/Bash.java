@@ -74,6 +74,11 @@ public interface Bash {
     public void directFiles(List<BashFile> accumulator) {
       args.forEach(b -> b.directFiles(accumulator));
     }
+
+    @Override
+    public String toString() {
+      return generate();
+    }
   }
 
   /** Several commands */
@@ -127,6 +132,10 @@ public interface Bash {
       commands.forEach(b -> b.directFiles(accumulator));
     }
 
+    @Override
+    public String toString() {
+      return generate();
+    }
   }
 
   /** Command sequence where commands are connected with pipes */
@@ -164,6 +173,11 @@ public interface Bash {
 
     public String path() {
       return path;
+    }
+
+    @Override
+    public String toString() {
+      return generate();
     }
   }
 
@@ -208,6 +222,11 @@ public interface Bash {
         content.directFiles(accumulator);
       }
     }
+
+    @Override
+    public String toString() {
+      return generate();
+    }
   }
 
   /** Anything that does not fit in the above classes */
@@ -226,6 +245,11 @@ public interface Bash {
 
     @Override
     public void directFiles(List<BashFile> accumulator) {
+    }
+
+    @Override
+    public String toString() {
+      return generate();
     }
   }
 
