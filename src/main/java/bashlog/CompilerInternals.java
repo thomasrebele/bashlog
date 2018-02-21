@@ -1,11 +1,13 @@
 package bashlog;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import bashlog.command.Bash;
+import bashlog.command.Bash.BashFile;
 import bashlog.translation.Translator;
 import common.plan.node.MaterializationNode;
 import common.plan.node.PlaceholderNode;
@@ -21,6 +23,8 @@ public class CompilerInternals {
 
   /** Maps a materialization node to its temporary file. Reuse nodes use the filename of the materialized relation. */
   Map<PlaceholderNode, String> placeholderToFilename = new HashMap<>();
+
+  Map<String, PlaceholderNode> filenameToPlaceholder = new HashMap<>();
 
   private boolean parallelMaterialization = true;
 
@@ -42,6 +46,7 @@ public class CompilerInternals {
   /** Indicates that plan *node* should take its input from *file* */
   public void registerPlaceholder(PlaceholderNode node, String file) {
     placeholderToFilename.put(node, file);
+    filenameToPlaceholder.put(file, node);
   }
 
   /** Next index for temporary files (materialized, delta, full) */
@@ -59,8 +64,12 @@ public class CompilerInternals {
   Bash waitFor(Bash snippet, List<PlanNode> children) {
     Bash result = snippet;
     if (parallelMaterialization) {
-      for (PlanNode child : children) {
-        if (child instanceof PlaceholderNode) {
+      List<BashFile> files = new ArrayList<>();
+      snippet.directFiles(files);
+
+      for (BashFile f : files) {
+        PlanNode child = filenameToPlaceholder.get(f.path());
+        if (child != null) {
           PlanNode parent = ((PlaceholderNode) child).getParent();
           if (parent instanceof MaterializationNode) {
             String matFile = placeholderToFilename.get(child);
@@ -69,6 +78,10 @@ public class CompilerInternals {
             }
           }
         }
+      }
+      String snip = snippet.generate(), res = result.generate();
+      if (snip.contains("tmp/mat") && !res.contains("cat tmp")) {
+        System.out.println("here");
       }
     }
     return result;

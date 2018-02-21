@@ -35,7 +35,7 @@ public class MultiFilter implements Translator {
 
   @Override
   public List<Class<?>> supports() {
-    return Arrays.asList(MultiFilter.class);
+    return Arrays.asList(MultiFilterNode.class);
   }
 
 }

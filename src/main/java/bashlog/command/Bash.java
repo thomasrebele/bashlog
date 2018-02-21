@@ -2,6 +2,7 @@ package bashlog.command;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Stream;
 
 import common.plan.node.PlanNode;
 
@@ -68,6 +69,11 @@ public interface Bash {
       args.add(other);
       return this;
     }
+
+    @Override
+    public void directFiles(List<BashFile> accumulator) {
+      args.forEach(b -> b.directFiles(accumulator));
+    }
   }
 
   /** Several commands */
@@ -116,6 +122,11 @@ public interface Bash {
       commands.add(new Other(string));
     }
 
+    @Override
+    public void directFiles(List<BashFile> accumulator) {
+      commands.forEach(b -> b.directFiles(accumulator));
+    }
+
   }
 
   /** Command sequence where commands are connected with pipes */
@@ -145,6 +156,15 @@ public interface Bash {
     public void generate(AutoIndent sb) {
       sb.append(path);
     }
+
+    @Override
+    public void directFiles(List<BashFile> accumulator) {
+      accumulator.add(this);
+    }
+
+    public String path() {
+      return path;
+    }
   }
 
   public static class Comment implements Bash {
@@ -157,6 +177,10 @@ public interface Bash {
     @Override
     public void generate(AutoIndent sb) {
       //sb.append(" `# " + comment + "` \\\n");
+    }
+
+    @Override
+    public void directFiles(List<BashFile> accumulator) {
     }
   }
 
@@ -177,6 +201,13 @@ public interface Bash {
       content.generate(sb.indent());
       sb.append(suffix);
     }
+
+    @Override
+    public void directFiles(List<BashFile> accumulator) {
+      if (!prefix.startsWith("<(")) {
+        content.directFiles(accumulator);
+      }
+    }
   }
 
   /** Anything that does not fit in the above classes */
@@ -191,6 +222,10 @@ public interface Bash {
     @Override
     public void generate(AutoIndent sb) {
       sb.append(text);
+    }
+
+    @Override
+    public void directFiles(List<BashFile> accumulator) {
     }
   }
 
@@ -219,4 +254,5 @@ public interface Bash {
     return result;
   }
 
+  public void directFiles(List<BashFile> accumulator);
 }
