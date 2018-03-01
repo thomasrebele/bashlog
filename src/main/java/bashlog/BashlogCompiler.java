@@ -117,7 +117,10 @@ public class BashlogCompiler {
     // use mawk if possible for better performance
     header.append("if type mawk > /dev/null; then awk=\"mawk\"; else awk=\"awk\"; fi\n");
     // tweak sort
-    header.append("sort=\"sort -S25% --parallel=2 \"\n\n");
+    header.append("sort=\"sort \"\n");
+    header.append("check() { grep -- $1 <(sort --help) > /dev/null; }\n");
+    header.append("check \"--buffer-size\" && sort=\"$sort --buffer-size=25% \"\n");
+    header.append("check \"--parallel\"    && sort=\"$sort --parallel=2 \"\n");
 
     CompilerInternals bc = new CompilerInternals(translators);
     Bash e = bc.compile(root);
