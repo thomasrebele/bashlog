@@ -88,7 +88,7 @@ public class CompilerInternals {
         if (parent instanceof MaterializationNode) {
           String matFile = placeholderToFilename.get(child);
           if (parallelMaterialization) {
-            result = new Bash.Command("cat").arg(matFile.replace("tmp/", "tmp/lock_")).arg("1>&2").arg("; ").other(result);
+            result = new Bash.Command("cat").arg(matFile.replace("tmp/", "tmp/lock_")).arg("1>&2").arg("2>/dev/null").arg("; ").other(result);
           }
         }
       }

@@ -113,18 +113,18 @@ public class BashlogCompiler {
     header.append("export LC_ALL=C\n");
     // for temporary files
     header.append("mkdir -p tmp\n");
-    header.append("rm tmp/*\n");
+    header.append("rm -f tmp/*\n");
     // use mawk if possible for better performance
     header.append("if type mawk > /dev/null; then awk=\"mawk\"; else awk=\"awk\"; fi\n");
     // tweak sort
     header.append("sort=\"sort \"\n");
     header.append("check() { grep -- $1 <(sort --help) > /dev/null; }\n");
     header.append("check \"--buffer-size\" && sort=\"$sort --buffer-size=25% \"\n");
-    header.append("check \"--parallel\"    && sort=\"$sort --parallel=2 \"\n");
+    header.append("check \"--parallel\"    && sort=\"$sort --parallel=2 \"\n\n");
 
     CompilerInternals bc = new CompilerInternals(translators);
     Bash e = bc.compile(root);
-    String result = header.toString() + e.generate() + "; rm tmp/*\n";
+    String result = header.toString() + e.generate() + "\n\n rm -f tmp/*\n";
 
     return result;
   }
