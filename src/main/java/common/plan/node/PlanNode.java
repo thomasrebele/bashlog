@@ -100,7 +100,11 @@ public interface PlanNode {
    * Convenience methods to wrap a plan node in another one
    */
   default PlanNode project(int[] projection, Comparable<?>[] constants) {
-    if(isEmpty() || Tools.isIdentity(projection, getArity())) {
+    if (isEmpty()) {
+      if (Arrays.stream(projection).allMatch(i -> i >= 0)) {
+        return this;
+      }
+    } else if (Tools.isIdentity(projection, getArity())) {
       return this;
     }
 

@@ -54,7 +54,10 @@ public class IntegrationTests {
 
   @Test
   public void testFact() throws Exception {
-    Program program = Program.read(new ParserReader("type(\"albert\", \"person\"). people(X) :- type(X, \"person\"). "));
+    Program program = Program.read(new ParserReader("type(\"albert\", \"person\"). type(\"max\", \"person\"). people(X) :- type(X, \"person\"). "));
+
+    FactsSet result = eval.evaluate(program, new SimpleFactsSet(), Tools.set("people/1"));
+    Assert.assertEquals(2, result.getByRelation("people/1").count());
   }
 
   @Test

@@ -63,7 +63,8 @@ public class BashlogCompiler {
         new bashlog.translation.ProjectFilter(),
         new bashlog.translation.Recursion(),
         new bashlog.translation.Sort(),
-        new bashlog.translation.Union()
+        new bashlog.translation.Union(),
+        new bashlog.translation.Fact()
     ).forEach(t -> t.supports().forEach(c -> translators.put(c, t)));
     
     root = planNode;

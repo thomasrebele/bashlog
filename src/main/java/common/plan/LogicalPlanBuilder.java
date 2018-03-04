@@ -123,6 +123,14 @@ public class LogicalPlanBuilder {
     if (rule instanceof BashRule) {
       return getPlanForBashRule((BashRule) rule, deltaNodes);
     }
+    if (rule.body.size() == 0) { // facts
+      if (Arrays.stream(rule.head.args).anyMatch(t -> !(t instanceof Constant<?>))) {
+        throw new UnsupportedOperationException("fact cannot contain variable: " + rule.head);
+      }
+      PlanNode result = new FactNode(
+          (Comparable<?>[]) Arrays.stream(rule.head.args).map(t -> (String) ((Constant<?>) t).getValue()).toArray(String[]::new));
+      return result;
+    }
     //TODO: check if the rule is sane
     //Variables integer encoding
     Map<Term, Integer> variablesEncoding = new HashMap<>();
