@@ -34,7 +34,7 @@ public class Rule implements Parseable {
       return new Rule(head);
     }
 
-    String found = pr.expect(":-", ":~", "<-", "<~");
+    String found = pr.expect(":-", ":~", "<-", "<~", ".");
     switch (found) {
       case ":-":
       case "<-":
@@ -55,6 +55,8 @@ loop:   do {
       case ":~":
       case "<~":
         return BashRule.read(pr, supportedFeatures, head);
+      case ".":
+        break;
     }
     Set<Variable> headVars = head.getVariables().collect(Collectors.toSet());
     headVars.removeAll(body.stream().flatMap(ct -> ct.getVariables()).collect(Collectors.toList()));
@@ -101,11 +103,13 @@ loop:   do {
     String[] rel = relation.split("/");
     int arity = Integer.parseInt(rel[1]);
     Term[] args = IntStream.range(0, arity).mapToObj(tmpI -> new Variable("tmp_" + tmpI)).toArray(Term[]::new);
-    CompoundTerm ct = new CompoundTerm("bash_command");
+    return BashRule.read(new ParserReader(cmd), Parseable.ALL_FEATURES, new CompoundTerm(rel[0], args));
+
+    /*CompoundTerm ct = new CompoundTerm("bash_command");
     Constant<String> c = new Constant<>(cmd);
     ct.args = new Term[] { c, new TermList(args) };
     Rule r = new Rule(new CompoundTerm(rel[0], args), ct);
-    return r;
+    return r;*/
   }
 
 }

@@ -5,6 +5,7 @@ import java.util.List;
 
 import bashlog.CompilerInternals;
 import bashlog.command.Bash;
+import bashlog.command.Bash.BashFile;
 import common.plan.node.MaterializationNode;
 import common.plan.node.PlanNode;
 
@@ -22,19 +23,33 @@ public class Materialization implements Translator {
     result.info(planNode, "");
 
     Bash reused = bc.compile(m.getReusedPlan());
-    if (bc.parallelMaterialization()) {
-      String lockFile = matFile.replaceAll("tmp/", "tmp/lock_");
-      String doneFile = matFile.replaceAll("tmp/", "tmp/done_");
-      reused = reused.wrap("mkfifo " + lockFile + "; ( ", //
-          " > " + matFile + //
-              "; mv " + lockFile + " " + doneFile + //
-              "; cat " + doneFile + " > /dev/null & " + //
-              "exec 3> " + doneFile + "; exec 3>&-;" + //
-              " ) & ");
+    if (reused instanceof BashFile) {
+      BashFile rf = (BashFile) reused;
+      bc.registerPlaceholder(m.getReuseNode(), rf.getPath());
     } else {
-      reused = reused.wrap("", " > " + matFile);
+      if (bc.parallelMaterialization()) {
+        String lockFile = matFile.replaceAll("tmp/", "tmp/lock_");
+        String doneFile = matFile.replaceAll("tmp/", "tmp/done_");
+        Bash.CommandSequence cs = new Bash.CommandSequence();
+        /*cs.other("mkfifo " + lockFile + "; ( ");
+        cs.add(reused);
+        cs.other(" > " + matFile + //
+          "; mv " + lockFile + " " + doneFile + //
+          "; cat " + doneFile + " > /dev/null & " + //
+          "exec 3> " + doneFile + "; exec 3>&-;" + //
+          " ) & ");
+        reused = cs;*/
+        reused = reused.wrap("mkfifo " + lockFile + "; ( ", //
+            " > " + matFile + //
+                "; mv " + lockFile + " " + doneFile + //
+                "; cat " + doneFile + " > /dev/null & " + //
+                "exec 3> " + doneFile + "; exec 3>&-;" + //
+                " ) & ");
+      } else {
+        reused = reused.wrap("", " > " + matFile);
+      }
+      result.add(reused);
     }
-    result.add(reused);
 
     if (!(m.getMainPlan() instanceof MaterializationNode)) {
       result.other("\n# plan");

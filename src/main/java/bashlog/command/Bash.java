@@ -134,7 +134,7 @@ public interface Bash {
   /** Represents a file */
   public static class BashFile implements Bash {
 
-    String path;
+    final String path;
 
     public BashFile(String path) {
       if (path == null) throw new IllegalArgumentException("file cannot be null");
@@ -144,6 +144,10 @@ public interface Bash {
     @Override
     public void generate(AutoIndent sb) {
       sb.append(path);
+    }
+
+    public String getPath() {
+      return path;
     }
   }
 

@@ -53,6 +53,11 @@ public class IntegrationTests {
   }
 
   @Test
+  public void testFact() throws Exception {
+    Program program = Program.read(new ParserReader("type(\"albert\", \"person\"). people(X) :- type(X, \"person\"). "));
+  }
+
+  @Test
   public void testLinearClosure() throws Exception {
     Program program = Program.read(new ParserReader(
             "ancestor(X,Y) :- parent(X,Y). ancestor(X,Z) :- ancestor(X,Y), parent(Y,Z)."

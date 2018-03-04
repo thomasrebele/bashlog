@@ -12,7 +12,6 @@ import org.slf4j.LoggerFactory;
 import common.Evaluator;
 import common.FactsSet;
 import common.SimpleFactsSet;
-import common.parser.Parseable;
 import common.parser.ParserReader;
 import common.parser.Program;
 import common.parser.Rule;
@@ -25,18 +24,20 @@ public class BashlogEvaluator implements Evaluator {
 
   String workingDir;
 
+  private boolean debug = false;
+
   public BashlogEvaluator(String workingDir) {
     new File(workingDir).mkdirs();
     this.workingDir = workingDir;
   }
 
-  @Override
-  public FactsSet evaluate(Program program, FactsSet facts, Set<String> relationsToOutput) throws Exception {
-    return evaluate(program, facts, relationsToOutput, false);
+  public BashlogEvaluator(String workingDir, boolean debug) {
+    new File(workingDir).mkdirs();
+    this.workingDir = workingDir;
+    this.debug = debug;
   }
 
-  public FactsSet evaluate(Program program, FactsSet facts, Set<String> relationsToOutput, boolean debug) throws IOException {
-
+  public FactsSet evaluate(Program program, FactsSet facts, Set<String> relationsToOutput) throws IOException {
     program = program.copy();
     for (String relation : facts.getRelations()) {
       String path = workingDir + "/" + relation.replace("/", "_");
@@ -56,13 +57,18 @@ public class BashlogEvaluator implements Evaluator {
       // construct bash command 'cat $path'
       program.addRule(Rule.bashRule(relation, "cat " + path));
     }
+    if (debug) {
+      System.out.println(program);
+    }
 
     SimpleFactsSet result = new SimpleFactsSet();
     for (String relation : relationsToOutput) {
       Runtime run = Runtime.getRuntime();
-      String query = BashlogCompiler.compileQuery(program, relation);
+      BashlogCompiler bc = BashlogCompiler.prepareQuery(program, relation);
+      String query = bc.compile();
       if (debug) {
         System.out.println(query);
+        System.out.println(bc.debugInfo());
       }
       LOG.debug("running " + relation);
       long start = System.nanoTime();
@@ -78,44 +84,7 @@ public class BashlogEvaluator implements Evaluator {
     return result;
   }
 
-  public Evaluator debug() {
-    return new Evaluator() {
-      
-      @Override
-      public FactsSet evaluate(Program program, FactsSet facts, Set<String> relationsToOutput) throws Exception {
-        return BashlogEvaluator.this.evaluate(program, facts, relationsToOutput, true);
-      }
-    };
-    
-  }
-  
-  @Override
-  public void debug(Program program, FactsSet facts, Set<String> relationsToOutput) throws Exception {
-    evaluate(program, facts, relationsToOutput, true);
-  }
-
   public static void main(String[] args) throws Exception {
-    /*    args = new String[] { "data/bashlog/recursion/datalog.txt", "tc/2" };
-    //args = new String[] { "data/bashlog/fast-join/datalog.txt", "main/3" };
-    //args = new String[] { "data/bashlog/fast-join/datalog.txt", "test/3" };
-    //args = new String[] { "data/bashlog/wikidata/people.txt", "instance/2" };
-    //args = new String[] { "data/bashlog/wikidata/people.txt", "subclassTC/2" };
-    args = new String[] { "data/bashlog/wikidata/people.txt", "humanClasses/1" };
-    args = new String[] { "data/bashlog/wikidata/people.txt", "people/1" };
-    args = new String[] { "data/bashlog/edbt2017/yago/yago-bashlog.txt", "people/1" };
-    
-    String lubm = lubmScript("/home/tr/extern/data/bashlog/lubm/1/");
-    System.out.println(lubm);
-    String scriptDir = "data/bashlog/edbt2017/lubm/bashlog/";
-    new File(scriptDir).mkdirs();
-    String[] files = { "data/lubm/tbox.txt", "data/lubm/queries.txt" };
-    for (int i = 1; i <= 14; i++) {
-      Program p = program(files);
-      p.addRules(Program.read(new ParserReader(lubm)));
-      String relation = "query" + i + "/1";
-      String script = compileQuery(p, relation);
-      Files.write(Paths.get(scriptDir + "query" + i + ".sh"), script.getBytes());
-    }*/
 
     String src = "rule(X) :- rel1(X), rel2(Y), rel3(X,Y).\n cp(X,Y) :- rel1(X), rel2(Y). ";
     src += "rule2(X) :- rel3(X, Y), rel3(Z, W), rel1(X), rel2(W).";

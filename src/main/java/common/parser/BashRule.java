@@ -56,6 +56,13 @@ public class BashRule extends Rule {
     return new BashRule(head, command, relations, commandParts);
   }
 
+  @Override
+  public String toString() {
+    StringBuilder b = new StringBuilder();
+    b.append(head).append(" :- ").append(command);
+    return b.toString();
+  }
+
   public static void main(String[] args) {
     ParserReader pr = new ParserReader("cat !abc xyz !def 123");
     BashRule br = read(pr, new HashSet<>(), new CompoundTerm("abc"));
