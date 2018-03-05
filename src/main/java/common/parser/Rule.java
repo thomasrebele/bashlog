@@ -38,17 +38,17 @@ public class Rule implements Parseable {
     switch (found) {
       case ":-":
       case "<-":
-loop:   do {
+        loop: do {
           CompoundTerm b = CompoundTerm.read(pr, variables, supportedFeatures);
           if (b == null) {
-            pr.error(new String[] {"expected: term(...)"}, null);
+            pr.error(new String[] { "expected: term(...)" }, null);
           }
           body.add(b);
-          switch(pr.expect(",", ".")) {
-          case ",":
-            break;
-          case ".":
-            break loop;
+          switch (pr.expect(",", ".")) {
+            case ",":
+              break;
+            case ".":
+              break loop;
           }
         } while (true);
         break;
@@ -60,19 +60,22 @@ loop:   do {
     }
     Set<Variable> headVars = head.getVariables().collect(Collectors.toSet());
     headVars.removeAll(body.stream().flatMap(ct -> ct.getVariables()).collect(Collectors.toList()));
-    if(headVars.size() > 0) {
+    if (headVars.size() > 0) {
       pr.error("head variable(s) not used in body: " + headVars.stream().map(v -> v.name).collect(Collectors.joining(", ")), null);
     }
-    
+
     return new Rule(head, body);
   }
 
   @Override
   public String toString() {
     StringBuilder b = new StringBuilder();
-    b.append(head).append(" :- ");
-    for (CompoundTerm a : body) {
-      b.append(a).append(", ");
+    b.append(head);
+    if (body.size() > 0) {
+      b.append(" :- ");
+      for (CompoundTerm a : body) {
+        b.append(a).append(", ");
+      }
     }
     if (!body.isEmpty()) b.setLength(b.length() - 2);
     b.append(".");

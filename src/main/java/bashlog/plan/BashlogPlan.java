@@ -2,10 +2,7 @@ package bashlog.plan;
 
 import java.util.List;
 
-import bashlog.plan.*;
 import common.Tools;
-import common.parser.Constant;
-import common.parser.ParserReader;
 import common.plan.node.*;
 import common.plan.optimizer.Optimizer;
 
@@ -24,6 +21,13 @@ public class BashlogPlan implements Optimizer {
   }
 
   private PlanNode prepareSortJoin(PlanNode p, int[] columns) {
+    if(columns.length == 0) {
+      columns = Tools.sequence(p.getArity() + 1);
+      Comparable<?>[] cnst = new Comparable<?>[p.getArity() + 1];
+      columns[cnst.length - 1] = -1;
+      cnst[cnst.length - 1] = "cnst";
+      return p.project(columns, cnst);
+    }
     if (columns.length == 1) {
       return new SortNode(p, columns);
     }

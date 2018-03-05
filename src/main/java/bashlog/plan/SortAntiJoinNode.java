@@ -1,7 +1,5 @@
 package bashlog.plan;
 
-import java.util.Arrays;
-
 import common.Tools;
 import common.plan.node.PlanNode;
 
@@ -13,13 +11,13 @@ public class SortAntiJoinNode extends SortJoinNode {
   }
 
   public SortAntiJoinNode(PlanNode left, PlanNode right, int[] leftJoinProjection, int[] outputProjection) {
-    super(left, right, leftJoinProjection, new int[] { 0 }, outputProjection);
+    super(left, right, leftJoinProjection, leftJoinProjection.length == 1 ? new int[] { 0 } : new int[] {}, outputProjection);
     if (leftJoinProjection.length > 1) throw new UnsupportedOperationException("sort join does not support sorting on more than one column");
   }
 
   @Override
   public String operatorString() {
-    return super.operatorString().replaceFirst("join_", "antijoin_sort_") + " out " + Arrays.toString(outputProjection);
+    return super.operatorString().replaceFirst("⋈_", "▷_");
   }
 
   @Override

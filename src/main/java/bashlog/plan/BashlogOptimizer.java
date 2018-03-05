@@ -47,6 +47,9 @@ public class BashlogOptimizer implements Optimizer {
           for (int i = 0; i < projection.length; i++) {
             projection[i] = sj.getOutputProjection()[projection[i]];
           }
+          if (p.getTable() instanceof SortAntiJoinNode) {
+            return new SortAntiJoinNode(sj.getLeft(), sj.getRight(), sj.getLeftProjection(), projection);
+          }
           return new SortJoinNode(sj.getLeft(), sj.getRight(), sj.getLeftProjection(), sj.getRightProjection(), projection);
         }
       }

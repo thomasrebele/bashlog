@@ -15,17 +15,21 @@ public class Join implements Translator {
   @Override
   public Bash translate(PlanNode planNode, CompilerInternals bc) {
     SortJoinNode j = (SortJoinNode) planNode;
-    int colLeft, colRight;
-    colLeft = j.getLeftProjection()[0] + 1;
-    colRight = j.getRightProjection()[0] + 1;
 
     Bash.Command result = new Bash.Command("join");
     if (j instanceof SortAntiJoinNode) {
       result.arg(" -v 1 ");
     }
     result.arg("-t $'\\t'");
-    result.arg("-1 " + colLeft);
-    result.arg("-2 " + colRight);
+
+    if (j.getLeftProjection().length > 0) {
+      int colLeft = j.getLeftProjection()[0] + 1;
+      result.arg("-1 " + colLeft);
+    }
+    if (j.getRightProjection().length > 0) {
+      int colRight = j.getRightProjection()[0] + 1;
+      result.arg("-2 " + colRight);
+    }
 
     StringBuilder outCols = new StringBuilder();
     for (int i = 0; i < j.getOutputProjection().length; i++) {
