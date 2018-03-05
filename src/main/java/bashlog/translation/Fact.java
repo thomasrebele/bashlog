@@ -6,8 +6,6 @@ import java.util.stream.Collectors;
 
 import bashlog.CompilerInternals;
 import bashlog.command.Bash;
-import bashlog.plan.SortAntiJoinNode;
-import bashlog.plan.SortJoinNode;
 import common.plan.node.FactNode;
 import common.plan.node.PlanNode;
 
@@ -20,9 +18,10 @@ public class Fact implements Translator {
 
     Bash.CommandSequence result = new Bash.CommandSequence();
     for (Comparable<?>[] fact : j.getFacts()) {
-      Bash.Command c = new Bash.Command("echo ");
-      String arg = "\"" + Arrays.stream(fact).map(f -> f.toString()).collect(Collectors.joining("\t")) + "\"";
-      c.arg(arg);
+      String content = Arrays.stream(fact).map(f -> f.toString()).collect(Collectors.joining("\t"));
+
+      Bash.Command c = new Bash.Command("cat ");
+      c.heredoc(new Bash.Heredoc("EOF", content));
       result.add(c);
     }
     return result;

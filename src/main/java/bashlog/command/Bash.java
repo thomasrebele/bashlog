@@ -25,6 +25,8 @@ public interface Bash {
 
     List<Bash> args = new ArrayList<>(); // arguments
 
+    List<Heredoc> docs = new ArrayList<>();
+
     public Command(String cmd) {
       this.cmd = cmd;
     }
@@ -50,6 +52,11 @@ public interface Bash {
       return this;
     }
 
+    public void heredoc(Heredoc doc) {
+      arg("<<" + doc.eof);
+      docs.add(doc);
+    }
+
     @Override
     public void generate(AutoIndent sb) {
       sb.append(cmd);
@@ -62,12 +69,37 @@ public interface Bash {
           b.generate(sb);
         }
       }
+      for (Heredoc doc : docs) {
+        doc.generate(sb);
+      }
+      if (docs.size() > 0) sb.append("\n");
     }
 
     public Bash other(Bash other) {
       args.add(other);
       return this;
     }
+  }
+
+  public static class Heredoc implements Bash {
+
+    String content;
+
+    String eof;
+
+    public Heredoc(String eof, String content) {
+      this.content = content;
+      this.eof = eof;
+    }
+
+    @Override
+    public void generate(AutoIndent sb) {
+      sb.appendRaw("\n");
+      sb.appendRaw(content);
+      if (!content.endsWith("\n")) sb.appendRaw("\n");
+      sb.appendRaw(eof);
+    }
+
   }
 
   /** Several commands */
