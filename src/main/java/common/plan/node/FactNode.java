@@ -11,6 +11,14 @@ public class FactNode implements PlanNode {
     facts.add(fields);
   }
 
+  public FactNode(List<FactNode> list) {
+    facts = new ArrayList<>();
+    for (FactNode fn : list) {
+      facts.addAll(fn.facts);
+    }
+    // TODO: check arity
+  }
+
   public List<Comparable<?>[]> getFacts() {
     return facts;
   }

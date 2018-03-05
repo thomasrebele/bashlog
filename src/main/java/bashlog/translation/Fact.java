@@ -17,13 +17,14 @@ public class Fact implements Translator {
     FactNode j = (FactNode) planNode;
 
     Bash.CommandSequence result = new Bash.CommandSequence();
+    Bash.Command c = new Bash.Command("cat ");
+    StringBuilder content = new StringBuilder();
     for (Comparable<?>[] fact : j.getFacts()) {
-      String content = Arrays.stream(fact).map(f -> f.toString()).collect(Collectors.joining("\t"));
-
-      Bash.Command c = new Bash.Command("cat ");
-      c.heredoc(new Bash.Heredoc("EOF", content));
-      result.add(c);
+      content.append(Arrays.stream(fact).map(f -> f.toString()).collect(Collectors.joining("\t")));
+      content.append("\n");
     }
+    c.heredoc(new Bash.Heredoc("EOF", content.toString()));
+    result.add(c);
     return result;
   }
 

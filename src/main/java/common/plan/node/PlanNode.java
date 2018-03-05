@@ -140,16 +140,25 @@ public interface PlanNode {
    * Convenience methods to wrap a plan node in another one
    */
   default PlanNode union(PlanNode other) {
+    return union(Collections.singletonList(other));
+  }
+
+  /**
+   * Convenience methods to wrap a plan node in another one
+   */
+  default PlanNode union(Collection<PlanNode> others) {
     Set<PlanNode> elements = new HashSet<>();
     if (this instanceof UnionNode) {
       elements.addAll(this.children());
     } else {
       elements.add(this);
     }
-    if (other instanceof UnionNode) {
-      elements.addAll(other.children());
-    } else {
-      elements.add(other);
+    for (PlanNode other : others) {
+      if (other instanceof UnionNode) {
+        elements.addAll(other.children());
+      } else {
+        elements.add(other);
+      }
     }
     switch (elements.size()) {
       case 0:
