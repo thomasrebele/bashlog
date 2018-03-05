@@ -30,7 +30,7 @@ Please call it as follows:
 
 <br>
 
-<code>curl --data-binary @example.dlog ${url}\?query=<i>predicate</i></code>
+<code>curl --data-binary @example.dlog ${url}\?query=<i style="color:red;">predicate</i></code>
 
 where <code class="inline">example.dlog</code> contains your datalog program, here an example:
 
@@ -42,7 +42,7 @@ main(X) :- facts(X, _, "person").
 
 You can save it into a file with this command:
 
-<code>curl --data-binary @example.dlog ${url}\?query=<i>predicate</i> &gt; query.sh</code>
+<code>curl --data-binary @example.dlog ${url}\?query=<i style="color:red;">predicate</i> &gt; query.sh</code>
 
 Execute it with the command <code class="inline">bash query.sh</code>.
 
