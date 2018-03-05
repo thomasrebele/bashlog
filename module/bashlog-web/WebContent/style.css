@@ -22,7 +22,7 @@ main {
 .grail, .grail-body { display: flex; flex-direction: column; }
 .grail-content { flex: 1; }
 .grail-nav { order: -1; }
-@media ( min-width : 500px) {
+@media ( min-width : 700px) {
 	.grail-body { flex-direction: row; flex: 1; }
 	.grail-content { flex: 1; margin-left:40px; margin-right:40px; }
 }
@@ -76,4 +76,8 @@ button {
 	border-width: 2px;
 	border-style: solid;
 	border-radius: 12px;
+}
+
+ul li {
+	margin: 0 10px 10px 0;
 }

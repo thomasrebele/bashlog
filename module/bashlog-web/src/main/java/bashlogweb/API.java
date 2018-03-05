@@ -18,6 +18,8 @@ import common.parser.Program;
 @WebServlet("/api")
 public class API extends HttpServlet {
 
+  private static final long serialVersionUID = -4871591970306811662L;
+
   @Override
   protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
     doPost(req, resp);
@@ -37,6 +39,7 @@ public class API extends HttpServlet {
     }
 
     req.setAttribute("datalog", datalog);
+    req.setAttribute("url", req.getRequestURL().toString().replace(".jsp", ""));
     req.getRequestDispatcher("api.jsp").forward(req, resp);
   }
 

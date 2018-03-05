@@ -1,35 +1,54 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8"
     pageEncoding="UTF-8"%>
-<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<!doctype html>
 <html>
 <head>
-<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-<title>BashlogWeb API</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=2.0">
+<title>Bashlog API</title>
 <!-- <link rel="stylesheet" type="text/css" href="reset.css"> -->
 <link rel="stylesheet" type="text/css" href="style.css">
+
 </head>
-<body>
+<body style="zoom: 120%;">
 
 <header>
-Bash Datalog<br/>
+<span style="font-weight: bold; font-size: 20px;">Bash Datalog</span><br/>
 Answering Datalog Queries with Unix Shell Commands
 </header>
-<main>
 
-A simple API for obtaining bashlog scripts. Please call it as follows:
+
+<main class="grail">
+	<div class="grail-body">
+
+<div class="grail-content">
+
+A simple API for transforming datalog to bash scripts. 
+For the syntax of the datalog dialect, see the <a href="./">main page</a> <br><br>
+
+Please call it as follows:
 
 <br>
 
-<code>curl --data-binary @example.dlog <%=request.getRequestURL() %>\?query=<i>predicate</i></code>
+<code>curl --data-binary @example.dlog ${url}\?query=<i>predicate</i></code>
 
-Where <code class="inline">example.dlog</code> contains your datalog program, here an example:
+where <code class="inline">example.dlog</code> contains your datalog program, here an example:
 
 <code>facts(S,P,O) :~ cat ~/facts.tsv
 main(X) :- facts(X, _, "person").
 </code>
 
-For the syntax of the datalog dialect see the <a href="./">main page</a>
+<br>
 
+You can save it into a file with this command:
+
+<code>curl --data-binary @example.dlog ${url}\?query=<i>predicate</i> &gt; query.sh</code>
+
+Execute it with the command <code class="inline">bash query.sh</code>.
+
+</div>
+
+</div>
 </main>
 </body>
 </html>
