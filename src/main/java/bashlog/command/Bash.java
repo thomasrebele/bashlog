@@ -3,6 +3,7 @@ package bashlog.command;
 import java.util.ArrayList;
 import java.util.List;
 
+import common.AutoIndent;
 import common.plan.node.PlanNode;
 
 /**
