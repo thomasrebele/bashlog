@@ -24,8 +24,6 @@ public class BashlogCompiler {
 
   private static final Logger LOG = LoggerFactory.getLogger(BashlogCompiler.class);
 
-  final static String INDENT = "    ";
-
   public static final Set<String> BASHLOG_PARSER_FEATURES = new HashSet<>(Arrays.asList());
 
   /** Query plan which should be translated */
