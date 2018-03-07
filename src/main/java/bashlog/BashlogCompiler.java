@@ -11,6 +11,7 @@ import bashlog.plan.BashlogOptimizer;
 import bashlog.plan.BashlogPlan;
 import bashlog.plan.SortNode;
 import bashlog.translation.Translator;
+import common.CompilerTools;
 import common.parser.Program;
 import common.plan.LogicalPlanBuilder;
 import common.plan.node.*;
@@ -33,7 +34,9 @@ public class BashlogCompiler {
   private String bash = null;
 
   /** Save debug information (query plans)*/
-  private String debug = "";
+  private StringBuilder debugBuilder = new StringBuilder();
+
+  private String debug;
 
   private List<List<Optimizer>> stages = Arrays.asList(//
       Arrays.asList(new CombineFacts(), new SimplifyRecursion(), new PushDownJoin(), new ReorderJoinLinear(), new PushDownFilterAndProject(),
@@ -67,30 +70,14 @@ public class BashlogCompiler {
     ).forEach(t -> t.supports().forEach(c -> translators.put(c, t)));
     
     root = planNode;
-    debug += "orig\n";
-    debug += root.toPrettyString() + "\n";
+    debugBuilder.append("orig\n");
+    debugBuilder.append(root.toPrettyString() + "\n");
     root = new SortNode(root, null);
 
+
     List<String> stageNames = Arrays.asList("simplification", "optimization", "transforming to bashlog plan");
-    Iterator<String> it = stageNames.iterator();
-    PlanValidator check = new PlanValidator();
-    for (List<Optimizer> stage : stages) {
-      debug += "\n\n" + (it.hasNext() ? it.next() : "") + "\n";
-      for (Optimizer o : stage) {
-        root = o.apply(root);
-
-        debug += "applied " + o.getClass() + " \n";
-        debug += root.toPrettyString() + "\n";
-
-        try {
-          check.apply(root);
-        } catch (Exception e) {
-          LOG.error(e.getMessage());
-          debug += "WARNING: " + e.getMessage();
-        }
-      }
-    }
-    debug = "#" + debug.replaceAll("\n", "\n# ");
+    root = CompilerTools.applyOptimizer(root, stageNames, stages, debugBuilder);
+    debug = "#" + debugBuilder.toString().replaceAll("\n", "\n# ");
   }
 
   public String compile() {
