@@ -74,6 +74,7 @@ public abstract class LUBMTest {
           check.onceList(line);
         }
       }
+      check.ignoreTooOften();
 
       String prefix = "query" + i + "/";
       for (int j = 0; j < 5; j++) {
