@@ -10,8 +10,8 @@ public class CatToFile implements Optimizer {
   @Override
   public PlanNode apply(PlanNode t) {
     return t.transform(pn -> {
-      if (t instanceof BashNode) {
-        String cmd = ((BashNode) t).getCommand();
+      if (pn instanceof BashNode) {
+        String cmd = ((BashNode) pn).getCommand();
         // TODO: support multiple file names
         if (cmd.trim().startsWith("cat ")) {
           ParserReader pr = new ParserReader(cmd);
@@ -23,7 +23,7 @@ public class CatToFile implements Optimizer {
           pr.skipWhitespace();
           if (pr.peek() == '\0') {
             if (!file.startsWith("!")) {
-              return new TSVFileNode(file, t.getArity());
+              return new TSVFileNode(file, pn.getArity());
             }
           }
         }
