@@ -109,7 +109,8 @@ public abstract class LUBMTest {
 
   @Test
   public void query4() throws Exception {
-    query(4);
+    throw new UnsupportedOperationException();
+    //query(4);
   }
 
   @Test
@@ -124,7 +125,8 @@ public abstract class LUBMTest {
 
   @Test
   public void query7() throws Exception {
-    query(7);
+    throw new UnsupportedOperationException();
+    //query(7);
   }
 
   @Test
@@ -134,7 +136,8 @@ public abstract class LUBMTest {
 
   @Test
   public void query9() throws Exception {
-    query(9);
+    throw new UnsupportedOperationException();
+    //query(9);
   }
 
   @Test
