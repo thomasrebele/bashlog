@@ -4,7 +4,6 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import bashlog.command.Bash;
-import bashlog.command.Bash.BashFile;
 import bashlog.translation.Translator;
 import common.plan.node.MaterializationNode;
 import common.plan.node.PlaceholderNode;
