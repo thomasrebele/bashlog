@@ -72,22 +72,21 @@ public class LogicalPlanBuilder {
       });
 
       //We map exit rules
-      PlanNode exitPlan = exitRules.stream()
+      PlanNode plan = exitRules.stream()
               .map(rule -> getPlanForRule(rule, filteredDeltaNode))
               .reduce(PlanNode::union)
               .orElseGet(() -> PlanNode.empty(CompoundTerm.parseRelationArity(relation)));
 
-      if (recursiveRules.isEmpty()) {
-        return exitPlan; //No recursion
+      if (!recursiveRules.isEmpty()) {
+        //We build recursion
+        RecursionNode recursionPlan = plan.recursion();
+        plan = recursionPlan;
+        Map<String, PlanNode> newDeltaNodes = withEntry(filteredDeltaNode, relation, recursionPlan.getDelta());
+        recursiveRules.forEach(rule ->
+                recursionPlan.addRecursivePlan(introduceFullRecursion(getPlanForRule(rule, newDeltaNodes), recursionPlan.getDelta(), recursionPlan.getFull()))
+        );
       }
-
-      //We build recursion
-      RecursionNode recursionPlan = exitPlan.recursion();
-      Map<String, PlanNode> newDeltaNodes = withEntry(filteredDeltaNode, relation, recursionPlan.getDelta());
-      recursiveRules.forEach(rule ->
-          recursionPlan.addRecursivePlan(introduceFullRecursion(getPlanForRule(rule, newDeltaNodes), recursionPlan.getDelta(), recursionPlan.getFull()))
-      );
-      planForRelation.put(relationWithDeltaNodes, recursionPlan);
+      planForRelation.put(relationWithDeltaNodes, plan);
     }
     return planForRelation.get(relationWithDeltaNodes);
   }
