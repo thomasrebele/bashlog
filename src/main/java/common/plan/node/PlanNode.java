@@ -6,9 +6,6 @@ import java.util.*;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 /**
  * A plan node (like a union or a join) following relational algebra.
  * Create a new implementation of this interface to create a new kind of node.
@@ -17,8 +14,6 @@ import org.slf4j.LoggerFactory;
  * LogicalPlanBuilder builds a plan from a Program
  */
 public interface PlanNode {
-
-  static final Logger LOG = LoggerFactory.getLogger(PlanNode.class);
 
   /**
    * Number of columns of the resulting table
@@ -100,10 +95,8 @@ public interface PlanNode {
    * Convenience methods to wrap a plan node in another one
    */
   default PlanNode project(int[] projection, Comparable<?>[] constants) {
-    if (isEmpty()) {
-      if (Arrays.stream(projection).allMatch(i -> i >= 0)) {
-        return this;
-      }
+    if (this.isEmpty()) {
+      return empty(Math.max(projection.length, constants.length));
     } else if (Tools.isIdentity(projection, getArity())) {
       return this;
     }
@@ -188,7 +181,6 @@ public interface PlanNode {
      *
      * @param originalNode   the node that is currently being transformed
      * @param transformed    a new node similar to originalNode (but new instance), where originalNode's children were already transformed
-     * @param originalParent
      * @return replacement for current node
      */
     PlanNode apply(PlanNode originalNode, PlanNode transformed, PlanNode originalParent);
@@ -290,8 +282,6 @@ public interface PlanNode {
 
   /**
    * Determine whether two plans are equal
-   * @param other
-   * @param assumedEqualities
    * @return true if equal
    */
   default boolean equals(Object other, Map<PlanNode, PlanNode> assumedEqualities) {
@@ -303,7 +293,6 @@ public interface PlanNode {
    * Height of this plan tree
    */
   default int height() {
-    if (children().size() == 0) return 0;
-    return children().stream().mapToInt(c -> c.height()).max().getAsInt() + 1;
+    return children().isEmpty() ? 0 : children().stream().mapToInt(PlanNode::height).max().getAsInt() + 1;
   }
 }

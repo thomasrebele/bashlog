@@ -72,22 +72,21 @@ public class LogicalPlanBuilder {
       });
 
       //We map exit rules
-      PlanNode exitPlan = exitRules.stream()
+      PlanNode plan = exitRules.stream()
               .map(rule -> getPlanForRule(rule, filteredDeltaNode))
               .reduce(PlanNode::union)
-              .orElseGet(() -> PlanNode.empty(Integer.parseInt(relation.split("/")[1])));
+              .orElseGet(() -> PlanNode.empty(CompoundTerm.parseRelationArity(relation)));
 
-      if (recursiveRules.isEmpty()) {
-        return exitPlan; //No recursion
+      if (!recursiveRules.isEmpty()) {
+        //We build recursion
+        RecursionNode recursionPlan = plan.recursion();
+        plan = recursionPlan;
+        Map<String, PlanNode> newDeltaNodes = withEntry(filteredDeltaNode, relation, recursionPlan.getDelta());
+        recursiveRules.forEach(rule ->
+                recursionPlan.addRecursivePlan(introduceFullRecursion(getPlanForRule(rule, newDeltaNodes), recursionPlan.getDelta(), recursionPlan.getFull()))
+        );
       }
-
-      //We build recursion
-      RecursionNode recursionPlan = exitPlan.recursion();
-      Map<String, PlanNode> newDeltaNodes = withEntry(filteredDeltaNode, relation, recursionPlan.getDelta());
-      recursiveRules.forEach(rule ->
-              recursionPlan.addRecursivePlan(introduceFullRecursion(getPlanForRule(rule, newDeltaNodes), recursionPlan.getDelta(), recursionPlan.getFull()))
-      );
-      planForRelation.put(relationWithDeltaNodes, recursionPlan);
+      planForRelation.put(relationWithDeltaNodes, plan);
     }
     return planForRelation.get(relationWithDeltaNodes);
   }
@@ -115,8 +114,7 @@ public class LogicalPlanBuilder {
     }
 
     int arity = (int) bashRule.head.getVariables().count();
-    BashNode bn = new BashNode(bashRule.command, bashRule.commandParts, children, arity);
-    return bn;
+    return new BashNode(bashRule.command, bashRule.commandParts, children, arity);
   }
 
   private PlanNode getPlanForRule(Rule rule, Map<String, PlanNode> deltaNodes) {
@@ -127,9 +125,7 @@ public class LogicalPlanBuilder {
       if (Arrays.stream(rule.head.args).anyMatch(t -> !(t instanceof Constant<?>))) {
         throw new UnsupportedOperationException("fact cannot contain variable: " + rule.head);
       }
-      PlanNode result = new FactNode(
-          (Comparable<?>[]) Arrays.stream(rule.head.args).map(t -> (String) ((Constant<?>) t).getValue()).toArray(String[]::new));
-      return result;
+      return new FactNode(Arrays.stream(rule.head.args).map(t -> (String) ((Constant<?>) t).getValue()).toArray(String[]::new));
     }
     //TODO: check if the rule is sane
     //Variables integer encoding
