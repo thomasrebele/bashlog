@@ -75,7 +75,7 @@ public class LogicalPlanBuilder {
       PlanNode exitPlan = exitRules.stream()
               .map(rule -> getPlanForRule(rule, filteredDeltaNode))
               .reduce(PlanNode::union)
-              .orElseGet(() -> PlanNode.empty(Integer.parseInt(relation.split("/")[1])));
+              .orElseGet(() -> PlanNode.empty(CompoundTerm.parseRelationArity(relation)));
 
       if (recursiveRules.isEmpty()) {
         return exitPlan; //No recursion
