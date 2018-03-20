@@ -8,7 +8,6 @@ import common.plan.node.MaterializationNode;
 import common.plan.node.PlanNode;
 import common.plan.node.RecursionNode;
 import common.plan.optimizer.*;
-
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -59,6 +58,10 @@ public class PlanNodeTest {
     Assert.assertEquals(
             PlanNode.empty(2),
             PlanNode.empty(2).project(new int[]{0, 0})
+    );
+    Assert.assertEquals(
+            PlanNode.empty(1),
+            PlanNode.empty(2).project(new int[]{0})
     );
     Assert.assertEquals(
             baz.project(new int[]{0, 1, 3}),
@@ -300,7 +303,7 @@ public class PlanNodeTest {
         optimizer.apply(bar.join(bar.project(new int[] { 2, 1 }), new int[] { 3 }, new int[] { 0 })));
   }
 
-  public static void assertEquals(PlanNode expected, PlanNode actual) {
+  private static void assertEquals(PlanNode expected, PlanNode actual) {
     if (!Objects.equals(expected, actual)) {
       System.out.println("expected:");
       System.out.println(expected.toPrettyString());
