@@ -92,13 +92,16 @@ public class Rule implements Parseable {
     /*r = read(new ParserReader("pred(a) :- trans(a,b), trans(b,_)."), null);
     System.out.println(r);*/
     ParserReader pr;
-    r = read(pr = new ParserReader("pred(A) :- pred2(a,b)."), Parseable.ALL_FEATURES);
+    r = read(pr = new ParserReader("pred(A) :- pred2(A,B)."), Parseable.ALL_FEATURES);
     System.out.println(r);
     System.out.println("remaining: " + pr.peekLine());
     r = read(pr = new ParserReader("pred(A) :- pred2([A,B])."), Parseable.ALL_FEATURES);
     System.out.println(r);
     System.out.println("remaining: " + pr.peekLine());
     r = read(pr = new ParserReader("pred(A) :~ cat a.txt"), Parseable.ALL_FEATURES);
+    System.out.println(r);
+
+    r = read(pr = new ParserReader("false() :- owl_Nothing(X)."), Parseable.ALL_FEATURES);
     System.out.println(r);
   }
 
