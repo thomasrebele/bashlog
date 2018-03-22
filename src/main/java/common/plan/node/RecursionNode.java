@@ -67,7 +67,7 @@ public class RecursionNode implements PlanNode {
 
   public void addRecursivePlan(PlanNode addedRecursivePlan) {
     if (addedRecursivePlan.getArity() != exitPlan.getArity()) {
-      throw new IllegalArgumentException("The recursions should have the same arity as the recursion entry");
+      throw new IllegalArgumentException("The recursions should have the same arity as the recursion entry.\nRecursion plan:\n" + addedRecursivePlan + "\nExit plan:\n" + exitPlan);
     }
     recursivePlan = recursivePlan.union(addedRecursivePlan);
   }

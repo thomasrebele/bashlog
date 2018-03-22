@@ -7,7 +7,7 @@ import org.junit.Test;
 
 public class IntegrationTests {
 
-  protected Evaluator eval;
+  private Evaluator eval;
 
   public IntegrationTests(Evaluator eval) {
     this.eval = eval;
@@ -205,5 +205,18 @@ public class IntegrationTests {
 
     FactsSet result = eval.evaluate(program, facts, Tools.set("a/2"));
     Assert.assertEquals(1, result.getByRelation("a/2").count());
+  }
+
+  @Test
+  public void notNeededLoop() throws Exception {
+    Program program = Program.read(new ParserReader("a(X) :- b(X). b(X) :- a(X), c(X)."));
+    SimpleFactsSet facts = new SimpleFactsSet();
+    facts.add("a/1", "Alice");
+    facts.add("c/1", "Alice");
+    facts.add("b/1", "Bob");
+    facts.add("c/1", "Bob");
+
+    FactsSet result = eval.evaluate(program, facts, Tools.set("a/1"));
+    Assert.assertEquals(2, result.getByRelation("a/1").count());
   }
 }

@@ -1,16 +1,14 @@
 package experiments;
 
+import bashlog.BashlogCompiler;
 import common.parser.ParserReader;
 import common.parser.Program;
 import org.semanticweb.owlapi.apibinding.OWLManager;
 import org.semanticweb.owlapi.model.IRI;
 import org.semanticweb.owlapi.model.OWLOntologyManager;
-
-import bashlog.BashlogCompiler;
 import owl.OntologyConverter;
 
 import java.io.File;
-import java.io.IOException;
 
 public class MainThomasOWL {
 
@@ -48,16 +46,9 @@ public class MainThomasOWL {
     return converter.convert(ontologyManager.getOntology(ontologyIRI));
   }
 
-  public static Program program(String[] files) throws IOException {
-    Program p = new Program();
-    for (String f : files) {
-      p.addRules(Program.loadFile(f));
-    }
-    return p;
-  }
-
   public static void main(String[] args) throws Exception {
     Program p = lubmProgram("data/lubm/1/", "data/lubm");
+    System.out.println(p);
 
     long start = System.currentTimeMillis();
     System.out.println(BashlogCompiler.compileQuery(p, "query1/1"));

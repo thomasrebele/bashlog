@@ -104,4 +104,8 @@ public class CompoundTerm extends Term implements Parseable {
   public int compareTo(Object o) {
     throw new UnsupportedOperationException();
   }
+
+  public static int parseRelationArity(String relation) {
+    return Integer.parseInt(relation.substring(relation.lastIndexOf('/') + 1));
+  }
 }
