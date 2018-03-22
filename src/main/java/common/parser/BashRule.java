@@ -1,6 +1,9 @@
 package common.parser;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 /**
  * A rule of the form rel(X,Y) :~ cat abc.txt !other/2
@@ -11,7 +14,6 @@ public class BashRule extends Rule {
 
   /** 
    * Constructor 
-   * @param head
    * @param command bash command
    * @param relations used in bash command, in the order they appear in the command
    * @param commandParts list of strings that surround the "!abc"
@@ -58,9 +60,7 @@ public class BashRule extends Rule {
 
   @Override
   public String toString() {
-    StringBuilder b = new StringBuilder();
-    b.append(head).append(" :- ").append(command);
-    return b.toString();
+    return String.valueOf(head) + " :- " + command;
   }
 
   public static void main(String[] args) {

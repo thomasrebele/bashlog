@@ -7,7 +7,7 @@ import java.util.Collection;
 
 public class TSVWriter {
 
-	BufferedWriter br;
+	private BufferedWriter br;
 
 	public TSVWriter(String path) throws IOException {
 		br = new BufferedWriter(new FileWriter(path));

@@ -1,14 +1,12 @@
 package common.parser;
 
+import common.Tools;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
-import com.typesafe.config.ConfigException.Parse;
-
-import common.Tools;
 
 /**
  * Parses datalog
@@ -26,7 +24,7 @@ import common.Tools;
  */
 public class Program implements Parseable {
 
-  private List<Rule> rules = new ArrayList<Rule>();
+  private List<Rule> rules = new ArrayList<>();
 
   private Map<String, List<Rule>> relationToRules = new HashMap<>();
 
