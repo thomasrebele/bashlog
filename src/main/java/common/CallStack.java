@@ -44,7 +44,7 @@ Example:<BR>
 public class CallStack {
 
   /** Holds the call stack */
-  protected Stack<StackTraceElement> callstack = new Stack<StackTraceElement>();
+  private Stack<StackTraceElement> callstack = new Stack<>();
 
   /** Constructs a call stack from the current program position (without the constructor call)*/
   public CallStack() {

@@ -1,10 +1,6 @@
 package common;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.nio.charset.Charset;
 import java.util.*;
 
@@ -34,6 +30,7 @@ public class Tools {
     return result;
   }
 
+  @SafeVarargs
   public static <T> Set<T> set(@SuppressWarnings("unchecked") T... items) {
     Set<T> set = new HashSet<>(items.length);
     Collections.addAll(set, items);
@@ -87,15 +84,6 @@ public class Tools {
     return OptionalInt.empty();
   }
 
-  public static <T> boolean isNullArray(T[] array) {
-    for (T val : array) {
-      if (val != null) {
-        return false;
-      }
-    }
-    return true;
-  }
-
   @FunctionalInterface
   public interface QuadriFunction<T, U, V, W, R> {
     R apply(T t, U u, V v, W w);
@@ -126,7 +114,6 @@ public class Tools {
    *
    * @param file  File to get String content from
    * @return      String content of file.
-   * @throws IOException
    */
   public static String getFileContent(File file) throws IOException {
     StringBuilder sb = new StringBuilder();

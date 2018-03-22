@@ -2,7 +2,7 @@ package common.parser;
 
 public class Constant<T extends Comparable> extends Term implements Parseable {
 
-  T value;
+  private T value;
 
   public Constant(T value) {
     this.value = value;
