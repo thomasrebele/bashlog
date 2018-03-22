@@ -1,5 +1,13 @@
 package common;
 
+import common.parser.Program;
+import experiments.lubm.BashlogLUBM;
+import experiments.lubm.generator.Tsv3Writer;
+import javatools.filehandlers.TSVFile;
+import org.junit.Before;
+import org.junit.Test;
+import yago4.Tools;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
@@ -7,38 +15,21 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Stream;
 
-import org.junit.Before;
-import org.junit.Test;
-
-import common.parser.Program;
-import experiments.lubm.BashlogLUBM;
-import experiments.lubm.generator.Tsv3Writer;
-import javatools.filehandlers.TSVFile;
-import yago4.Tools;
-
 /**
  * Run LUBM queries and compare with official answers.
  * TODO: the official answers for query 8 removed characters at the end of some email addresses. Fix it here.
  */
 public abstract class LUBMTest {
 
-  String answers = "http://swat.cse.lehigh.edu/projects/lubm/answers.zip";
+  private String answers = "http://swat.cse.lehigh.edu/projects/lubm/answers.zip";
 
-  String lubm = "data/lubm/";
+  private String lubm = "data/lubm/";
 
-  Program lubmProgram;
+  private Program lubmProgram;
 
-  SimpleFactsSet empty = new SimpleFactsSet();
+  private SimpleFactsSet empty = new SimpleFactsSet();
 
   public abstract Evaluator evaluator();
-
-  public LUBMTest() {
-
-  }
-
-  public LUBMTest(String lubmPath) {
-    this.lubm = lubmPath;
-  }
 
   @Before
   public void setup() throws IOException {
@@ -58,15 +49,13 @@ public abstract class LUBMTest {
     System.out.println(lubmProgram.toString());
   }
 
-  public Stream<Object[]> getRelation(String relation) throws Exception {
+  private Stream<Object[]> getRelation(String relation) throws Exception {
     return evaluator().evaluate(lubmProgram, empty, //
-        Collections.singleton(relation)).getByRelation(relation).map(c -> {
-          Object[] a = Arrays.stream(c).toArray(Object[]::new);
-          return a;
-        });
+        Collections.singleton(relation)).getByRelation(relation).map(c -> Arrays.stream(c).toArray(Object[]::new)
+    );
   }
 
-  public void query(int i) throws Exception {
+  private void query(int i) throws Exception {
     try (Check check = new Check()) {
       try (TSVFile expected = new TSVFile(new File(lubm + "/answers/answers_query" + i + ".txt"))) {
         expected.next();
@@ -81,7 +70,7 @@ public abstract class LUBMTest {
         String relation = prefix + j;
         if (lubmProgram.rulesForRelation(relation).isEmpty()) continue;
         try {
-          getRelation(relation).forEach(c -> check.apply(c));
+          getRelation(relation).forEach(check::apply);
           check.close();
           return;
         } catch (AssertionError e) {

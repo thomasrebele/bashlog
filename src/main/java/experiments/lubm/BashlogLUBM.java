@@ -1,7 +1,13 @@
 package experiments.lubm;
 
+import bashlog.BashlogCompiler;
 import common.parser.ParserReader;
 import common.parser.Program;
+import org.semanticweb.owlapi.apibinding.OWLManager;
+import org.semanticweb.owlapi.model.IRI;
+import org.semanticweb.owlapi.model.OWLOntologyCreationException;
+import org.semanticweb.owlapi.model.OWLOntologyManager;
+import owl.OntologyConverter;
 import sqllog.SqllogCompiler;
 
 import java.io.File;
@@ -10,8 +16,6 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.HashSet;
-
-import bashlog.BashlogCompiler;
 
 public class BashlogLUBM {
 
@@ -79,6 +83,23 @@ public class BashlogLUBM {
   /** LUBM queries for 3-column TSV */
   public static Program lubmProgram3(String lubmDir, String queryDir) throws IOException {
     Program lubmProgram = Program.merge(Program.loadFile(queryDir + "/tbox.txt"), Program.loadFile(queryDir + "/queries.txt"));
+    String script = lubmScript3(lubmDir, lubmProgram);
+    lubmProgram.addRules(Program.read(new ParserReader(script)));
+    return lubmProgram;
+  }
+
+  /** LUBM queries for 3-column TSV */
+  public static Program lubmProgramOWL3(String lubmDir, String queryDir) throws IOException {
+    OWLOntologyManager ontologyManager = OWLManager.createOWLOntologyManager();
+    IRI ontologyIRI = IRI.create("http://swat.cse.lehigh.edu/onto/univ-bench.owl");
+    try {
+      ontologyManager.loadOntology(ontologyIRI);
+    } catch (OWLOntologyCreationException e) {
+      throw new IOException(e);
+    }
+    OntologyConverter converter = new OntologyConverter();
+
+    Program lubmProgram = Program.merge(converter.convert(ontologyManager.getOntology(ontologyIRI)), Program.loadFile(queryDir + "/queries.txt"));
     String script = lubmScript3(lubmDir, lubmProgram);
     lubmProgram.addRules(Program.read(new ParserReader(script)));
     return lubmProgram;
