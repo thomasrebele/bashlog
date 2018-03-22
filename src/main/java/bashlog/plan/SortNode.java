@@ -1,9 +1,6 @@
 package bashlog.plan;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 
 import common.Tools;
 import common.plan.node.PlanNode;
@@ -45,6 +42,11 @@ public class SortNode implements PlanNode {
 
   public int[] sortColumns() {
     return sortColumns;
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    return equals(obj, Collections.emptyMap());
   }
 
   public boolean equals(Object obj, Map<PlanNode, PlanNode> assumedEqualities) {
