@@ -26,7 +26,7 @@ public class Materialize implements Optimizer {
     analyzeStructure(t, 0, new ArrayList<>(), new HashSet<>(), new HashSet<>());
     analyzeReuse(t, 1);
     analyzeMaterialize(t, false);
-    print(t);
+    //print(t);
 
     // store for every node, which plans should be materialized just above them
     HashMap<PlanNode, List<Info>> nodesToInfo = new HashMap<>();
@@ -44,13 +44,6 @@ public class Materialize implements Optimizer {
           i.calculateReuseAt();
         }
       }
-    });
-
-    nodesToInfo.forEach((p, l) -> {
-      System.out.println("applying to");
-      System.out.println(Tools.head(p.toPrettyString(), 3));
-      System.out.println("list");
-      l.forEach(i -> System.out.println(" - " + Tools.head(i.plan.toPrettyString(), 3).replace("\n", "\n   ")));
     });
 
     return t.transform((old, node, parent) -> {

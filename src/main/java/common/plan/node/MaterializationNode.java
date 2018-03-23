@@ -52,9 +52,7 @@ public class MaterializationNode implements PlanNode {
     if (!(reuseNode instanceof PlaceholderNode)) {
       throw new IllegalArgumentException();
     }
-    this.reuseNode = builder != null ? reuseNode : new PlaceholderNode(this, reuseNode.operatorString(), reusedPlan.getArity());
-    //this.reuseNode = reuseNode;
-    //this.reuseNode = reuseNode.parent == null ? reuseNode : new PlaceholderNode(this, reuseNode.operatorString(), reusedPlan.getArity());
+    this.reuseNode = reuseNode;
     this.reusedPlan = reusedPlan;
     if (!mainPlan.contains(reuseNode)) {
       if (builder != null) {
@@ -67,7 +65,6 @@ public class MaterializationNode implements PlanNode {
     }
     this.mainPlan = builder != null ? mainPlan : mainPlan.replace(reuseNode, this.reuseNode);
     this.reuseCount = reuseCount;
-    LOG.info("mat constructor for {}", operatorString());
   }
 
   public PlanNode getReusedPlan() {
