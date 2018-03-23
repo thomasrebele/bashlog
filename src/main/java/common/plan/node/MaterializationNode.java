@@ -100,6 +100,11 @@ public class MaterializationNode implements PlanNode {
   }
 
   @Override
+  public List<PlaceholderNode> placeholders() {
+    return Arrays.asList(reuseNode);
+  }
+
+  @Override
   public PlanNode transform(TransformFn fn, PlanNode originalParent) {
     PlanNode newMainPlan = mainPlan.transform(fn, this);
     PlanNode newReusedPlan = reusedPlan.transform(fn, this);
