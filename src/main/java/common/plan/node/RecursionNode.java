@@ -45,8 +45,8 @@ public class RecursionNode implements PlanNode {
 
     public RecursionNode build() {
       RecursionNode r = new RecursionNode(exitPlan, recursivePlan, Builder.this);
-      delta.build(r, "delta for " + r.operatorString());
-      full.build(r, "full for " + r.operatorString());
+      delta.build();
+      full.build();
       return r;
     }
 
@@ -90,8 +90,8 @@ public class RecursionNode implements PlanNode {
           "Exit and recursive plans should have the same arity." + "Here: " + exitPlan.getArity() + " vs " + recursivePlan.getArity());
     }
 
-    this.deltaNode = new PlaceholderNode(this, "delta", exitPlan.getArity());
-    this.fullNode = new PlaceholderNode(this, "full", exitPlan.getArity());
+    this.deltaNode = new PlaceholderNode("delta", exitPlan.getArity());
+    this.fullNode = new PlaceholderNode("full", exitPlan.getArity());
     this.exitPlan = exitPlan;
     // TODO: use a building like in MaterializationNode, in order to avoid performance bugs
     this.recursivePlan = recursivePlan.replace(delta, deltaNode).replace(full, fullNode);

@@ -23,31 +23,26 @@ public class MaterializationNode implements PlanNode {
 
   public static class Builder {
   
-    PlaceholderNode.Builder reuseNodeBuilder;
+    PlaceholderNode placeholder;
 
     public Builder(int arity) {
-      reuseNodeBuilder = new PlaceholderNode.Builder("mat_{building}", arity);//new ReuseNode(null, arity);
+      placeholder = new PlaceholderNode("mat_{building}", arity);//new ReuseNode(null, arity);
     }
 
     public PlanNode getReuseNode() {
-      return reuseNodeBuilder.preview();
+      return placeholder;
     }
   
     public MaterializationNode build(PlanNode mainPlan, PlanNode reusedPlan, int reuseCount) {
-      if (reuseNodeBuilder == null) throw new IllegalStateException("already built!");
-      MaterializationNode result = new MaterializationNode(mainPlan, reusedPlan, reuseNodeBuilder, null, reuseCount);
-      reuseNodeBuilder.build(result, result.operatorString().replaceAll("mat", "reuse") + " (reusing " + result.hash() + ")");
+      MaterializationNode result = new MaterializationNode(mainPlan, reusedPlan, placeholder, reuseCount);
       return result;
     }
     
   }
 
   /** Use builder if possible */
-  protected MaterializationNode(PlanNode mainPlan, PlanNode reusedPlan, PlaceholderNode.Builder builder, PlaceholderNode reuseNode, int reuseCount) {
+  protected MaterializationNode(PlanNode mainPlan, PlanNode reusedPlan, PlaceholderNode reuseNode, int reuseCount) {
     // first initialize reuse node!
-    if (builder != null) {
-      reuseNode = builder.preview();
-    }
 
     if (!(reuseNode instanceof PlaceholderNode)) {
       throw new IllegalArgumentException();
@@ -55,15 +50,12 @@ public class MaterializationNode implements PlanNode {
     this.reuseNode = reuseNode;
     this.reusedPlan = reusedPlan;
     if (!mainPlan.contains(reuseNode)) {
-      if (builder != null) {
-        builder.setOperatorString(reuseNode.operatorString() + " (EXCEPTION)");
-      }
       System.err.println("exception while constructing " + this.operatorString());
       System.err.println("main plan:\n" + mainPlan.toPrettyString());
       throw new IllegalArgumentException(
           "incorrect reuse node specified:" + reuseNode.toPrettyString() + "\nfor reuse plan\n" + reusedPlan.toPrettyString());
     }
-    this.mainPlan = builder != null ? mainPlan : mainPlan.replace(reuseNode, this.reuseNode);
+    this.mainPlan = mainPlan.replace(reuseNode, this.reuseNode);
     this.reuseCount = reuseCount;
   }
 
@@ -109,7 +101,7 @@ public class MaterializationNode implements PlanNode {
     PlanNode newMainPlan = mainPlan.transform(fn, this);
     PlanNode newReusedPlan = reusedPlan.transform(fn, this);
     PlanNode newNode = mainPlan.equals(newMainPlan) && reusedPlan.equals(newReusedPlan) ? this
-            : new MaterializationNode(newMainPlan, newReusedPlan, null, reuseNode, reuseCount);
+        : new MaterializationNode(newMainPlan, newReusedPlan, reuseNode, reuseCount);
     return fn.apply(this, newNode, originalParent);
   }
 

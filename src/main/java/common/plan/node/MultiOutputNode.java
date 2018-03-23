@@ -30,7 +30,7 @@ public class MultiOutputNode implements PlanNode {
       MultiOutputNode result = new MultiOutputNode(mainPlan, leafPlan, reusedPlans, reuseNodeBuilders, null);
       for (int i = 0; i < reusedPlans.size(); i++) {
         String op = "reuse " + i + " (" + result.reusedPlans.get(i).hash() + ")";
-        reuseNodeBuilders.get(i).build(result, op);
+        reuseNodeBuilders.get(i).build();
       }
       return result;
     }
@@ -59,7 +59,7 @@ public class MultiOutputNode implements PlanNode {
       for (int i = 0; i < reusedPlans.size(); i++) {
         PlanNode oldReuseNode = reuseNodes.get(i);
         // TODO: recycle reuse nodes
-        PlaceholderNode newReuseNode = new PlaceholderNode(this, oldReuseNode.operatorString(), reusedPlans.get(i).getArity());
+        PlaceholderNode newReuseNode = new PlaceholderNode(oldReuseNode.operatorString(), reusedPlans.get(i).getArity());
         this.reuseNodes.add(newReuseNode);
 
         if (!mainPlan.contains(oldReuseNode)) {

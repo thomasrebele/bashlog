@@ -22,7 +22,7 @@ public class MultiFilterNode implements PlanNode {
     this.arity = arity;
     this.table = table;
 
-    placeholder = new PlaceholderNode(this, "inner_plan", table.getArity());
+    placeholder = new PlaceholderNode("inner_plan", table.getArity());
 
     this.children = children.stream().map(c -> c.replace(table, placeholder)).collect(Collectors.toSet());
     operatorString = this.children.stream().map(PlanNode::toString).collect(Collectors.joining(", "));

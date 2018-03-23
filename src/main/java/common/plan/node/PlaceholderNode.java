@@ -14,22 +14,17 @@ public class PlaceholderNode implements PlanNode {
     private PlaceholderNode node;
 
     public Builder(String operatorString, Integer arity) {
-      node = new PlaceholderNode(null, operatorString, arity);
+      node = new PlaceholderNode(operatorString, arity);
     }
 
     public PlaceholderNode preview() {
       return node;
     }
 
-    /** Only use for debugging */
-    public void setOperatorString(String str) {
-      node.operatorString = str;
-    }
-
-    public PlaceholderNode build(PlanNode parent, String operatorString) {
+    public PlaceholderNode build() {
       if (node == null) throw new IllegalStateException("already built!");
       try {
-        node.operatorString = operatorString;
+        //node.operatorString = operatorString;
         return node;
       } finally {
         node = null;
@@ -37,12 +32,7 @@ public class PlaceholderNode implements PlanNode {
     }
   }
 
-  public PlaceholderNode(PlanNode parent, String operatorString) {
-    this.operatorString = operatorString;
-    arity = null;
-  }
-
-  public PlaceholderNode(PlanNode parent, String operatorString, Integer arity) {
+  public PlaceholderNode(String operatorString, Integer arity) {
     this.operatorString = operatorString;
     this.arity = arity;
     if (arity == null) {
@@ -83,9 +73,10 @@ public class PlaceholderNode implements PlanNode {
 
   @Override
   public String operatorString() {
-    return operatorString /*+ (parent != null && !operatorString.contains(" for ") ? " for " + parent.operatorString() : "")*/;
+    return operatorString;
   }
 
+  /** Walk through plan, and create a map for obtaining the parents of placeholder nodes */
   public static Map<PlaceholderNode, PlanNode> placeholderToParentMap(PlanNode plan) {
     Map<PlaceholderNode, PlanNode> map = new HashMap<>();
     if (plan != null) {
