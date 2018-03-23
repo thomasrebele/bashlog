@@ -1,14 +1,14 @@
 package experiments.lubm;
 
 import bashlog.BashlogCompiler;
-import common.parser.ParserReader;
-import common.parser.Program;
+import common.parser.*;
 import org.semanticweb.owlapi.apibinding.OWLManager;
 import org.semanticweb.owlapi.model.IRI;
 import org.semanticweb.owlapi.model.OWLOntology;
 import org.semanticweb.owlapi.model.OWLOntologyCreationException;
 import org.semanticweb.owlapi.model.OWLOntologyManager;
 import owl.OntologyConverter;
+import owl.OntologyConverterTriple;
 import sqllog.SqllogCompiler;
 
 import java.io.File;
@@ -16,7 +16,9 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
+import java.util.stream.Collectors;
 
 public class BashlogLUBM {
 
@@ -113,6 +115,48 @@ public class BashlogLUBM {
     return lubmProgram;
   }
 
+  /** LUBM queries for 3-column TSV */
+  public static Program lubmProgramOWLRL(String lubmDir, String queryDir) throws IOException {
+    OWLOntologyManager ontologyManager = OWLManager.createOWLOntologyManager();
+    IRI ontologyIRI = IRI.create("file:data/lubm/univ-bench.owl");
+
+    if (ontologyProgram == null) {
+      OWLOntology ontology;
+      try {
+        ontology = ontologyManager.loadOntology(ontologyIRI);
+      } catch (OWLOntologyCreationException e) {
+        throw new IOException(e);
+      }
+      OntologyConverterTriple converter = new OntologyConverterTriple("allFacts");
+      ontologyProgram = normalizeProgram(converter.convert(ontology));
+    }
+
+    Program lubmProgram = Program.merge(ontologyProgram, Program.loadFile(queryDir + "/queries.txt"));
+    String script = lubmScript3(lubmDir, lubmProgram);
+    lubmProgram.addRules(Program.read(new ParserReader(script)));
+    return lubmProgram;
+  }
+
+  private static Program normalizeProgram(Program program) {
+    return new Program(program.rules().stream().map(rule ->
+            new Rule(
+                    normalizeCompoundTerm(rule.head),
+                    rule.body.stream().map(BashlogLUBM::normalizeCompoundTerm).collect(Collectors.toList()))
+    ));
+  }
+
+  private static CompoundTerm normalizeCompoundTerm(CompoundTerm compoundTerm) {
+    return new CompoundTerm(compoundTerm.name, compoundTerm.negated, Arrays.stream(compoundTerm.args).map(term -> {
+      if(term instanceof Constant) {
+        Object v = ((Constant) term).getValue();
+        if(v instanceof String) {
+          return new Constant<>(((String) v).replace("http://swat.cse.lehigh.edu/onto/univ-bench.owl#", "").replace("http://www.w3.org/1999/02/22-rdf-syntax-ns#", "rdf:"));
+        }
+      }
+      return term;
+    }).toArray(Term[]::new));
+  }
+
   public static void main(String[] args) throws IOException {
 
     String scriptDir = "experiments/edbt2017/lubm/bashlog/";
@@ -136,7 +180,7 @@ public class BashlogLUBM {
           }
         });
 
-        String sql = new SqllogCompiler().compile(sqlProg, new HashSet<>(Arrays.asList("allFacts/3")), relation);
+        String sql = new SqllogCompiler().compile(sqlProg, new HashSet<>(Collections.singletonList("allFacts/3")), relation);
         String noDBSql = new SqllogCompiler(true, true).compile(sqlProg, new HashSet<>(Arrays.asList("allFacts/3")), relation);
         Files.write(Paths.get(scriptDir + "query" + (i + 1) + ".sh"), script.getBytes());
         Files.write(Paths.get(sqlDir + "query" + (i + 1) + ".sql"), sql.getBytes());
