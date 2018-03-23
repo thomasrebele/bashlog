@@ -31,31 +31,29 @@ public class RecursionNode implements PlanNode {
 
     int arity;
 
-    PlaceholderNode.Builder delta, full;
+    PlaceholderNode delta, full;
 
     PlanNode exitPlan, recursivePlan;
 
     public Builder(PlanNode exitPlan) {
       this.exitPlan = exitPlan;
       this.arity = exitPlan.getArity();
-      delta = new PlaceholderNode.Builder("delta_{building}", arity);
-      full = new PlaceholderNode.Builder("full_{building}", arity);
+      delta = new PlaceholderNode("delta_{building}", arity);
+      full = new PlaceholderNode("full_{building}", arity);
       recursivePlan = PlanNode.empty(arity);
     }
 
     public RecursionNode build() {
       RecursionNode r = new RecursionNode(exitPlan, recursivePlan, Builder.this);
-      delta.build();
-      full.build();
       return r;
     }
 
     public PlaceholderNode getDelta() {
-      return delta.preview();
+      return delta;
     }
 
     public PlaceholderNode getFull() {
-      return full.preview();
+      return full;
     }
 
     public void addRecursivePlan(PlanNode addedRecursivePlan) {
@@ -74,8 +72,8 @@ public class RecursionNode implements PlanNode {
           "Exit and recursive plans should have the same arity." + "Here: " + exitPlan.getArity() + " vs " + recursivePlan.getArity());
     }
 
-    this.deltaNode = builder.delta.preview();
-    this.fullNode = builder.full.preview();
+    this.deltaNode = builder.delta;
+    this.fullNode = builder.full;
 
     this.exitPlan = exitPlan;
     // TODO: use a building like in MaterializationNode, in order to avoid performance bugs

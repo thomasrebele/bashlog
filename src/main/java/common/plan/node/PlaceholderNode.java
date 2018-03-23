@@ -7,37 +7,11 @@ public class PlaceholderNode implements PlanNode {
 
   protected String operatorString;
 
-  protected final Integer arity;
+  protected final int arity;
 
-  public static class Builder {
-
-    private PlaceholderNode node;
-
-    public Builder(String operatorString, Integer arity) {
-      node = new PlaceholderNode(operatorString, arity);
-    }
-
-    public PlaceholderNode preview() {
-      return node;
-    }
-
-    public PlaceholderNode build() {
-      if (node == null) throw new IllegalStateException("already built!");
-      try {
-        //node.operatorString = operatorString;
-        return node;
-      } finally {
-        node = null;
-      }
-    }
-  }
-
-  public PlaceholderNode(String operatorString, Integer arity) {
+  public PlaceholderNode(String operatorString, int arity) {
     this.operatorString = operatorString;
     this.arity = arity;
-    if (arity == null) {
-      throw new NullPointerException();
-    }
   }
 
   @Override
@@ -63,7 +37,7 @@ public class PlaceholderNode implements PlanNode {
 
   @Override
   public int getArity() {
-    return arity == null ? -1 : arity;
+    return arity;
   }
 
   @Override
