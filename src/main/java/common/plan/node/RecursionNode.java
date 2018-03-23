@@ -114,6 +114,11 @@ public class RecursionNode implements PlanNode {
   }
 
   @Override
+  public List<PlaceholderNode> placeholders() {
+    return Arrays.asList(fullNode, deltaNode);
+  }
+
+  @Override
   public PlanNode transform(TransformFn fn, PlanNode originalParent) {
     PlanNode newExit = exitPlan.transform(fn, this);
     PlanNode newRecursion = recursivePlan.transform(fn, this);

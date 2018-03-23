@@ -47,8 +47,8 @@ public class PlanValidator implements Optimizer {
       }
 
       allNodes.add(n);
-      if (n instanceof PlaceholderNode) {
-        parentToPlaceholders.computeIfAbsent(((PlaceholderNode) n).getParent(), k -> new HashSet<>()).add(n);
+      if (n.placeholders().size() > 0) {
+        parentToPlaceholders.put(n, new HashSet<>(n.placeholders()));
       }
       return n;
     });

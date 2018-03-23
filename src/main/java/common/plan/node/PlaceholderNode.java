@@ -56,9 +56,9 @@ public class PlaceholderNode implements PlanNode {
     this.arity = arity;
   }
 
-  public PlanNode getParent() {
+  /*public PlanNode getParent() {
     return parent;
-  }
+  }*/
 
   @Override
   public String toString() {
@@ -97,19 +97,19 @@ public class PlaceholderNode implements PlanNode {
   }
 
   /** Walk through the plan and collect outer nodes that have a place holder in the plan given by argument 'ofPlan' */
-  public static Set<PlanNode> outerParents(PlanNode ofPlan) {
+  /*public static Set<PlanNode> outerParents(PlanNode ofPlan) {
     HashMap<PlanNode, Boolean> nodeToContained = new HashMap<>();
-
+  
     ofPlan.transform(pn -> {
       nodeToContained.put(pn, true);
-
+  
       if (pn instanceof PlaceholderNode) {
         nodeToContained.putIfAbsent(((PlaceholderNode) pn).getParent(), false);
       }
       return pn;
     });
-
+  
     return nodeToContained.entrySet().stream().filter(e -> !e.getValue()).map(e -> e.getKey()).collect(Collectors.toSet());
-  }
+  }*/
 
 }

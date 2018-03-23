@@ -52,7 +52,7 @@ public abstract class LUBMTest {
       Tsv3Writer.generate(1, 0, 0, dir);
     }
 
-    lubmProgram = BashlogLUBM.lubmProgramOWL3(dir, lubm);
+    lubmProgram = BashlogLUBM.lubmProgram3(dir, lubm);
 
     Files.write(Paths.get("/tmp/lubm-program.txt"), lubmProgram.toString().getBytes());
     LOG.info("wrote lubm program to /tmp/lubm-program.txt");

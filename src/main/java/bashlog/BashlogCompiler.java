@@ -42,7 +42,7 @@ public class BashlogCompiler {
       Arrays.asList(new CombineFacts(), new SimplifyRecursion(), new PushDownJoin(), new ReorderJoinLinear(), new PushDownFilterAndProject(),
           new SimplifyRecursion(),
           new PushDownFilterAndProject()),
-      Arrays.asList(new BashlogPlan(), new BashlogOptimizer(), new MultiOutput(), new CombineFilter(false), new Materialize(),
+      Arrays.asList(new BashlogPlan(), new BashlogOptimizer(), new MultiOutput(), new CombineFilter(false), /*new Materialize(),*/
           new CombineFilter(false)));
   
 
@@ -109,7 +109,7 @@ public class BashlogCompiler {
     header.append("check \"--buffer-size\" && sort=\"$sort --buffer-size=25% \"\n");
     header.append("check \"--parallel\"    && sort=\"$sort --parallel=2 \"\n\n");
 
-    CompilerInternals bc = new CompilerInternals(translators);
+    CompilerInternals bc = new CompilerInternals(translators, root);
     Bash e = bc.compile(root);
     String result = header.toString() + e.generate() + "\n\n rm -f tmp/*\n";
 

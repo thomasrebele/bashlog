@@ -30,6 +30,11 @@ public interface PlanNode {
    */
   List<PlanNode> children();
 
+  /** List of placeholder nodes that are associated with this node */
+  default List<PlaceholderNode> placeholders() {
+    return Collections.emptyList();
+  }
+
   /**
    * Children which should be printed by toPrettyString()
    */

@@ -1,5 +1,6 @@
 package sqllog;
 
+import common.CompilerInternals;
 import common.parser.*;
 import common.plan.LogicalPlanBuilder;
 import common.plan.node.*;
@@ -22,6 +23,7 @@ public class SqllogCompiler {
 
   private static final String TABLE_ALIAS_PREFIX = "T";
 
+  private Map<PlaceholderNode, PlanNode> placeholderToParent = new HashMap<>();
   private Map<PlanNode, String> closureTables = new HashMap<>();
   private int count = 0;
 
@@ -47,7 +49,9 @@ public class SqllogCompiler {
     relationsInTables.forEach(relation -> program.addRule(buildLoadRuleForRelation(relation)));
 
     LogicalPlanBuilder planBuilder = new LogicalPlanBuilder(BUILDS_IN, Collections.singleton(relationToOutput));
-    return mapPlanNode(optimize(planBuilder.getPlanForProgram(program).get(relationToOutput))).toString();
+    PlanNode plan = optimize(planBuilder.getPlanForProgram(program).get(relationToOutput));
+    placeholderToParent = common.CompilerInternals.placeholderToParentMap(plan);
+    return mapPlanNode(plan).toString();
   }
 
   private PlanNode optimize(PlanNode node) {
@@ -153,7 +157,7 @@ public class SqllogCompiler {
   }
 
   private Select mapTokenNode(PlaceholderNode node) {
-    return newTable(closureTables.get(node.getParent()), node.getArity());
+    return newTable(closureTables.get(placeholderToParent.get(node)), node.getArity());
   }
 
   private Select mapUnionNode(UnionNode node) {
