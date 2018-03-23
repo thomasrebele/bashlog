@@ -16,16 +16,18 @@ public class PushDownJoin implements Optimizer {
    */
   @Override
   public PlanNode apply(PlanNode node) {
-    return node.transform((n) -> {
-      if (n instanceof JoinNode) {
-        return optimize((JoinNode) n);
-      } else {
-        return n;
-      }
-    });
+    return node.transform(this::optimize);
   }
 
-  private PlanNode optimize(JoinNode joinNode) {
+  private PlanNode optimize(PlanNode n) {
+    if (n instanceof JoinNode) {
+      return pushDown((JoinNode) n);
+      } else {
+        return n;
+    }
+  }
+
+  private PlanNode pushDown(JoinNode joinNode) {
     PlanNode leftChild = joinNode.getLeft();
     if (leftChild instanceof ProjectNode) {
       return swap(joinNode, (ProjectNode) leftChild, LEFT);
@@ -49,21 +51,21 @@ public class PushDownJoin implements Optimizer {
 
   private PlanNode swap(JoinNode joinNode, VariableEqualityFilterNode filter, boolean direction) {
     if (direction == LEFT) {
-      return filter.getTable().join(joinNode.getRight(), joinNode.getLeftProjection(), joinNode.getRightProjection())
+      return optimize(filter.getTable().join(joinNode.getRight(), joinNode.getLeftProjection(), joinNode.getRightProjection()))
           .equalityFilter(filter.getField1(), filter.getField2());
     } else {
-      return joinNode.getLeft().join(filter.getTable(), joinNode.getLeftProjection(), joinNode.getRightProjection())
+      return optimize(joinNode.getLeft().join(filter.getTable(), joinNode.getLeftProjection(), joinNode.getRightProjection()))
           .equalityFilter(joinNode.getLeft().getArity() + filter.getField1(), joinNode.getLeft().getArity() + filter.getField2());
     }
   }
 
   private PlanNode swap(JoinNode joinNode, ConstantEqualityFilterNode filter, boolean direction) {
     if(direction == LEFT) {
-      return filter.getTable().join(joinNode.getRight(), joinNode.getLeftProjection(), joinNode.getRightProjection())
+      return optimize(filter.getTable().join(joinNode.getRight(), joinNode.getLeftProjection(), joinNode.getRightProjection()))
           .equalityFilter(filter.getField(), filter.getValue());
     }
     else {
-      return joinNode.getLeft().join(filter.getTable(), joinNode.getLeftProjection(), joinNode.getRightProjection())
+      return optimize(joinNode.getLeft().join(filter.getTable(), joinNode.getLeftProjection(), joinNode.getRightProjection()))
           .equalityFilter(joinNode.getLeft().getArity() + filter.getField(), filter.getValue());
     }
   }
@@ -101,7 +103,7 @@ public class PushDownJoin implements Optimizer {
     }
 
     // create final join and projection 
-    PlanNode result = apply(left.join(right, joinFieldLeft, joinFieldRight));
+    PlanNode result = optimize(left.join(right, joinFieldLeft, joinFieldRight));
     if (proj.hasConstants()) {
       result = result.project(prjFields, constants);
     } else {
