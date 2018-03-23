@@ -19,6 +19,18 @@ public class Rule implements Parseable {
     this(head, Arrays.asList(body));
   }
 
+  public Rule withBodyClause(CompoundTerm add) {
+    List<CompoundTerm> newBody = new ArrayList<>(body);
+    newBody.add(add);
+    return new Rule(head, newBody);
+  }
+
+  public Rule withBodyClauses(List<CompoundTerm> add) {
+    List<CompoundTerm> newBody = new ArrayList<>(body);
+    newBody.addAll(add);
+    return new Rule(head, newBody);
+  }
+
   public static Rule read(ParserReader pr, Set<String> supportedFeatures) {
     Map<String, Variable> variables = new HashMap<>();
 
@@ -59,7 +71,7 @@ public class Rule implements Parseable {
         break;
     }
     Set<Variable> headVars = head.getVariables().collect(Collectors.toSet());
-    headVars.removeAll(body.stream().flatMap(ct -> ct.getVariables()).collect(Collectors.toList()));
+    headVars.removeAll(body.stream().flatMap(CompoundTerm::getVariables).collect(Collectors.toList()));
     if (headVars.size() > 0) {
       pr.error("head variable(s) not used in body: " + headVars.stream().map(v -> v.name).collect(Collectors.joining(", ")), null);
     }
