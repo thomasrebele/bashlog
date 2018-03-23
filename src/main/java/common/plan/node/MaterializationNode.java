@@ -2,10 +2,15 @@ package common.plan.node;
 
 import java.util.*;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import common.Tools;
 
 
 public class MaterializationNode implements PlanNode {
+
+  private static final Logger LOG = LoggerFactory.getLogger(MaterializationNode.class);
 
   private final PlanNode mainPlan;
 
@@ -48,8 +53,9 @@ public class MaterializationNode implements PlanNode {
     if (!(reuseNode instanceof PlaceholderNode)) {
       throw new IllegalArgumentException();
     }
-    //this.reuseNode = builder != null ? reuseNode : new PlaceholderNode(this, reuseNode.operatorString(), reusedPlan.getArity());
-    this.reuseNode = reuseNode;
+    this.reuseNode = builder != null ? reuseNode : new PlaceholderNode(this, reuseNode.operatorString(), reusedPlan.getArity());
+    //this.reuseNode = reuseNode;
+    //this.reuseNode = reuseNode.parent == null ? reuseNode : new PlaceholderNode(this, reuseNode.operatorString(), reusedPlan.getArity());
     this.reusedPlan = reusedPlan;
     if (!mainPlan.contains(reuseNode)) {
       if (builder != null) {
@@ -62,6 +68,7 @@ public class MaterializationNode implements PlanNode {
     }
     this.mainPlan = builder != null ? mainPlan : mainPlan.replace(reuseNode, this.reuseNode);
     this.reuseCount = reuseCount;
+    LOG.info("mat constructor for {}", operatorString());
   }
 
   public PlanNode getReusedPlan() {
@@ -124,5 +131,10 @@ public class MaterializationNode implements PlanNode {
   @Override
   public int hashCode() {
     return Objects.hash(mainPlan, reusedPlan);
+  }
+
+  @Override
+  public String toString() {
+    return operatorString();
   }
 }

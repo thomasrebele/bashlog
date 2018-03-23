@@ -20,6 +20,10 @@ public class PlanValidator implements Optimizer {
 
   private CharSequence debug = null;
 
+  private static final String save = "mat_1777";
+
+  Set<PlanNode> saved = new HashSet<>();
+
   public PlanValidator(CharSequence debugInfo) {
     this.debug = debugInfo;
   }
@@ -30,6 +34,14 @@ public class PlanValidator implements Optimizer {
     Set<PlanNode> allNodes = new HashSet<>();
 
     node.transform((orig, n, origParent) -> {
+      if (save != null) {
+        if (n.operatorString().contains(save)) {
+          saved.add(n);
+          if (saved.size() > 1) {
+            System.out.println("here");
+          }
+        }
+      }
       if (n instanceof UnionNode) {
         check((UnionNode) n);
       }
@@ -48,7 +60,7 @@ public class PlanValidator implements Optimizer {
       }
       parentToPlaceholders.values().stream().flatMap(s -> s.stream())
           .forEach(n -> LOG.error("parent of placeholder {} not found", n.operatorString()));
-      //throw new IllegalStateException("some orphaned placeholders, check log messages");
+      throw new IllegalStateException("some orphaned placeholders, check log messages. " + (debug != null ? "debug length: " + debug.length() : ""));
     }
 
     return node;
