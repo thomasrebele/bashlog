@@ -5,6 +5,8 @@ import experiments.lubm.BashlogLUBM;
 import experiments.lubm.generator.Tsv3Writer;
 import javatools.filehandlers.TSVFile;
 
+import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -16,9 +18,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Stream;
 
 /**
@@ -37,6 +37,10 @@ public abstract class LUBMTest {
 
   private SimpleFactsSet empty = new SimpleFactsSet();
 
+  private static int count = 0;
+
+  private static Map<String, Long> timing = new HashMap<>();
+
   public abstract Evaluator evaluator();
 
   @Before
@@ -52,16 +56,33 @@ public abstract class LUBMTest {
       Tsv3Writer.generate(1, 0, 0, dir);
     }
 
+    timing.merge("make program", -System.nanoTime(), (a, b) -> a + b);
     lubmProgram = BashlogLUBM.lubmProgram3(dir, lubm);
+    timing.merge("make program", +System.nanoTime(), (a, b) -> a + b);
 
     Files.write(Paths.get("/tmp/lubm-program.txt"), lubmProgram.toString().getBytes());
     LOG.info("wrote lubm program to /tmp/lubm-program.txt");
   }
 
+  @AfterClass
+  public static void printTiming() {
+    timing.forEach((name, time) -> {
+      LOG.info("average {}: {}", name, time / 1e9 / count);
+    });
+  }
+
   private Stream<Object[]> getRelation(String relation) throws Exception {
-    return evaluator().evaluate(lubmProgram, empty, //
+    Evaluator e = evaluator();
+    Stream<Object[]> fs = e.evaluate(lubmProgram, empty, //
         Collections.singleton(relation)).getByRelation(relation).map(c -> Arrays.stream(c).toArray(Object[]::new)
     );
+    count++;
+    e.getTiming().forEach((name, time) -> {
+      LOG.info("{}: {}", name, time / 1e9);
+      timing.merge(name, time, (a, b) -> a + b);
+    });
+
+    return fs;
   }
 
   private void query(int i) throws Exception {

@@ -1,5 +1,7 @@
 package common;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 
 import common.parser.Program;
@@ -10,5 +12,9 @@ public interface Evaluator {
 
   default void debug(Program program, FactsSet facts, Set<String> queryRelations) throws Exception {
     System.err.println("warning: " + this.getClass() + " does not provide debug information");
+  }
+
+  default Map<String, Long> getTiming() {
+    return new HashMap<>();
   }
 }

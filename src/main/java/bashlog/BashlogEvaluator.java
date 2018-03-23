@@ -26,6 +26,8 @@ public class BashlogEvaluator implements Evaluator {
 
   private boolean debug = false;
 
+  private long timeCompile = 0, timeBash = 0; // in nano seconds
+
   public BashlogEvaluator(String workingDir) {
     new File(workingDir).mkdirs();
     this.workingDir = workingDir;
@@ -37,7 +39,17 @@ public class BashlogEvaluator implements Evaluator {
     this.debug = debug;
   }
 
+  @Override
+  public Map<String, Long> getTiming() {
+    HashMap<String, Long> map = new HashMap<>();
+    map.put("compile", timeCompile);
+    map.put("bash", timeBash);
+    return map;
+  }
+
   public FactsSet evaluate(Program program, FactsSet facts, Set<String> relationsToOutput) throws IOException {
+    timeCompile = 0;
+    timeBash = 0;
     program = program.copy();
     for (String relation : facts.getRelations()) {
       String path = workingDir + "/" + relation.replace("/", "_");
@@ -64,6 +76,7 @@ public class BashlogEvaluator implements Evaluator {
     SimpleFactsSet result = new SimpleFactsSet();
     for (String relation : relationsToOutput) {
       Runtime run = Runtime.getRuntime();
+      timeCompile -= System.nanoTime();
       BashlogCompiler bc = BashlogCompiler.prepareQuery(program, relation);
       String query = null;
       try {
@@ -74,7 +87,9 @@ public class BashlogEvaluator implements Evaluator {
           System.out.println(bc.debugInfo());
         }
       }
+      timeCompile += System.nanoTime();
       LOG.debug("running " + relation);
+      timeBash -= System.nanoTime();
       long start = System.nanoTime();
       Process proc = run.exec(new String[] { "/bin/bash", "-c", query });
       BufferedReader br = new BufferedReader(new InputStreamReader(proc.getInputStream()));
@@ -82,6 +97,7 @@ public class BashlogEvaluator implements Evaluator {
       while ((line = br.readLine()) != null) {
         result.add(relation, line.split("\t"));
       }
+      timeBash += System.nanoTime();
       LOG.debug("bash command executed in " + (System.nanoTime() - start) * 1e-9 + "s");
     }
 
