@@ -32,11 +32,11 @@ public class MainThomas {
     //relation = "takesCourse/2";
     //relation = BashlogLUBM.queries[2];
     //for (int i = 1; i <= 14; i++) {
-    for (int i = 9; i <= 9; i++) {
+    for (int i = 5; i <= 5; i++) {
       relation = BashlogLUBM.queries[i - 1];
       p.rulesForRelation(relation).forEach(r -> System.out.println(r));
       BashlogCompiler bc = BashlogCompiler.prepareQuery(p, relation);
-      
+
       try {
         String script = bc.compile();
         Files.write(new File("/home/tr/tmp/bashlog/new_query" + i).toPath(), script.getBytes());

@@ -19,6 +19,18 @@ public class Rule implements Parseable {
     this(head, Arrays.asList(body));
   }
 
+  public Rule withBodyClause(CompoundTerm add) {
+    List<CompoundTerm> newBody = new ArrayList<>(body);
+    newBody.add(add);
+    return new Rule(head, newBody);
+  }
+
+  public Rule withBodyClauses(List<CompoundTerm> add) {
+    List<CompoundTerm> newBody = new ArrayList<>(body);
+    newBody.addAll(add);
+    return new Rule(head, newBody);
+  }
+
   public static Rule read(ParserReader pr, Set<String> supportedFeatures) {
     Map<String, Variable> variables = new HashMap<>();
 
@@ -92,13 +104,16 @@ public class Rule implements Parseable {
     /*r = read(new ParserReader("pred(a) :- trans(a,b), trans(b,_)."), null);
     System.out.println(r);*/
     ParserReader pr;
-    r = read(pr = new ParserReader("pred(A) :- pred2(a,b)."), Parseable.ALL_FEATURES);
+    r = read(pr = new ParserReader("pred(A) :- pred2(A,B)."), Parseable.ALL_FEATURES);
     System.out.println(r);
     System.out.println("remaining: " + pr.peekLine());
     r = read(pr = new ParserReader("pred(A) :- pred2([A,B])."), Parseable.ALL_FEATURES);
     System.out.println(r);
     System.out.println("remaining: " + pr.peekLine());
     r = read(pr = new ParserReader("pred(A) :~ cat a.txt"), Parseable.ALL_FEATURES);
+    System.out.println(r);
+
+    r = read(pr = new ParserReader("false() :- owl_Nothing(X)."), Parseable.ALL_FEATURES);
     System.out.println(r);
   }
 

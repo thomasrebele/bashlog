@@ -2,10 +2,15 @@ package common.plan.node;
 
 import java.util.*;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import common.Tools;
 
 
 public class MaterializationNode implements PlanNode {
+
+  private static final Logger LOG = LoggerFactory.getLogger(MaterializationNode.class);
 
   private final PlanNode mainPlan;
 
@@ -41,14 +46,13 @@ public class MaterializationNode implements PlanNode {
   protected MaterializationNode(PlanNode mainPlan, PlanNode reusedPlan, PlaceholderNode.Builder builder, PlaceholderNode reuseNode, int reuseCount) {
     // first initialize reuse node!
     if (builder != null) {
-      builder.setParent(this);
       reuseNode = builder.preview();
     }
 
     if (!(reuseNode instanceof PlaceholderNode)) {
       throw new IllegalArgumentException();
     }
-    this.reuseNode = builder != null ? reuseNode : new PlaceholderNode(this, reuseNode.operatorString(), reusedPlan.getArity());
+    this.reuseNode = reuseNode;
     this.reusedPlan = reusedPlan;
     if (!mainPlan.contains(reuseNode)) {
       if (builder != null) {
@@ -123,5 +127,10 @@ public class MaterializationNode implements PlanNode {
   @Override
   public int hashCode() {
     return Objects.hash(mainPlan, reusedPlan);
+  }
+
+  @Override
+  public String toString() {
+    return operatorString();
   }
 }

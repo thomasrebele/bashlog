@@ -5,6 +5,7 @@ import common.plan.node.JoinNode;
 import common.plan.node.PlanNode;
 
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Map;
 
 /** Join two sorted inputs based on ONE column */
@@ -41,6 +42,11 @@ public class SortJoinNode extends JoinNode {
   }
 
   @Override
+  public boolean equals(Object obj) {
+    return equals(obj, new HashMap<>());
+  }
+
+  @Override
   public boolean equals(Object obj, Map<PlanNode, PlanNode> assumedEqualities) {
     if (this == obj) return true;
     if (!(obj.getClass() == getClass())) {
@@ -51,8 +57,14 @@ public class SortJoinNode extends JoinNode {
   }
 
   @Override
+  public int hashCode() {
+    return super.hashCode() ^ Arrays.hashCode(outputProjection);
+  }
+
+  @Override
   public int getArity() {
     return outputProjection.length;
   }
+
 
 }

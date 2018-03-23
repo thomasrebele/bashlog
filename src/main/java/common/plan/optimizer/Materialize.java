@@ -4,6 +4,8 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import bashlog.plan.TSVFileNode;
+import common.CompilerTools;
+import common.Tools;
 import common.plan.node.*;
 
 /**
@@ -12,11 +14,14 @@ import common.plan.node.*;
  */
 public class Materialize implements Optimizer {
 
-  private HashMap<PlanNode, Info> planToInfo;
+  private Map<PlanNode, Info> planToInfo;
+
+  private Map<PlaceholderNode, PlanNode> placeholderToParent;
 
   @Override
   public PlanNode apply(PlanNode t) {
     planToInfo = new HashMap<>();
+    placeholderToParent = PlaceholderNode.placeholderToParentMap(t);
     // determine which plan nodes to materialize
     analyzeStructure(t, 0, new ArrayList<>(), new HashSet<>(), new HashSet<>());
     analyzeReuse(t, 1);
@@ -34,6 +39,10 @@ public class Materialize implements Optimizer {
         PlanNode reuseAt = i.reuseAt() == null ? t : i.reuseAt();
         nodesToInfo.computeIfAbsent(reuseAt, k -> new ArrayList<>()).add(i);
         nodesToReuseNode.put(i.plan, i.matNodeBuilder.getReuseNode());
+
+        if (i.plan.toPrettyString().contains("delta")) {
+          i.calculateReuseAt();
+        }
       }
     });
 
@@ -52,8 +61,7 @@ public class Materialize implements Optimizer {
             if (i2.plan.contains(i1.plan)) return 1;
             return 0;
           }
-        })
-            .thenComparingInt(i -> i.depth) //
+        }).thenComparingInt(i -> i.depth) //
             .thenComparingInt(i -> System.identityHashCode(i));
 
         info.sort(cmp);
@@ -84,7 +92,7 @@ public class Materialize implements Optimizer {
       if (info != null) {
         add = info.toString();
       }
-      return String.format(" %-50s%s", add, str);
+      return String.format(" %-70s%s", add, str);
     }));
   }
 
@@ -99,8 +107,8 @@ public class Materialize implements Optimizer {
   private void analyzeStructure(PlanNode p, int depth, List<PlanNode> outerRecursions, //
       Set<PlanNode> innerRecursions, Set<PlanNode> calledRecursions) {
 
-    if (p instanceof PlaceholderNode && ((PlaceholderNode) p).getParent() instanceof RecursionNode) {
-      calledRecursions.add(((PlaceholderNode) p).getParent());
+    if (p instanceof PlaceholderNode && placeholderToParent.get(p) instanceof RecursionNode) {
+      calledRecursions.add(placeholderToParent.get(p));
       return;
     }
 
@@ -220,23 +228,37 @@ public class Materialize implements Optimizer {
       return result;
     }
 
+    void calculateReuseAt() {
+      int[] calledDepth = new int[] { -1 }, outerDepth = new int[] { -1 };
+      Set<PlanNode> outer = PlaceholderNode.outerParents(plan, placeholderToParent).stream().map(pn -> {
+        if (pn instanceof MultiOutputNode) {
+          return ((MultiOutputNode) pn).getMainPlan();
+        }
+        return pn;
+      }).collect(Collectors.toSet());
+      materializeAt = maxDepth(outer, new int[] { -1 });
+      // calculate outer and called depth
+      maxDepth(outerRecursions, outerDepth);
+      maxDepth(calledRecursions, calledDepth);
+      // check whether this plan is contained within a recursion node, but doesn't contain its delta/full nodes
+      // in that case we should materialize it at node 'materializeAt'
+      isRepeated = outerDepth[0] > calledDepth[0];
+      // do not materialize outside of an outer parent
+      if (outerDepth[0] == calledDepth[0] && materializeAt != null) {
+        // Q&D
+        for (PlanNode child : materializeAt.children()) {
+          if (child.contains(plan)) {
+            materializeAt = child;
+            break;
+          }
+        }
+      }
+    }
+
     /** Calculate which node should contain the materialization node for this plan (if at all) */
     PlanNode reuseAt() {
-      if (isRepeated == null) {
-        int[] calledDepth = new int[] { -1 }, outerDepth = new int[] { -1 };
-        Set<PlanNode> outer = PlaceholderNode.outerParents(plan).stream().map(pn -> {
-          if (pn instanceof MultiOutputNode) {
-            return ((MultiOutputNode) pn).getMainPlan();
-          }
-          return pn;
-        }).collect(Collectors.toSet());
-        materializeAt = maxDepth(outer, new int[] { -1 });
-        // calculate outer and called depth
-        maxDepth(outerRecursions, outerDepth);
-        maxDepth(calledRecursions, calledDepth);
-        // check whether this plan is contained within a recursion node, but doesn't contain its delta/full nodes
-        // in that case we should materialize it at node 'materializeAt'
-        isRepeated = outerDepth[0] > calledDepth[0];
+      if (materializeAt == null) {
+        calculateReuseAt();
       }
       return materializeAt;
     }
@@ -253,11 +275,11 @@ public class Materialize implements Optimizer {
     @Override
     public String toString() {
       return //filename + " uc:" + planUseCount + //
-          " orc:" + outerRecursions.size() + //
+      " orc:" + outerRecursions.size() + //
           " crc:" + calledRecursions.size() + //
           " " + (reuse() ? "reuse" : "     ") + //
           " " + (useCount() < 0 ? "-" : useCount()) + "x " + //
-          (reuseAt() != null ? " at " + reuseAt().hash() : "") + "  " + plan.toString();
+          (reuseAt() != null ? " at " + reuseAt().hash() + "  " + reuseAt().operatorString() : "");
     }
   }
 

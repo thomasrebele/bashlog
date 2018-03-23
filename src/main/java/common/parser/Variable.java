@@ -14,7 +14,7 @@ public class Variable extends Term implements Parseable {
 
   @Override
   public String toString() {
-    return "var:" + name + "@" + ("" + System.identityHashCode(this)).substring(0, 3);
+    return name;
   }
 
   public static Variable read(ParserReader pr, Map<String, Variable> varMap, Set<String> supportedFeatures) {

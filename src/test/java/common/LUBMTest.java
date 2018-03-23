@@ -4,12 +4,18 @@ import common.parser.Program;
 import experiments.lubm.BashlogLUBM;
 import experiments.lubm.generator.Tsv3Writer;
 import javatools.filehandlers.TSVFile;
+
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import yago4.Tools;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -20,6 +26,8 @@ import java.util.stream.Stream;
  * TODO: the official answers for query 8 removed characters at the end of some email addresses. Fix it here.
  */
 public abstract class LUBMTest {
+
+  private static final Logger LOG = LoggerFactory.getLogger(LUBMTest.class);
 
   private String answers = "http://swat.cse.lehigh.edu/projects/lubm/answers.zip";
 
@@ -46,7 +54,8 @@ public abstract class LUBMTest {
 
     lubmProgram = BashlogLUBM.lubmProgram3(dir, lubm);
 
-    System.out.println(lubmProgram.toString());
+    Files.write(Paths.get("/tmp/lubm-program.txt"), lubmProgram.toString().getBytes());
+    LOG.info("wrote lubm program to /tmp/lubm-program.txt");
   }
 
   private Stream<Object[]> getRelation(String relation) throws Exception {

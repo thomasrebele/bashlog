@@ -10,7 +10,7 @@ public class Constant<T extends Comparable> extends Term implements Parseable {
 
   @Override
   public String toString() {
-    return "const:'" + value + "'";
+    return "\"" + value + "\"";
   }
 
   @Override

@@ -10,9 +10,7 @@ import common.plan.node.PlaceholderNode;
 import common.plan.node.PlanNode;
 
 /** Stores information that is needed during the translation. For the translation you need to use BashlogCompiler. */
-public class CompilerInternals {
-
-  private final Map<Class<?>, Translator> translators;
+public class CompilerInternals extends common.CompilerInternals<Translator> {
 
   /** Current index for temporary files. Increment when using it! */
   AtomicInteger tmpFileIndex = new AtomicInteger();
@@ -30,8 +28,9 @@ public class CompilerInternals {
    * Constructor
    * @param translators map from a node class to its translator
    */
-  CompilerInternals(Map<Class<?>, Translator> translators) {
-    this.translators = translators;
+  CompilerInternals(Map<Class<?>, bashlog.translation.Translator> translators, PlanNode fullPlan) {
+    super(translators, fullPlan);
+
   }
 
   /** Whether the resulting bash script will materialize multiple plans in parallel */
@@ -83,7 +82,7 @@ public class CompilerInternals {
       directPlaceholderDescendants(children, todo);
 
       for (PlanNode child : todo) {
-        PlanNode parent = ((PlaceholderNode) child).getParent();
+        PlanNode parent = getParent((PlaceholderNode) child);
         if (parent instanceof MaterializationNode) {
           String matFile = placeholderToFilename.get(child);
           if (parallelMaterialization) {
@@ -104,7 +103,7 @@ public class CompilerInternals {
     if (cache.containsKey(planNode)) return cache.get(planNode);
 
     // apply corresponding translator if possible; also applies locking for parallel materialization
-    Translator t = translators.get(planNode.getClass());
+    bashlog.translation.Translator t = translators.get(planNode.getClass());
     if (t != null) {
       Bash result = waitFor(t.translate(planNode, this), planNode.children());
       cache.put(planNode, result);
@@ -113,7 +112,7 @@ public class CompilerInternals {
 
     // inject files for placeholder nodes
     if (planNode instanceof PlaceholderNode) {
-      PlanNode parent = ((PlaceholderNode) planNode).getParent();
+      PlanNode parent = getParent((PlaceholderNode) planNode);
       String file = placeholderToFilename.get(planNode);
       if (file == null) {
         placeholderToFilename.forEach((m, f) -> System.err.println(m.operatorString() + "  " + f));

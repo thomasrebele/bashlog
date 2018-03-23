@@ -1,5 +1,8 @@
 package bashlog.plan;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import common.Tools;
 import common.plan.node.PlanNode;
 
@@ -28,4 +31,22 @@ public class SortAntiJoinNode extends SortJoinNode {
         originalParent);
   }
 
+  @Override
+  public boolean equals(Object obj) {
+    return equals(obj, new HashMap<>());
+  }
+
+  @Override
+  public boolean equals(Object obj, Map<PlanNode, PlanNode> assumedEqualities) {
+    if (this == obj) return true;
+    if (!(obj.getClass() == getClass())) {
+      return false;
+    }
+    return super.equals(obj, assumedEqualities);
+  }
+
+  @Override
+  public int hashCode() {
+    return super.hashCode();
+  }
 }

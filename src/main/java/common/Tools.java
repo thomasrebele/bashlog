@@ -3,6 +3,7 @@ package common;
 import java.io.*;
 import java.nio.charset.Charset;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class Tools {
 
@@ -124,6 +125,12 @@ public class Tools {
     }
     reader.close();
     return sb.toString();
+  }
+
+  /** Get first n lines of string */
+  public static String head(String prettyString, int n) {
+    String[] parts = prettyString.split("\n", n + 1);
+    return Arrays.stream(parts).limit(n).collect(Collectors.joining("\n"));
   }
 
 }

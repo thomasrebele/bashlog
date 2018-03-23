@@ -30,6 +30,11 @@ public interface PlanNode {
    */
   List<PlanNode> children();
 
+  /** List of placeholder nodes that are associated with this node */
+  default List<PlaceholderNode> placeholders() {
+    return Collections.emptyList();
+  }
+
   /**
    * Children which should be printed by toPrettyString()
    */
@@ -167,9 +172,9 @@ public interface PlanNode {
    * Convenience methods to wrap a plan node in another one
    */
 
-  default RecursionNode recursion() {
+  /*default RecursionNode recursion() {
     return new RecursionNode(this);
-  }
+  }*/
 
   /**
    * Lambda class for applying transformation on plan node
@@ -228,6 +233,7 @@ public interface PlanNode {
    * Create a new plan where target subplan is replaced by replacement subplan
    */
   default PlanNode replace(PlanNode target, PlanNode replacement) {
+    if (target == replacement) return this;
     return transform((node) -> (node.equals(target)) ? replacement : node);
   }
 

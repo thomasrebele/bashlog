@@ -3,7 +3,6 @@ package common.plan.optimizer;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import bashlog.plan.TSVFileNode;
 import common.plan.node.*;
 
 /**
@@ -13,6 +12,8 @@ public class MultiOutput implements Optimizer {
 
   // leaf node to info
   private HashMap<PlanNode, Info> planToInfo;
+
+  private HashMap<PlaceholderNode, PlanNode> placeholderToParent = new HashMap<>();
 
   @Override
   public PlanNode apply(PlanNode t) {
@@ -29,7 +30,7 @@ public class MultiOutput implements Optimizer {
     HashMap<PlanNode, List<Info>> nodesToInfo = new HashMap<>();
     planToInfo.forEach((p, i) -> {
       if (i.createMultiOutputNode) {
-        PlanNode reuseAt = p instanceof PlaceholderNode ? ((PlaceholderNode) p).getParent() : t;
+        PlanNode reuseAt = p instanceof PlaceholderNode ? placeholderToParent.get(p) : t;
         nodesToInfo.computeIfAbsent(reuseAt, k -> new ArrayList<>()).add(i);
         for (PlanNode reusedPlan : i.plans) {
           nodesToReuseNode.put(reusedPlan, i.builder.getNextReuseNode(reusedPlan.getArity()));
@@ -78,6 +79,10 @@ public class MultiOutput implements Optimizer {
    */
   private PlanNode analyzeStructure(PlanNode p, int depth) {
     // TODO: multioutput for placeholders
+    for (PlaceholderNode ph : p.placeholders()) {
+      placeholderToParent.put(ph, p);
+    }
+
     if (p.children().size() == 0 && !(p instanceof PlaceholderNode)) {
       planToInfo.computeIfAbsent(p, k -> new Info());
       return p;

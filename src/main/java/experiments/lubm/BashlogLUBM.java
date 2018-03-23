@@ -5,6 +5,7 @@ import common.parser.ParserReader;
 import common.parser.Program;
 import org.semanticweb.owlapi.apibinding.OWLManager;
 import org.semanticweb.owlapi.model.IRI;
+import org.semanticweb.owlapi.model.OWLOntology;
 import org.semanticweb.owlapi.model.OWLOntologyCreationException;
 import org.semanticweb.owlapi.model.OWLOntologyManager;
 import owl.OntologyConverter;
@@ -88,18 +89,25 @@ public class BashlogLUBM {
     return lubmProgram;
   }
 
+  private static Program ontologyProgram;
+
   /** LUBM queries for 3-column TSV */
   public static Program lubmProgramOWL3(String lubmDir, String queryDir) throws IOException {
     OWLOntologyManager ontologyManager = OWLManager.createOWLOntologyManager();
-    IRI ontologyIRI = IRI.create("http://swat.cse.lehigh.edu/onto/univ-bench.owl");
-    try {
-      ontologyManager.loadOntology(ontologyIRI);
-    } catch (OWLOntologyCreationException e) {
-      throw new IOException(e);
-    }
-    OntologyConverter converter = new OntologyConverter();
+    IRI ontologyIRI = IRI.create("file:data/lubm/univ-bench.owl");
 
-    Program lubmProgram = Program.merge(converter.convert(ontologyManager.getOntology(ontologyIRI)), Program.loadFile(queryDir + "/queries.txt"));
+    if (ontologyProgram == null) {
+      OWLOntology ontology;
+      try {
+        ontology = ontologyManager.loadOntology(ontologyIRI);
+      } catch (OWLOntologyCreationException e) {
+        throw new IOException(e);
+      }
+      OntologyConverter converter = new OntologyConverter();
+      ontologyProgram = converter.convert(ontology);
+    }
+
+    Program lubmProgram = Program.merge(ontologyProgram, Program.loadFile(queryDir + "/queries.txt"));
     String script = lubmScript3(lubmDir, lubmProgram);
     lubmProgram.addRules(Program.read(new ParserReader(script)));
     return lubmProgram;

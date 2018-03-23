@@ -13,7 +13,7 @@ public class MultiOutputNode implements PlanNode {
 
   private final List<PlanNode> reusedPlans;
 
-  private final List<PlanNode> reuseNodes;
+  private final List<PlaceholderNode> reuseNodes;
 
   public static class Builder {
 
@@ -38,12 +38,11 @@ public class MultiOutputNode implements PlanNode {
 
   /** Use builder if possible */
   protected MultiOutputNode(PlanNode mainPlan, PlanNode leafPlan, List<PlanNode> reusedPlans, List<PlaceholderNode.Builder> builders,
-      List<PlanNode> reuseNodes) {
+      List<PlaceholderNode> reuseNodes) {
     // first initialize reuse node!
     if (builders != null) {
       reuseNodes = new ArrayList<>(builders.size());
       for (PlaceholderNode.Builder builder : builders) {
-        builder.setParent(this);
         reuseNodes.add(builder.preview());
       }
     }
@@ -59,7 +58,8 @@ public class MultiOutputNode implements PlanNode {
       this.reuseNodes = new ArrayList<>();
       for (int i = 0; i < reusedPlans.size(); i++) {
         PlanNode oldReuseNode = reuseNodes.get(i);
-        PlanNode newReuseNode = new PlaceholderNode(this, oldReuseNode.operatorString(), reusedPlans.get(i).getArity());
+        // TODO: recycle reuse nodes
+        PlaceholderNode newReuseNode = new PlaceholderNode(this, oldReuseNode.operatorString(), reusedPlans.get(i).getArity());
         this.reuseNodes.add(newReuseNode);
 
         if (!mainPlan.contains(oldReuseNode)) {
@@ -92,6 +92,11 @@ public class MultiOutputNode implements PlanNode {
   @Override
   public List<PlanNode> children() {
     return Arrays.asList(leafPlan, mainPlan); //
+  }
+
+  @Override
+  public List<PlaceholderNode> placeholders() {
+    return reuseNodes;
   }
 
   @Override
