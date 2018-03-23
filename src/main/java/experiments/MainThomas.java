@@ -26,7 +26,7 @@ public class MainThomas {
 
     String scriptDir = "experiments/edbt2017/lubm/bashlog/";
     new File(scriptDir).mkdirs();
-    Program p = BashlogLUBM.lubmProgramOWL3("~/extern/data/bashlog/lubm/$1/", "data/lubm");
+    Program p = BashlogLUBM.lubmProgram3("~/extern/data/bashlog/lubm/$1/", "data/lubm");
     String relation = BashlogLUBM.queries[1];
     //relation = "Student/1";
     //relation = "takesCourse/2";

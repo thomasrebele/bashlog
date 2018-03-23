@@ -45,6 +45,9 @@ public class PlanValidator implements Optimizer {
       if (n instanceof UnionNode) {
         check((UnionNode) n);
       }
+      else if (n instanceof PlaceholderNode) {
+        check((PlaceholderNode) n);
+      }
 
       allNodes.add(n);
       if (n.placeholders().size() > 0) {
@@ -71,6 +74,12 @@ public class PlanValidator implements Optimizer {
       if (c instanceof UnionNode) {
         LOG.error("union may not have a union as child");
       }
+    }
+  }
+
+  private void check(PlaceholderNode n) {
+    if (n.getArity() < 0) {
+      LOG.error("placeholder has no arity: {}", n);
     }
   }
 

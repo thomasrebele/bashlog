@@ -5,8 +5,6 @@ import java.util.stream.Collectors;
 
 public class PlaceholderNode implements PlanNode {
 
-  protected PlanNode parent;
-
   protected String operatorString;
 
   protected final Integer arity;
@@ -23,10 +21,6 @@ public class PlaceholderNode implements PlanNode {
       return node;
     }
 
-    public void setParent(PlanNode parent) {
-      node.parent = parent;
-    }
-
     /** Only use for debugging */
     public void setOperatorString(String str) {
       node.operatorString = str;
@@ -35,7 +29,6 @@ public class PlaceholderNode implements PlanNode {
     public PlaceholderNode build(PlanNode parent, String operatorString) {
       if (node == null) throw new IllegalStateException("already built!");
       try {
-        node.parent = parent;
         node.operatorString = operatorString;
         return node;
       } finally {
@@ -45,20 +38,17 @@ public class PlaceholderNode implements PlanNode {
   }
 
   public PlaceholderNode(PlanNode parent, String operatorString) {
-    this.parent = parent;
     this.operatorString = operatorString;
     arity = null;
   }
 
   public PlaceholderNode(PlanNode parent, String operatorString, Integer arity) {
-    this.parent = parent;
     this.operatorString = operatorString;
     this.arity = arity;
+    if (arity == null) {
+      throw new NullPointerException();
+    }
   }
-
-  /*public PlanNode getParent() {
-    return parent;
-  }*/
 
   @Override
   public String toString() {
@@ -83,7 +73,7 @@ public class PlaceholderNode implements PlanNode {
 
   @Override
   public int getArity() {
-    return arity == null ? parent.getArity() : arity;
+    return arity == null ? -1 : arity;
   }
 
   @Override
@@ -93,23 +83,37 @@ public class PlaceholderNode implements PlanNode {
 
   @Override
   public String operatorString() {
-    return operatorString + (parent != null && !operatorString.contains(" for ") ? " for " + parent.operatorString() : "");
+    return operatorString /*+ (parent != null && !operatorString.contains(" for ") ? " for " + parent.operatorString() : "")*/;
   }
 
-  /** Walk through the plan and collect outer nodes that have a place holder in the plan given by argument 'ofPlan' */
-  /*public static Set<PlanNode> outerParents(PlanNode ofPlan) {
+  public static Map<PlaceholderNode, PlanNode> placeholderToParentMap(PlanNode plan) {
+    Map<PlaceholderNode, PlanNode> map = new HashMap<>();
+    if (plan != null) {
+      plan.transform(n -> {
+        for (PlaceholderNode pn : n.placeholders()) {
+          map.put(pn, n);
+        }
+        return n;
+      });
+    }
+    return map;
+  }
+
+  /** Walk through the plan and collect outer nodes that have a place holder in the plan given by argument 'ofPlan' 
+   * @param placeholderToParent */
+  public static Set<PlanNode> outerParents(PlanNode ofPlan, Map<PlaceholderNode, PlanNode> placeholderToParent) {
     HashMap<PlanNode, Boolean> nodeToContained = new HashMap<>();
   
     ofPlan.transform(pn -> {
       nodeToContained.put(pn, true);
   
       if (pn instanceof PlaceholderNode) {
-        nodeToContained.putIfAbsent(((PlaceholderNode) pn).getParent(), false);
+        nodeToContained.putIfAbsent(placeholderToParent.get(pn), false);
       }
       return pn;
     });
   
     return nodeToContained.entrySet().stream().filter(e -> !e.getValue()).map(e -> e.getKey()).collect(Collectors.toSet());
-  }*/
+  }
 
 }

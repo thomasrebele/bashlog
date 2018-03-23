@@ -172,9 +172,9 @@ public interface PlanNode {
    * Convenience methods to wrap a plan node in another one
    */
 
-  default RecursionNode recursion() {
+  /*default RecursionNode recursion() {
     return new RecursionNode(this);
-  }
+  }*/
 
   /**
    * Lambda class for applying transformation on plan node

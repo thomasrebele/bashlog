@@ -79,12 +79,15 @@ public class LogicalPlanBuilder {
 
       if (!recursiveRules.isEmpty()) {
         //We build recursion
-        RecursionNode recursionPlan = plan.recursion();
-        plan = recursionPlan;
-        Map<String, PlanNode> newDeltaNodes = withEntry(filteredDeltaNode, relation, recursionPlan.getDelta());
+        RecursionNode.Builder builder = new RecursionNode.Builder(plan);
+        //RecursionNode recursionPlan = plan.recursion();
+        //plan = recursionPlan;
+        Map<String, PlanNode> newDeltaNodes = withEntry(filteredDeltaNode, relation, builder.getDelta());
         recursiveRules.forEach(rule ->
-                recursionPlan.addRecursivePlan(introduceFullRecursion(getPlanForRule(rule, newDeltaNodes), recursionPlan.getDelta(), recursionPlan.getFull()))
+        builder.addRecursivePlan(introduceFullRecursion(getPlanForRule(rule, newDeltaNodes), builder.getDelta(), builder.getFull()))
         );
+
+        plan = builder.build();
       }
       planForRelation.put(relationWithDeltaNodes, plan);
     }

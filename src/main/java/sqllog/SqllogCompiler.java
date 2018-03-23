@@ -50,7 +50,7 @@ public class SqllogCompiler {
 
     LogicalPlanBuilder planBuilder = new LogicalPlanBuilder(BUILDS_IN, Collections.singleton(relationToOutput));
     PlanNode plan = optimize(planBuilder.getPlanForProgram(program).get(relationToOutput));
-    placeholderToParent = common.CompilerInternals.placeholderToParentMap(plan);
+    placeholderToParent = common.plan.node.PlaceholderNode.placeholderToParentMap(plan);
     return mapPlanNode(plan).toString();
   }
 

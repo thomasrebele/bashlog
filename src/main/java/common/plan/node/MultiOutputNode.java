@@ -43,7 +43,6 @@ public class MultiOutputNode implements PlanNode {
     if (builders != null) {
       reuseNodes = new ArrayList<>(builders.size());
       for (PlaceholderNode.Builder builder : builders) {
-        builder.setParent(this);
         reuseNodes.add(builder.preview());
       }
     }

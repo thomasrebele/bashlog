@@ -42,7 +42,7 @@ public class BashlogCompiler {
       Arrays.asList(new CombineFacts(), new SimplifyRecursion(), new PushDownJoin(), new ReorderJoinLinear(), new PushDownFilterAndProject(),
           new SimplifyRecursion(),
           new PushDownFilterAndProject()),
-      Arrays.asList(new BashlogPlan(), new BashlogOptimizer(), new MultiOutput(), new CombineFilter(false), /*new Materialize(),*/
+      Arrays.asList(new BashlogPlan(), new BashlogOptimizer(), new MultiOutput(), new CombineFilter(false), new Materialize(),
           new CombineFilter(false)));
   
 

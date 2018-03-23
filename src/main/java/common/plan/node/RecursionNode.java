@@ -10,7 +10,12 @@ import java.util.Map;
 /** 
  * Represents a plan node, that has itself as subplan.
  * 
-
+ * Usecase example:
+ * r1: foo(x,y) <- bar(x,y)
+ * r2: foo(x,z) <- foo(x,y), bar(y,z)
+ * <p>
+ * We will have for exit plan the plan for r1 (input of the loop) and we will add the recursive plan for r2 where
+ * foo call is replaced by the delta node (retrieved by getDelta()) 
  */
 public class RecursionNode implements PlanNode {
 
@@ -18,32 +23,75 @@ public class RecursionNode implements PlanNode {
 
   private PlanNode recursivePlan;
 
-  protected final PlaceholderNode deltaNode = new PlaceholderNode(this, "delta");
+  protected final PlaceholderNode deltaNode;
 
-  protected final PlaceholderNode fullNode = new PlaceholderNode(this, "full");
+  protected final PlaceholderNode fullNode;
 
-  /**
-   * Constructs a recursion.
-   * 
-   * Usecase example:
-   * r1: foo(x,y) <- bar(x,y)
-   * r2: foo(x,z) <- foo(x,y), bar(y,z)
-   * <p>
-   * We will have for exit plan the plan for r1 (input of the loop) and we will add the recursive plan for r2 where
-   * foo call is replaced by the delta node (retrieved by getDelta()) 
-   */
-  public RecursionNode(PlanNode exitPlan) {
-    this.exitPlan = exitPlan;
-    recursivePlan = PlanNode.empty(exitPlan.getArity());
+  public static class Builder {
+
+    int arity;
+
+    PlaceholderNode.Builder delta, full;
+
+    PlanNode exitPlan, recursivePlan;
+
+    public Builder(PlanNode exitPlan) {
+      this.exitPlan = exitPlan;
+      this.arity = exitPlan.getArity();
+      delta = new PlaceholderNode.Builder("delta_{building}", arity);
+      full = new PlaceholderNode.Builder("full_{building}", arity);
+      recursivePlan = PlanNode.empty(arity);
+    }
+
+    public RecursionNode build() {
+      RecursionNode r = new RecursionNode(exitPlan, recursivePlan, Builder.this);
+      delta.build(r, "delta for " + r.operatorString());
+      full.build(r, "full for " + r.operatorString());
+      return r;
+    }
+
+    public PlaceholderNode getDelta() {
+      return delta.preview();
+    }
+
+    public PlaceholderNode getFull() {
+      return full.preview();
+    }
+
+    public void addRecursivePlan(PlanNode addedRecursivePlan) {
+      if (addedRecursivePlan.getArity() != exitPlan.getArity()) {
+        throw new IllegalArgumentException("The recursions should have the same arity as the recursion entry.\nRecursion plan:\n" + addedRecursivePlan
+            + "\nExit plan:\n" + exitPlan);
+      }
+      recursivePlan = recursivePlan.union(addedRecursivePlan);
+    }
   }
 
   /** Use exit plan and recursive plan. The delta is the one in the recursive plan. It will be replaced by a new delta. */
-  public RecursionNode(PlanNode exitPlan, PlanNode recursivePlan, PlanNode delta, PlanNode full) {
+  private RecursionNode(PlanNode exitPlan, PlanNode recursivePlan, Builder builder) {
     if (exitPlan.getArity() != recursivePlan.getArity()) {
       throw new IllegalArgumentException(
           "Exit and recursive plans should have the same arity." + "Here: " + exitPlan.getArity() + " vs " + recursivePlan.getArity());
     }
 
+    this.deltaNode = builder.delta.preview();
+    this.fullNode = builder.full.preview();
+
+    this.exitPlan = exitPlan;
+    // TODO: use a building like in MaterializationNode, in order to avoid performance bugs
+    //this.recursivePlan = recursivePlan.replace(delta, deltaNode).replace(full, fullNode);
+    this.recursivePlan = recursivePlan;
+  }
+
+  /** Use exit plan and recursive plan. The delta is the one in the recursive plan. It will be replaced by a new delta. */
+  public RecursionNode(PlanNode exitPlan, PlanNode recursivePlan, PlaceholderNode delta, PlaceholderNode full) {
+    if (exitPlan.getArity() != recursivePlan.getArity()) {
+      throw new IllegalArgumentException(
+          "Exit and recursive plans should have the same arity." + "Here: " + exitPlan.getArity() + " vs " + recursivePlan.getArity());
+    }
+
+    this.deltaNode = new PlaceholderNode(this, "delta", exitPlan.getArity());
+    this.fullNode = new PlaceholderNode(this, "full", exitPlan.getArity());
     this.exitPlan = exitPlan;
     // TODO: use a building like in MaterializationNode, in order to avoid performance bugs
     this.recursivePlan = recursivePlan.replace(delta, deltaNode).replace(full, fullNode);
@@ -65,12 +113,7 @@ public class RecursionNode implements PlanNode {
     return fullNode;
   }
 
-  public void addRecursivePlan(PlanNode addedRecursivePlan) {
-    if (addedRecursivePlan.getArity() != exitPlan.getArity()) {
-      throw new IllegalArgumentException("The recursions should have the same arity as the recursion entry.\nRecursion plan:\n" + addedRecursivePlan + "\nExit plan:\n" + exitPlan);
-    }
-    recursivePlan = recursivePlan.union(addedRecursivePlan);
-  }
+
 
   @Override
   public int getArity() {

@@ -46,7 +46,6 @@ public class MaterializationNode implements PlanNode {
   protected MaterializationNode(PlanNode mainPlan, PlanNode reusedPlan, PlaceholderNode.Builder builder, PlaceholderNode reuseNode, int reuseCount) {
     // first initialize reuse node!
     if (builder != null) {
-      builder.setParent(this);
       reuseNode = builder.preview();
     }
 
