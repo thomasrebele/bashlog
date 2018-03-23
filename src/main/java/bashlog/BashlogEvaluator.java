@@ -65,10 +65,14 @@ public class BashlogEvaluator implements Evaluator {
     for (String relation : relationsToOutput) {
       Runtime run = Runtime.getRuntime();
       BashlogCompiler bc = BashlogCompiler.prepareQuery(program, relation);
-      String query = bc.compile();
-      if (debug) {
-        System.out.println(query);
-        System.out.println(bc.debugInfo());
+      String query = null;
+      try {
+        query = bc.compile();
+      } finally {
+        if (debug) {
+          System.out.println(query);
+          System.out.println(bc.debugInfo());
+        }
       }
       LOG.debug("running " + relation);
       long start = System.nanoTime();

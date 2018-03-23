@@ -59,6 +59,7 @@ public class MultiOutputNode implements PlanNode {
       this.reuseNodes = new ArrayList<>();
       for (int i = 0; i < reusedPlans.size(); i++) {
         PlanNode oldReuseNode = reuseNodes.get(i);
+        // TODO: recycle reuse nodes
         PlanNode newReuseNode = new PlaceholderNode(this, oldReuseNode.operatorString(), reusedPlans.get(i).getArity());
         this.reuseNodes.add(newReuseNode);
 

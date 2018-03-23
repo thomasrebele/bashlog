@@ -96,11 +96,11 @@ public class PlaceholderNode implements PlanNode {
     return operatorString + (parent != null && !operatorString.contains(" for ") ? " for " + parent.operatorString() : "");
   }
 
-  /** Walk through the plan and collect outer nodes that have a place holder in the plan */
-  public static Set<PlanNode> outerParents(PlanNode plan) {
+  /** Walk through the plan and collect outer nodes that have a place holder in the plan given by argument 'ofPlan' */
+  public static Set<PlanNode> outerParents(PlanNode ofPlan) {
     HashMap<PlanNode, Boolean> nodeToContained = new HashMap<>();
 
-    plan.transform(pn -> {
+    ofPlan.transform(pn -> {
       nodeToContained.put(pn, true);
 
       if (pn instanceof PlaceholderNode) {

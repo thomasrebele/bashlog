@@ -228,6 +228,7 @@ public interface PlanNode {
    * Create a new plan where target subplan is replaced by replacement subplan
    */
   default PlanNode replace(PlanNode target, PlanNode replacement) {
+    if (target == replacement) return this;
     return transform((node) -> (node.equals(target)) ? replacement : node);
   }
 

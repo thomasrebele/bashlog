@@ -24,7 +24,6 @@ public class MainThomas {
 
     // lubm
 
-    System.in.read();
     String scriptDir = "experiments/edbt2017/lubm/bashlog/";
     new File(scriptDir).mkdirs();
     Program p = BashlogLUBM.lubmProgramOWL3("~/extern/data/bashlog/lubm/$1/", "data/lubm");
@@ -33,7 +32,7 @@ public class MainThomas {
     //relation = "takesCourse/2";
     //relation = BashlogLUBM.queries[2];
     //for (int i = 1; i <= 14; i++) {
-    for (int i = 13; i <= 13; i++) {
+    for (int i = 2; i <= 2; i++) {
       relation = BashlogLUBM.queries[i - 1];
       p.rulesForRelation(relation).forEach(r -> System.out.println(r));
       BashlogCompiler bc = BashlogCompiler.prepareQuery(p, relation);

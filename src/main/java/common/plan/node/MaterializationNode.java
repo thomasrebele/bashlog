@@ -48,7 +48,8 @@ public class MaterializationNode implements PlanNode {
     if (!(reuseNode instanceof PlaceholderNode)) {
       throw new IllegalArgumentException();
     }
-    this.reuseNode = builder != null ? reuseNode : new PlaceholderNode(this, reuseNode.operatorString(), reusedPlan.getArity());
+    //this.reuseNode = builder != null ? reuseNode : new PlaceholderNode(this, reuseNode.operatorString(), reusedPlan.getArity());
+    this.reuseNode = reuseNode;
     this.reusedPlan = reusedPlan;
     if (!mainPlan.contains(reuseNode)) {
       if (builder != null) {

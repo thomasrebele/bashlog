@@ -95,7 +95,7 @@ public class RecursionNode implements PlanNode {
 
   @Override
   public int hashCode() {
-    return exitPlan.hashCode() ^ recursivePlan.hashCode();
+    return exitPlan.hashCode() ^ 137 * recursivePlan.hashCode();
   }
 
   @Override

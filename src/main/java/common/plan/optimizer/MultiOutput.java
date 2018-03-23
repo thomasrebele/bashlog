@@ -3,7 +3,6 @@ package common.plan.optimizer;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import bashlog.plan.TSVFileNode;
 import common.plan.node.*;
 
 /**
