@@ -1,9 +1,12 @@
 package common.plan.optimizer;
 
-import java.util.*;
-import java.util.stream.Collectors;
+import common.plan.node.FactNode;
+import common.plan.node.PlanNode;
+import common.plan.node.UnionNode;
 
-import common.plan.node.*;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Combine a union of selections/projections on one subplan to a single node
@@ -21,7 +24,7 @@ public class CombineFacts implements Optimizer {
 
         if (facts.size() > 1) {
           FactNode fn = new FactNode(facts);
-          Set<PlanNode> others = u.children().stream().filter(c -> !(c instanceof FactNode)).map(c -> (FactNode) c).collect(Collectors.toSet());
+          Set<PlanNode> others = u.children().stream().filter(c -> !(c instanceof FactNode)).collect(Collectors.toSet());
           return fn.union(others);
         }
 
