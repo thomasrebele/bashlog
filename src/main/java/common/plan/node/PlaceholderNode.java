@@ -32,7 +32,7 @@ public class PlaceholderNode implements PlanNode {
 
   @Override
   public int hashCode() {
-    return 0;
+    return System.identityHashCode(this);
   }
 
   @Override
