@@ -19,6 +19,18 @@ public class Rule implements Parseable {
     this(head, Arrays.asList(body));
   }
 
+  public Rule withBodyClause(CompoundTerm add) {
+    List<CompoundTerm> newBody = new ArrayList<>(body);
+    newBody.add(add);
+    return new Rule(head, newBody);
+  }
+
+  public Rule withBodyClauses(List<CompoundTerm> add) {
+    List<CompoundTerm> newBody = new ArrayList<>(body);
+    newBody.addAll(add);
+    return new Rule(head, newBody);
+  }
+
   public static Rule read(ParserReader pr, Set<String> supportedFeatures) {
     Map<String, Variable> variables = new HashMap<>();
 

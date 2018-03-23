@@ -24,9 +24,16 @@ import java.util.stream.Stream;
  */
 public class Program implements Parseable {
 
-  private List<Rule> rules = new ArrayList<>();
+  private final List<Rule> rules = new ArrayList<>();
 
-  private Map<String, List<Rule>> relationToRules = new HashMap<>();
+  private final Map<String, List<Rule>> relationToRules = new HashMap<>();
+
+  public Program() {
+  }
+
+  public Program(Stream<Rule> rules) {
+    rules.forEach(this::addRule);
+  }
 
   public static Program loadFile(String path) throws IOException {
     return loadFile(path, Parseable.ALL_FEATURES);
