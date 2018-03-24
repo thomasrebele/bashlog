@@ -73,16 +73,15 @@ public class MultiFilterNode implements PlanNode {
   }
 
   @Override
-  public boolean equals(Object obj,  Map<PlanNode,PlanNode> assumedEqualities) {
+  public boolean equals(Object obj, Map<PlanNode, PlanNode> assumedEqualities) {
     if (this == obj) return true;
     if (!(obj.getClass() == getClass())) {
       return false;
     }
     MultiFilterNode node = (MultiFilterNode) obj;
-    Map<PlanNode,PlanNode> newAssumedEqualities = Tools.with(assumedEqualities, placeholder, node.placeholder);
-    return table.equals(node.table, newAssumedEqualities) &&
-            children.size() == node.children.size() &&
-            children.stream().allMatch(child -> node.children.stream().anyMatch(other -> other.equals(child, newAssumedEqualities)));
+    Map<PlanNode, PlanNode> newAssumedEqualities = Tools.with(assumedEqualities, placeholder, node.placeholder);
+    return table.equals(node.table, newAssumedEqualities) && children.size() == node.children.size()
+        && children.stream().allMatch(child -> node.children.stream().anyMatch(other -> other.equals(child, newAssumedEqualities)));
   }
 
   @Override

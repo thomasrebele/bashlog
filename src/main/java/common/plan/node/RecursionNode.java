@@ -111,8 +111,6 @@ public class RecursionNode implements PlanNode {
     return fullNode;
   }
 
-
-
   @Override
   public int getArity() {
     return exitPlan.getArity();
@@ -124,7 +122,7 @@ public class RecursionNode implements PlanNode {
   }
 
   @Override
-  public boolean equals(Object obj, Map<PlanNode,PlanNode> assumedEqualities) {
+  public boolean equals(Object obj, Map<PlanNode, PlanNode> assumedEqualities) {
     if (this == obj) return true;
     if (!(obj.getClass() == getClass())) {
       return false;

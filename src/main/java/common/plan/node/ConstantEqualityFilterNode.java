@@ -59,7 +59,7 @@ public class ConstantEqualityFilterNode implements EqualityFilterNode {
   }
 
   @Override
-  public boolean equals(Object obj,  Map<PlanNode,PlanNode> assumedEqualities) {
+  public boolean equals(Object obj, Map<PlanNode, PlanNode> assumedEqualities) {
     if (this == obj) return true;
     if (!(obj.getClass() == getClass())) {
       return false;

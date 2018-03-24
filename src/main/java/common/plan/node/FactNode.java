@@ -5,6 +5,10 @@ public class FactNode implements PlanNode {
 
   private final List<Comparable<?>[]> facts;
 
+  public FactNode(String... fields) {
+    this((Comparable<?>[]) fields);
+  }
+
   public FactNode(Comparable<?>[] fields) {
     facts = new ArrayList<>();
     facts.add(fields);

@@ -67,8 +67,9 @@ public class JoinNode implements PlanNode {
 
   @Override
   public String operatorString() {
-    return "⋈_{" + IntStream.range(0, leftProjection.length).mapToObj(i -> leftProjection[i] + "=" + rightProjection[i])
-        .collect(Collectors.joining(", ")) + "}";
+    return "⋈_{"
+        + IntStream.range(0, leftProjection.length).mapToObj(i -> leftProjection[i] + "=" + rightProjection[i]).collect(Collectors.joining(", "))
+        + "}";
   }
 
   @Override
@@ -82,14 +83,14 @@ public class JoinNode implements PlanNode {
   }
 
   @Override
-  public boolean equals(Object obj,  Map<PlanNode,PlanNode> assumedEqualities) {
+  public boolean equals(Object obj, Map<PlanNode, PlanNode> assumedEqualities) {
     if (this == obj) return true;
     if (!(obj.getClass() == getClass())) {
       return false;
     }
     JoinNode node = (JoinNode) obj;
-    return Arrays.equals(leftProjection, node.leftProjection) && Arrays.equals(rightProjection, node.rightProjection) &&
-            left.equals(node.left, assumedEqualities) && right.equals(node.right, assumedEqualities);
+    return Arrays.equals(leftProjection, node.leftProjection) && Arrays.equals(rightProjection, node.rightProjection)
+        && left.equals(node.left, assumedEqualities) && right.equals(node.right, assumedEqualities);
   }
 
   @Override

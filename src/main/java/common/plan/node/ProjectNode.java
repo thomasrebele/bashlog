@@ -21,8 +21,8 @@ public class ProjectNode implements PlanNode {
    */
   ProjectNode(PlanNode table, int[] projection, Comparable<?>[] constants) {
     if (Arrays.stream(projection).anyMatch(i -> i >= table.getArity())) {
-      throw new IllegalArgumentException(
-          "Invalid projection: trying to project a non-existing field: " + Arrays.toString(projection) + "\n" + table + ", arity " + table.getArity());
+      throw new IllegalArgumentException("Invalid projection: trying to project a non-existing field: " + Arrays.toString(projection) + "\n" + table
+          + ", arity " + table.getArity());
     }
     if (IntStream.range(0, projection.length).anyMatch(i -> projection[i] < 0 && (constants.length <= i || constants[i] == null))) {
       throw new IllegalArgumentException("Invalid projection: trying to project a non-existing field");
@@ -90,7 +90,7 @@ public class ProjectNode implements PlanNode {
   }
 
   @Override
-  public boolean equals(Object obj,  Map<PlanNode,PlanNode> assumedEqualities) {
+  public boolean equals(Object obj, Map<PlanNode, PlanNode> assumedEqualities) {
     if (this == obj) return true;
     if (!(obj.getClass() == getClass())) {
       return false;

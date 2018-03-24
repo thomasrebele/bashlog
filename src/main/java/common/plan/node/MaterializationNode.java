@@ -22,7 +22,7 @@ public class MaterializationNode implements PlanNode {
   private final int reuseCount;
 
   public static class Builder {
-  
+
     PlaceholderNode placeholder;
 
     public Builder(int arity) {
@@ -32,12 +32,12 @@ public class MaterializationNode implements PlanNode {
     public PlanNode getReuseNode() {
       return placeholder;
     }
-  
+
     public MaterializationNode build(PlanNode mainPlan, PlanNode reusedPlan, int reuseCount) {
       MaterializationNode result = new MaterializationNode(mainPlan, reusedPlan, placeholder, reuseCount);
       return result;
     }
-    
+
   }
 
   /** Use builder if possible */
@@ -111,8 +111,8 @@ public class MaterializationNode implements PlanNode {
   }
 
   @Override
-  public boolean equals(Object obj,  Map<PlanNode,PlanNode> assumedEqualities) {
-    if(this == obj) return true;
+  public boolean equals(Object obj, Map<PlanNode, PlanNode> assumedEqualities) {
+    if (this == obj) return true;
     if (!(obj.getClass() == getClass())) {
       return false;
     }

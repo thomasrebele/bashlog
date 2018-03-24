@@ -56,8 +56,7 @@ public class AntiJoinNode implements PlanNode {
 
   @Override
   public String operatorString() {
-    return "▷_{" + IntStream.range(0, leftProjection.length).mapToObj(i -> leftProjection[i] + "=" + i)
-            .collect(Collectors.joining(", ")) + "}";
+    return "▷_{" + IntStream.range(0, leftProjection.length).mapToObj(i -> leftProjection[i] + "=" + i).collect(Collectors.joining(", ")) + "}";
   }
 
   @Override
@@ -71,14 +70,14 @@ public class AntiJoinNode implements PlanNode {
   }
 
   @Override
-  public boolean equals(Object obj,  Map<PlanNode,PlanNode> assumedEqualities) {
-    if(this == obj) return true;
+  public boolean equals(Object obj, Map<PlanNode, PlanNode> assumedEqualities) {
+    if (this == obj) return true;
     if (!(obj.getClass() == getClass())) {
       return false;
     }
     AntiJoinNode node = (AntiJoinNode) obj;
-    return Arrays.equals(leftProjection, node.leftProjection) &&
-            left.equals(node.left, assumedEqualities) && right.equals(node.right, assumedEqualities);
+    return Arrays.equals(leftProjection, node.leftProjection) && left.equals(node.left, assumedEqualities)
+        && right.equals(node.right, assumedEqualities);
   }
 
   @Override

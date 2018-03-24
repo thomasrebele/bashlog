@@ -5,6 +5,9 @@ import java.nio.charset.Charset;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import common.plan.node.AntiJoinNode;
+import common.plan.node.PlanNode;
+
 public class Tools {
 
   public static int[] sequence(int start, int end) {
@@ -131,6 +134,18 @@ public class Tools {
   public static String head(String prettyString, int n) {
     String[] parts = prettyString.split("\n", n + 1);
     return Arrays.stream(parts).limit(n).collect(Collectors.joining("\n"));
+  }
+
+  public static <T> void removeLast(List<T> list) {
+    if (list != null) {
+      list.remove(list.size() - 1);
+    }
+  }
+
+  public static <T> void addLast(List<T> list, T item) {
+    if (list != null) {
+      list.add(item);
+    }
   }
 
 }

@@ -73,14 +73,14 @@ public class UnionNode implements PlanNode {
   }
 
   @Override
-  public boolean equals(Object obj,  Map<PlanNode,PlanNode> assumedEqualities) {
+  public boolean equals(Object obj, Map<PlanNode, PlanNode> assumedEqualities) {
     if (this == obj) return true;
     if (!(obj.getClass() == getClass())) {
       return false;
     }
     UnionNode node = (UnionNode) obj;
-    return children.size() == node.children.size() &&
-        children.stream().allMatch(child -> node.children.stream().anyMatch(other -> child.equals(other, assumedEqualities)));
+    return children.size() == node.children.size()
+        && children.stream().allMatch(child -> node.children.stream().anyMatch(other -> child.equals(other, assumedEqualities)));
   }
 
   @Override
