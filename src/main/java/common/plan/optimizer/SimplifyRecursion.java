@@ -1,11 +1,11 @@
 package common.plan.optimizer;
 
-import common.plan.node.PlaceholderNode;
-import common.plan.node.PlanNode;
-import common.plan.node.RecursionNode;
-import common.plan.node.UnionNode;
-
 import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
+import common.plan.node.*;
 
 /**
  * Simplifies plan by applying equivalence transformations like
@@ -43,6 +43,9 @@ public class SimplifyRecursion implements Optimizer {
     exitPlan = apply(exitPlan);
     recursivePlan = apply(recursivePlan);
 
+    // search for unnecessary delta/full nodes
+    Set<List<PlanNode>> remove = superfluous(recursivePlan);
+
     //No recursion or recursion with just Full or delta
     if (recursivePlan.isEmpty() || recursivePlan instanceof PlaceholderNode) {
       return exitPlan;
@@ -59,4 +62,29 @@ public class SimplifyRecursion implements Optimizer {
 
     return node;
   }
+
+  /**
+   * 
+   * @param recursivePlan
+   * @return set of paths to placeholder
+   */
+  private Set<List<PlanNode>> superfluous(PlanNode recursivePlan) {
+    Set<List<PlanNode>> result = new HashSet<>();
+
+
+    return result;
+  }
+
+  public static void main(String[] args) {
+    RecursionNode.Builder builder = new RecursionNode.Builder(new FactNode("abc", "def"));
+    builder.addRecursivePlan(builder.getDelta().union(builder.getFull()));
+    PlanNode p = builder.build();
+
+
+    System.out.println(p.toPrettyString());
+    System.out.println("---");
+    p = new SimplifyRecursion().apply(p);
+    System.out.println(p.toPrettyString());
+  }
+
 }

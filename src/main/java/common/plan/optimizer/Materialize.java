@@ -44,7 +44,7 @@ public class Materialize implements Optimizer {
       }
     });
 
-    return t.transform((old, node, parent) -> {
+    return t.transform((old, node, oldPath) -> {
       if (nodesToReuseNode.containsKey(old)) {
         return nodesToReuseNode.get(old);
       }
@@ -66,7 +66,7 @@ public class Materialize implements Optimizer {
 
         PlanNode mat = node;
         for (Info i : info) {
-          PlanNode newReusedPlan = i.plan.transform((o, pn, p) -> {
+          PlanNode newReusedPlan = i.plan.transform((o, pn, subOldPath) -> {
             // compare with 'old' node, as plan tree might have changed due to preceding materializations
             if (o.equals(i.plan)) return pn;
             PlanNode rn = nodesToReuseNode.get(o);

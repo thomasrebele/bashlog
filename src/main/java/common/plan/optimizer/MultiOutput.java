@@ -38,7 +38,7 @@ public class MultiOutput implements Optimizer {
       }
     });
     
-    return t.transform((old, node, parent) -> {
+    return t.transform((old, node, oldPath) -> {
       if (nodesToReuseNode.containsKey(old)) {
         return nodesToReuseNode.get(old);
       }
@@ -46,7 +46,7 @@ public class MultiOutput implements Optimizer {
       if (info != null) {
         PlanNode mat = node;
         for (Info i : info) {
-          mat = i.builder.build(mat, i.leaf, i.plans.stream().map(p -> p.transform((subOld, subNode, subParent) -> {
+          mat = i.builder.build(mat, i.leaf, i.plans.stream().map(p -> p.transform((subOld, subNode, subOldPath) -> {
             if (subOld.equals(p)) return subNode;
             PlanNode rn = nodesToReuseNode.get(subOld);
             return rn == null ? subNode : rn;
