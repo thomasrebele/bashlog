@@ -4,8 +4,6 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import bashlog.plan.TSVFileNode;
-import common.CompilerTools;
-import common.Tools;
 import common.plan.node.*;
 
 /**
@@ -93,7 +91,7 @@ public class Materialize implements Optimizer {
         add = info.toString();
       }
       return String.format(" %-70s%s", add, str);
-    }));
+    }, placeholderToParent));
   }
 
   /**

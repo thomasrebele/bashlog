@@ -20,7 +20,7 @@ public class MultiOutputNode implements PlanNode {
     List<PlaceholderNode> reuseNodes = new ArrayList<>();
 
     public PlanNode getNextReuseNode(int arity) {
-      PlaceholderNode reuseNodeBuilder = new PlaceholderNode("mo_{building}", arity);
+      PlaceholderNode reuseNodeBuilder = new PlaceholderNode("mo_" + reuseNodes.size(), arity);
       reuseNodes.add(reuseNodeBuilder);
       return reuseNodeBuilder;
     }

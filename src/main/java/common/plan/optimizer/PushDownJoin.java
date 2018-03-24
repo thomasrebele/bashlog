@@ -3,9 +3,6 @@ package common.plan.optimizer;
 import common.Tools;
 import common.plan.node.*;
 
-import java.util.Arrays;
-import java.util.OptionalInt;
-
 /** Push down join nodes over selection and projection. This groups joins together, in order to reorder them. */
 public class PushDownJoin implements Optimizer {
 

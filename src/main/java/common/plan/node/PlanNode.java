@@ -169,14 +169,6 @@ public interface PlanNode {
   }
 
   /**
-   * Convenience methods to wrap a plan node in another one
-   */
-
-  /*default RecursionNode recursion() {
-    return new RecursionNode(this);
-  }*/
-
-  /**
    * Lambda class for applying transformation on plan node
    */
   interface TransformFn {
@@ -241,7 +233,7 @@ public interface PlanNode {
    * Generate a tree representation of the plan
    */
   default String toPrettyString() {
-    return toPrettyString((node, str) -> str);
+    return toPrettyString((node, str) -> str, PlaceholderNode.placeholderToParentMap(this));
   }
 
   /**
@@ -249,9 +241,9 @@ public interface PlanNode {
    *
    * @param fn function from (plan node, head line) to actually printed line
    */
-  default String toPrettyString(BiFunction<PlanNode, String, String> fn) {
+  default String toPrettyString(BiFunction<PlanNode, String, String> fn, Map<PlaceholderNode, PlanNode> placeholderToParent) {
     StringBuilder sb = new StringBuilder();
-    toPrettyString(sb, "", "", fn);
+    toPrettyString(sb, "", "", fn, placeholderToParent);
     return sb.toString();
   }
 
@@ -261,15 +253,21 @@ public interface PlanNode {
    * @param stringBuilder already generated string representation
    * @param prefixHead    prefix for the first line of output (will be adapted for recursive calls)
    * @param prefixOther   prefix for the other lines (will be adapted for recursive calls)
-   * @param fn            see {@link #toPrettyString(BiFunction)}
+   * @param fn            see {@link #toPrettyString(BiFunction, Map)}
    */
-  default void toPrettyString(StringBuilder stringBuilder, String prefixHead, String prefixOther, BiFunction<PlanNode, String, String> fn) {
-    stringBuilder.append(hash()).append(fn.apply(this, " " + prefixHead + operatorString() + " arity " + getArity())).append("\n");
+  default void toPrettyString(StringBuilder stringBuilder, String prefixHead, String prefixOther, //
+      BiFunction<PlanNode, String, String> fn, Map<PlaceholderNode, PlanNode> placeholderToParent) {
+    String operator = operatorString();
+    if (this instanceof PlaceholderNode && placeholderToParent != null) {
+      PlanNode parent = placeholderToParent.get(this);
+      operator += parent == null ? "NO PARENT" : " for " + parent.operatorString();
+    }
+    stringBuilder.append(hash()).append(fn.apply(this, " " + prefixHead + operator + " arity " + getArity())).append("\n");
     List<PlanNode> args = childrenForPrettyString();
     for (int i = 0; i < args.size(); i++) {
       PlanNode arg = args.get(i);
       boolean last = i == args.size() - 1;
-      arg.toPrettyString(stringBuilder, prefixOther + "+-", prefixOther + (last ? "  " : "| "), fn);
+      arg.toPrettyString(stringBuilder, prefixOther + "+-", prefixOther + (last ? "  " : "| "), fn, placeholderToParent);
     }
   }
 
@@ -291,7 +289,6 @@ public interface PlanNode {
    * @return true if equal
    */
   default boolean equals(Object other, Map<PlanNode, PlanNode> assumedEqualities) {
-    // TODO: check whether method is implemented by necessary classes
     return equals(other);
   }
 

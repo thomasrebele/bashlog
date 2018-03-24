@@ -11,7 +11,6 @@ import bashlog.plan.BashlogOptimizer;
 import bashlog.plan.BashlogPlan;
 import bashlog.plan.SortNode;
 import bashlog.translation.Translator;
-import common.CompilerTools;
 import common.parser.Program;
 import common.plan.LogicalPlanBuilder;
 import common.plan.node.*;
@@ -76,7 +75,7 @@ public class BashlogCompiler {
 
 
     List<String> stageNames = Arrays.asList("simplification", "optimization", "transforming to bashlog plan");
-    root = CompilerTools.applyOptimizer(root, stageNames, stages, debugBuilder);
+    root = Optimizer.applyOptimizer(root, stageNames, stages, debugBuilder);
     debug = "#" + debugBuilder.toString().replaceAll("\n", "\n# ");
   }
 

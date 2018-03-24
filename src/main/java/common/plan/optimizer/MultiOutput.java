@@ -69,7 +69,7 @@ public class MultiOutput implements Optimizer {
         add = info.toString();
       }
       return String.format(" %-50s%s", add, str);
-    }));
+    }, placeholderToParent));
   }
 
   /**

@@ -10,7 +10,7 @@ import common.plan.node.PlaceholderNode;
 import common.plan.node.PlanNode;
 
 /** Stores information that is needed during the translation. For the translation you need to use BashlogCompiler. */
-public class CompilerInternals extends common.CompilerInternals<Translator> {
+public class CompilerInternals extends common.compiler.CompilerInternals<Translator> {
 
   /** Current index for temporary files. Increment when using it! */
   AtomicInteger tmpFileIndex = new AtomicInteger();
