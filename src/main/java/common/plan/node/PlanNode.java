@@ -180,7 +180,7 @@ public interface PlanNode {
      * @param transformed    a new node similar to originalNode (but new instance), where originalNode's children were already transformed
      * @return replacement for current node
      */
-    PlanNode apply(PlanNode originalNode, PlanNode transformed, PlanNode originalParent);
+    PlanNode apply(PlanNode originalNode, PlanNode transformed, List<PlanNode> originalPath);
   }
 
   /**
@@ -189,19 +189,19 @@ public interface PlanNode {
    * If you don't want to apply any specific operation just return the parameter
    * Parameters of fn: (original node, transformed node)
    */
-  default PlanNode transform(TransformFn fn, PlanNode originalParent) {
-    return fn.apply(this, this, originalParent);
+  default PlanNode transform(TransformFn fn, List<PlanNode> originalPath) {
+    return fn.apply(this, this, originalPath);
   }
 
   /**
-   * Convenience method. Calls {@link #transform(TransformFn, PlanNode)}
+   * Convenience method. Calls {@link #transform(TransformFn, List)}
    */
   default PlanNode transform(TransformFn fn) {
     return transform(fn, null);
   }
 
   /**
-   * Convenience method. Calls {@link #transform(TransformFn, PlanNode)}
+   * Convenience method. Calls {@link #transform(TransformFn, List)}
    */
   default PlanNode transform(Function<PlanNode, PlanNode> fn) {
     return transform((o, n, p) -> fn.apply(n), null);

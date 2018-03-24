@@ -64,8 +64,13 @@ public class SortNode implements PlanNode {
   }
 
   @Override
-  public PlanNode transform(TransformFn fn, PlanNode originalParent) {
-    return fn.apply(this, new SortNode(child.transform(fn, this), sortColumns), originalParent);
+  public PlanNode transform(TransformFn fn, List<PlanNode> originalPath) {
+    try {
+      Tools.addLast(originalPath, this);
+      return fn.apply(this, new SortNode(child.transform(fn, originalPath), sortColumns), originalPath);
+    } finally {
+      Tools.removeLast(originalPath);
+    }
   }
 
 }

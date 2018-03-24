@@ -4,6 +4,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import common.Tools;
 
 public class UnionNode implements PlanNode {
 
@@ -51,7 +52,6 @@ public class UnionNode implements PlanNode {
     return children.isEmpty();
   }
 
-
   @Override
   public String toString() {
     return children.stream().map(Object::toString).collect(Collectors.joining(" " + operatorString() + " "));
@@ -88,12 +88,17 @@ public class UnionNode implements PlanNode {
     return children.hashCode();
   }
 
-  public PlanNode transform(TransformFn fn, PlanNode originalParent) {
-    Set<PlanNode> newChildren = children.stream()//
-        .map(child -> child.transform(fn, this))//
-        .flatMap(child -> (Stream<PlanNode>) ((child instanceof UnionNode) ? ((UnionNode) child).children().stream() : Stream.of(child)))//
-        .collect(Collectors.toSet());
-    PlanNode newNode = newChildren.equals(children) ? this : new UnionNode(newChildren, this.arity);
-    return fn.apply(this, newNode, originalParent);
+  public PlanNode transform(TransformFn fn, List<PlanNode> originalPath) {
+    try {
+      Tools.addLast(originalPath, this);
+      Set<PlanNode> newChildren = children.stream()//
+          .map(child -> child.transform(fn, originalPath))//
+          .flatMap(child -> (Stream<PlanNode>) ((child instanceof UnionNode) ? ((UnionNode) child).children().stream() : Stream.of(child)))//
+          .collect(Collectors.toSet());
+      PlanNode newNode = newChildren.equals(children) ? this : new UnionNode(newChildren, this.arity);
+      return fn.apply(this, newNode, originalPath);
+    } finally {
+      Tools.removeLast(originalPath);
+    }
   }
 }

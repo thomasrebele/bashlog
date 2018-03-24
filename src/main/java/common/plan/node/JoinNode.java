@@ -7,6 +7,8 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import common.Tools;
+
 /**
  * Does join on fields such that the projection of left with leftProjection equals the rightProjection of right
  */
@@ -99,11 +101,16 @@ public class JoinNode implements PlanNode {
   }
 
   @Override
-  public PlanNode transform(TransformFn fn, PlanNode originalParent) {
-    PlanNode newLeft = left.transform(fn, this);
-    PlanNode newRight = right.transform(fn, this);
-    PlanNode newNode = left.equals(newLeft) && right.equals(newRight) ? this : newLeft.join(newRight, leftProjection, rightProjection);
-    return fn.apply(this, newNode, originalParent);
+  public PlanNode transform(TransformFn fn, List<PlanNode> originalPath) {
+    try {
+      Tools.addLast(originalPath, this);
+      PlanNode newLeft = left.transform(fn, originalPath);
+      PlanNode newRight = right.transform(fn, originalPath);
+      PlanNode newNode = left.equals(newLeft) && right.equals(newRight) ? this : newLeft.join(newRight, leftProjection, rightProjection);
+      return fn.apply(this, newNode, originalPath);
+    } finally {
+      Tools.removeLast(originalPath);
+    }
   }
 
   /** Transform index of output column to index of left input column, or -1 if not possible */

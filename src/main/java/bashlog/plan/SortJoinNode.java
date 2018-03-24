@@ -6,6 +6,7 @@ import common.plan.node.PlanNode;
 
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /** Join two sorted inputs based on ONE column */
@@ -30,11 +31,14 @@ public class SortJoinNode extends JoinNode {
   }
 
   @Override
-  public PlanNode transform(TransformFn fn, PlanNode originalParent) {
-    return fn.apply(this,
-        new SortJoinNode(getLeft().transform(fn, this), getRight().transform(fn, this), getLeftProjection(), getRightProjection(),
-            outputProjection),
-        originalParent);
+  public PlanNode transform(TransformFn fn, List<PlanNode> originalPath) {
+    try {
+      Tools.addLast(originalPath, this);
+      return fn.apply(this, new SortJoinNode(getLeft().transform(fn, originalPath), getRight().transform(fn, originalPath), getLeftProjection(),
+          getRightProjection(), outputProjection), originalPath);
+    } finally {
+      Tools.removeLast(originalPath);
+    }
   }
 
   public int[] getOutputProjection() {
@@ -65,6 +69,5 @@ public class SortJoinNode extends JoinNode {
   public int getArity() {
     return outputProjection.length;
   }
-
 
 }

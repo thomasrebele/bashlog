@@ -7,7 +7,6 @@ import org.slf4j.LoggerFactory;
 
 import common.Tools;
 
-
 public class MaterializationNode implements PlanNode {
 
   private static final Logger LOG = LoggerFactory.getLogger(MaterializationNode.class);
@@ -97,12 +96,17 @@ public class MaterializationNode implements PlanNode {
   }
 
   @Override
-  public PlanNode transform(TransformFn fn, PlanNode originalParent) {
-    PlanNode newMainPlan = mainPlan.transform(fn, this);
-    PlanNode newReusedPlan = reusedPlan.transform(fn, this);
-    PlanNode newNode = mainPlan.equals(newMainPlan) && reusedPlan.equals(newReusedPlan) ? this
-        : new MaterializationNode(newMainPlan, newReusedPlan, reuseNode, reuseCount);
-    return fn.apply(this, newNode, originalParent);
+  public PlanNode transform(TransformFn fn, List<PlanNode> originalPath) {
+    try {
+      Tools.addLast(originalPath, this);
+      PlanNode newMainPlan = mainPlan.transform(fn, originalPath);
+      PlanNode newReusedPlan = reusedPlan.transform(fn, originalPath);
+      PlanNode newNode = mainPlan.equals(newMainPlan) && reusedPlan.equals(newReusedPlan) ? this
+          : new MaterializationNode(newMainPlan, newReusedPlan, reuseNode, reuseCount);
+      return fn.apply(this, newNode, originalPath);
+    } finally {
+      Tools.removeLast(originalPath);
+    }
   }
 
   @Override

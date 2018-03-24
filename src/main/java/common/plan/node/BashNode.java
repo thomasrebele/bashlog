@@ -3,6 +3,8 @@ package common.plan.node;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import common.Tools;
+
 public class BashNode implements PlanNode {
 
   private final int arity;
@@ -71,13 +73,18 @@ public class BashNode implements PlanNode {
   }
 
   @Override
-  public PlanNode transform(TransformFn fn, PlanNode originalParent) {
-    List<PlanNode> newChildren = this.children.stream().map(pn -> pn.transform(fn, this)).collect(Collectors.toList());
-    PlanNode newNode = this;
-    if (!this.children.equals(newChildren)) {
-      newNode = new BashNode(this.command, this.commandParts, newChildren, this.arity);
+  public PlanNode transform(TransformFn fn, List<PlanNode> originalPath) {
+    try {
+      Tools.addLast(originalPath, this);
+      List<PlanNode> newChildren = this.children.stream().map(pn -> pn.transform(fn, originalPath)).collect(Collectors.toList());
+      PlanNode newNode = this;
+      if (!this.children.equals(newChildren)) {
+        newNode = new BashNode(this.command, this.commandParts, newChildren, this.arity);
+      }
+      return fn.apply(this, newNode, originalPath);
+    } finally {
+      Tools.removeLast(originalPath);
     }
-    return fn.apply(this, newNode, originalParent);
   }
 
 }

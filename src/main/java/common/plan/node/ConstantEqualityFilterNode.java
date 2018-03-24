@@ -4,6 +4,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+import common.Tools;
+
 public class ConstantEqualityFilterNode implements EqualityFilterNode {
 
   private final PlanNode table;
@@ -74,9 +76,14 @@ public class ConstantEqualityFilterNode implements EqualityFilterNode {
   }
 
   @Override
-  public PlanNode transform(TransformFn fn, PlanNode originalParent) {
-    PlanNode newTable = table.transform(fn, this);
-    PlanNode newNode = newTable.equals(table) ? this : newTable.equalityFilter(field, value);
-    return fn.apply(this, newNode, originalParent);
+  public PlanNode transform(TransformFn fn, List<PlanNode> originalPath) {
+    try {
+      Tools.addLast(originalPath, this);
+      PlanNode newTable = table.transform(fn, originalPath);
+      PlanNode newNode = newTable.equals(table) ? this : newTable.equalityFilter(field, value);
+      return fn.apply(this, newNode, originalPath);
+    } finally {
+      Tools.removeLast(originalPath);
+    }
   }
 }

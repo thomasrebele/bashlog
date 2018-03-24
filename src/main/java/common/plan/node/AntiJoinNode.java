@@ -7,6 +7,8 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import common.Tools;
+
 /**
  * Returns tuple in left such that there exists no tuple in right with the left projection of left is the same as the right projection of right
  */
@@ -17,7 +19,6 @@ public class AntiJoinNode implements PlanNode {
   private final PlanNode right;
 
   private final int[] leftProjection;
-
 
   AntiJoinNode(PlanNode left, PlanNode right, int[] leftProjection) {
     if (leftProjection.length != right.getArity()) {
@@ -86,10 +87,16 @@ public class AntiJoinNode implements PlanNode {
   }
 
   @Override
-  public PlanNode transform(TransformFn fn, PlanNode originalParent) {
-    PlanNode newLeft = left.transform(fn, this);
-    PlanNode newRight = right.transform(fn, this);
-    PlanNode newNode = left.equals(newLeft) && right.equals(newRight) ? this : newLeft.antiJoin(newRight, leftProjection);
-    return fn.apply(this, newNode, originalParent);
+  public PlanNode transform(TransformFn fn, List<PlanNode> originalPath) {
+    try {
+      Tools.addLast(originalPath, this);
+      PlanNode newLeft = left.transform(fn, originalPath);
+      PlanNode newRight = right.transform(fn, originalPath);
+
+      PlanNode newNode = left.equals(newLeft) && right.equals(newRight) ? this : newLeft.antiJoin(newRight, leftProjection);
+      return fn.apply(this, newNode, originalPath);
+    } finally {
+      Tools.removeLast(originalPath);
+    }
   }
 }

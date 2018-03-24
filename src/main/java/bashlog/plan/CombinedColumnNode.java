@@ -4,6 +4,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 
+import common.Tools;
 import common.plan.node.PlanNode;
 
 /** Combine several column into one (delimited by \u0001) and append it at the end */
@@ -51,8 +52,13 @@ public class CombinedColumnNode implements PlanNode {
   }
 
   @Override
-  public PlanNode transform(TransformFn fn, PlanNode originalParent) {
-    return fn.apply(this, new CombinedColumnNode(child.transform(fn, this), columns), originalParent);
+  public PlanNode transform(TransformFn fn, List<PlanNode> originalPath) {
+    try {
+      Tools.addLast(originalPath, this);
+      return fn.apply(this, new CombinedColumnNode(child.transform(fn, originalPath), columns), originalPath);
+    } finally {
+      Tools.removeLast(originalPath);
+    }
   }
 
   public PlanNode getTable() {

@@ -1,6 +1,7 @@
 package bashlog.plan;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import common.Tools;
@@ -24,11 +25,15 @@ public class SortAntiJoinNode extends SortJoinNode {
   }
 
   @Override
-  public PlanNode transform(TransformFn fn, PlanNode originalParent) {
+  public PlanNode transform(TransformFn fn, List<PlanNode> originalPath) {
+    try {
     return fn.apply(this,
-        new SortAntiJoinNode(getLeft().transform(fn, this), getRight().transform(fn, this), getLeftProjection(),
+          new SortAntiJoinNode(getLeft().transform(fn, originalPath), getRight().transform(fn, originalPath), getLeftProjection(),
             outputProjection),
-        originalParent);
+        originalPath);
+    } finally {
+      Tools.removeLast(originalPath);
+    }
   }
 
   @Override

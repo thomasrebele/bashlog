@@ -105,10 +105,15 @@ public class ProjectNode implements PlanNode {
   }
 
   @Override
-  public PlanNode transform(TransformFn fn, PlanNode originalParent) {
-    PlanNode newTable = table.transform(fn, this);
-    PlanNode newNode = newTable.equals(table) ? this : newTable.project(projection, constants);
-    return fn.apply(this, newNode, originalParent);
+  public PlanNode transform(TransformFn fn, List<PlanNode> originalPath) {
+    try {
+      Tools.addLast(originalPath, this);
+      PlanNode newTable = table.transform(fn, originalPath);
+      PlanNode newNode = newTable.equals(table) ? this : newTable.project(projection, constants);
+      return fn.apply(this, newNode, originalPath);
+    } finally {
+      Tools.removeLast(originalPath);
+    }
   }
 
   /** Whether this projection uses any constants */

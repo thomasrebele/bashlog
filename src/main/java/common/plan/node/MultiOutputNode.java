@@ -5,6 +5,8 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import common.Tools;
+
 public class MultiOutputNode implements PlanNode {
 
   private final PlanNode mainPlan;
@@ -83,21 +85,26 @@ public class MultiOutputNode implements PlanNode {
   }
 
   @Override
-  public PlanNode transform(TransformFn fn, PlanNode originalParent) {
-    PlanNode newMainPlan = mainPlan.transform(fn, this);
-    PlanNode newLeafPlan = leafPlan.transform(fn, this);
-    List<PlanNode> newReusedPlans = reusedPlans.stream().map(n -> n.transform(fn, this)).collect(Collectors.toList());
-    //List<PlanNode> newReusedPlans = reusedPlans;
-    PlanNode newNode = this;
-    if (!(mainPlan.equals(newMainPlan) && leafPlan.equals(newLeafPlan) && reusedPlans.equals(newReusedPlans))) {
-      try {
-        newNode = new MultiOutputNode(newMainPlan, newLeafPlan, newReusedPlans, reuseNodes);
-      } catch (Exception e) {
-        System.err.println("problem transforming multi output node\n" + this.toPrettyString());
-        throw e;
+  public PlanNode transform(TransformFn fn, List<PlanNode> originalPath) {
+    try {
+      Tools.addLast(originalPath, this);
+      PlanNode newMainPlan = mainPlan.transform(fn, originalPath);
+      PlanNode newLeafPlan = leafPlan.transform(fn, originalPath);
+      List<PlanNode> newReusedPlans = reusedPlans.stream().map(n -> n.transform(fn, originalPath)).collect(Collectors.toList());
+      //List<PlanNode> newReusedPlans = reusedPlans;
+      PlanNode newNode = this;
+      if (!(mainPlan.equals(newMainPlan) && leafPlan.equals(newLeafPlan) && reusedPlans.equals(newReusedPlans))) {
+        try {
+          newNode = new MultiOutputNode(newMainPlan, newLeafPlan, newReusedPlans, reuseNodes);
+        } catch (Exception e) {
+          System.err.println("problem transforming multi output node\n" + this.toPrettyString());
+          throw e;
+        }
       }
+      return fn.apply(this, newNode, originalPath);
+    } finally {
+      Tools.removeLast(originalPath);
     }
-    return fn.apply(this, newNode, originalParent);
   }
 
   @Override
