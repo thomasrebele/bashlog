@@ -4,6 +4,8 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.*;
 
 import org.slf4j.Logger;
@@ -69,9 +71,6 @@ public class BashlogEvaluator implements Evaluator {
       // construct bash command 'cat $path'
       program.addRule(Rule.bashRule(relation, "cat " + path));
     }
-    if (debug) {
-      System.out.println(program);
-    }
 
     SimpleFactsSet result = new SimpleFactsSet();
     for (String relation : relationsToOutput) {
@@ -89,6 +88,11 @@ public class BashlogEvaluator implements Evaluator {
       }
       timeCompile += System.nanoTime();
       LOG.debug("running " + relation);
+      if (debug) {
+        LOG.info("saving program to /tmp/bashlog.sh, and debug info to /tmp/bashlog-debug.txt");
+        Files.write(Paths.get("/tmp/bashlog-debug.txt"), bc.debugInfo().getBytes());
+        Files.write(Paths.get("/tmp/bashlog.sh"), query.getBytes());
+      }
       timeBash -= System.nanoTime();
       long start = System.nanoTime();
       Process proc = run.exec(new String[] { "/bin/bash", "-c", query });
