@@ -194,7 +194,7 @@ public class AwkHelper {
     if (output != null) {
       arg.append(" >> \"").append(output).append("\"");
     }
-    arg.append("} ");
+    arg.append("} \n ");
     return plan;
   }
 
