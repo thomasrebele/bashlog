@@ -89,7 +89,7 @@ public class SqllogCompiler {
     } else if (node instanceof VariableEqualityFilterNode) {
       return mapVariableEqualityFilterNode((VariableEqualityFilterNode) node);
     } else {
-      throw new IllegalArgumentException("Unknown node type: " + node.toString());
+      throw new IllegalArgumentException("Unknown node type: " + node.toString() + " operator " + node.operatorString());
     }
   }
 
