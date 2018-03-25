@@ -23,13 +23,10 @@ public class MultiOutput implements Optimizer {
 
     // determine for which leaf nodes shall become a multi output
     analyzeStructure(t, 0);
-    planToInfo.forEach((pn, i) -> {
-      i.createMultiOutputNode = i.plans.size() > 1;
-    });
 
     HashMap<PlanNode, List<Info>> nodesToInfo = new HashMap<>();
     planToInfo.forEach((p, i) -> {
-      if (i.createMultiOutputNode) {
+      if (i.plans.size() > 1) {
         PlanNode reuseAt = p instanceof PlaceholderNode ? placeholderToParent.get(p) : t;
         nodesToInfo.computeIfAbsent(reuseAt, k -> new ArrayList<>()).add(i);
         for (PlanNode reusedPlan : i.plans) {
@@ -111,18 +108,13 @@ public class MultiOutput implements Optimizer {
   /** Statistics for reusing subplans */
   private class Info {
 
+    /** A plan that occurs several times with different projections/selections */
     PlanNode leaf = null;
 
+    /** The plans where the leaf occurs */
     Set<PlanNode> plans = new HashSet<>();
 
     MultiOutputNode.Builder builder = new MultiOutputNode.Builder();
-
-    boolean createMultiOutputNode = false;
-
-    @Override
-    public String toString() {
-      return "";
-    }
   }
 
 }
