@@ -145,7 +145,7 @@ public class SimplifyRecursion implements Optimizer {
       }
     }
 
-    System.out.println("cols " + cols + " for " + PlanNode.pathToString(path));
+    LOG.trace("cols {} for {}", cols, PlanNode.pathToString(path));
     return cols.equals(orig);
   }
 
