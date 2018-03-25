@@ -6,6 +6,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import common.plan.node.AntiJoinNode;
+import common.plan.node.JoinNode;
 import common.plan.node.PlanNode;
 
 public class Tools {
@@ -136,16 +137,27 @@ public class Tools {
     return Arrays.stream(parts).limit(n).collect(Collectors.joining("\n"));
   }
 
+  /** Remove last element of list, if possible */
   public static <T> void removeLast(List<T> list) {
     if (list != null) {
       list.remove(list.size() - 1);
     }
   }
 
+  /** Add item to end of list, if possible */
   public static <T> void addLast(List<T> list, T item) {
     if (list != null) {
       list.add(item);
     }
+  }
+
+  /** Get element by (positive or negative) index, or null if out-of-bounds. Last element has index -1 */
+  public static <T> T index(List<T> op, int idx) {
+    if (idx >= 0) {
+      return idx >= op.size() ? null : op.get(idx);
+    }
+    idx = op.size() + idx;
+    return idx < 0 || idx >= op.size() ? null : op.get(idx);
   }
 
 }

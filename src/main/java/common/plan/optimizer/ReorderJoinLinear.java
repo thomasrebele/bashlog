@@ -4,10 +4,7 @@ import common.Tools;
 import common.plan.node.JoinNode;
 import common.plan.node.PlanNode;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,12 +16,12 @@ public class ReorderJoinLinear implements Optimizer {
   @Override
   public PlanNode apply(PlanNode node) {
     return node.transform((o, n, op) -> {
-      if (n instanceof JoinNode && !(op instanceof JoinNode)) {
+      if (n instanceof JoinNode && !(PlanNode.parent(op) instanceof JoinNode)) {
         return reorder((JoinNode) n);
       } else {
         return n;
       }
-    });
+    }, new LinkedList<>());
   }
 
   Random r = new Random();

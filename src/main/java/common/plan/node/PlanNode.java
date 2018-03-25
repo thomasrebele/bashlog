@@ -193,6 +193,11 @@ public interface PlanNode {
     return fn.apply(this, this, originalPath);
   }
 
+  /** Get parent from path (e.g., originalPath argument of transform function) */
+  static PlanNode parent(List<PlanNode> path) {
+    return Tools.index(path, -2);
+  }
+
   /**
    * Convenience method. Calls {@link #transform(TransformFn, List)}
    */
@@ -298,4 +303,5 @@ public interface PlanNode {
   default int height() {
     return children().isEmpty() ? 0 : children().stream().mapToInt(PlanNode::height).max().getAsInt() + 1;
   }
+
 }

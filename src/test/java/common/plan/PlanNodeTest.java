@@ -15,6 +15,8 @@ import java.util.Objects;
 
 public class PlanNodeTest {
 
+  private TermList args1 = new TermList(new Variable("X"));
+
   private TermList args2 = new TermList(new Variable("X"), new Variable("Y"));
 
   private TermList args3 = new TermList(new Variable("X"), new Variable("Y"), new Variable("Z"));
@@ -307,6 +309,18 @@ public class PlanNodeTest {
     assertEquals(//
         bar.join(bar, new int[] { 3 }, new int[] { 2 }).project(new int[] { 0, 1, 2, 3, 6, 5 }), //
         optimizer.apply(bar.join(bar.project(new int[] { 2, 1 }), new int[] { 3 }, new int[] { 0 })));
+  }
+
+  @Test
+  public void testJoinReorder() {
+    PlanNode foo = new BuiltinNode(new CompoundTerm("foo", args2));
+    PlanNode bar = new BuiltinNode(new CompoundTerm("bar", args1));
+    
+    Optimizer optimizer = new ReorderJoinLinear();
+    assertEquals(
+        foo.join(bar, new int[] { 0 }, new int[] { 0 }).join(bar, new int[] { 1 }, new int[] { 0 }).project(new int[] { 2, 3, 0, 1 }), //
+        optimizer.apply(bar.join(bar, new int[] {}, new int[] {}).join(foo, new int[] { 0, 1 }, new int[] { 0, 1 }))
+        );
   }
 
   private static void assertEquals(PlanNode expected, PlanNode actual) {
