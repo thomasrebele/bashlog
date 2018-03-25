@@ -4,10 +4,8 @@ import common.compiler.CompilerInternals;
 import common.parser.*;
 import common.plan.LogicalPlanBuilder;
 import common.plan.node.*;
-import common.plan.optimizer.Optimizer;
-import common.plan.optimizer.PushDownFilterAndProject;
-import common.plan.optimizer.ReorderJoinLinear;
-import common.plan.optimizer.SimplifyRecursion;
+import common.plan.optimizer.*;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

@@ -1,6 +1,7 @@
 package experiments.lubm;
 
 import bashlog.BashlogCompiler;
+import common.parser.BashRule;
 import common.parser.ParserReader;
 import common.parser.Program;
 import org.semanticweb.owlapi.apibinding.OWLManager;
@@ -129,7 +130,7 @@ public class BashlogLUBM {
 
         Program sqlProg = new Program();
         p.rules().forEach(r -> {
-          if (r.body.size() == 1 && "bash_command".equals(r.body.get(0).name)) {
+          if (r instanceof BashRule) {
             // ignore this rule
           } else {
             sqlProg.addRule(r);
