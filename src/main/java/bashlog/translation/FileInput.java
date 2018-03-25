@@ -9,7 +9,7 @@ import bashlog.plan.TSVFileNode;
 import common.plan.node.PlanNode;
 
 /** Translate a file to a file */
-public class FileInput implements Translator {
+public class FileInput implements BashTranslator {
 
   @Override
   public Bash translate(PlanNode planNode, CompilerInternals bc) {

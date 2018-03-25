@@ -4,13 +4,13 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import bashlog.command.Bash;
-import bashlog.translation.Translator;
+import bashlog.translation.BashTranslator;
 import common.plan.node.MaterializationNode;
 import common.plan.node.PlaceholderNode;
 import common.plan.node.PlanNode;
 
 /** Stores information that is needed during the translation. For the translation you need to use BashlogCompiler. */
-public class CompilerInternals extends common.compiler.CompilerInternals<Translator> {
+public class CompilerInternals extends common.compiler.CompilerInternals<BashTranslator> {
 
   /** Current index for temporary files. Increment when using it! */
   AtomicInteger tmpFileIndex = new AtomicInteger();
@@ -28,7 +28,7 @@ public class CompilerInternals extends common.compiler.CompilerInternals<Transla
    * Constructor
    * @param translators map from a node class to its translator
    */
-  CompilerInternals(Map<Class<?>, bashlog.translation.Translator> translators, PlanNode fullPlan) {
+  CompilerInternals(Map<Class<?>, bashlog.translation.BashTranslator> translators, PlanNode fullPlan) {
     super(translators, fullPlan);
 
   }
@@ -103,7 +103,7 @@ public class CompilerInternals extends common.compiler.CompilerInternals<Transla
     if (cache.containsKey(planNode)) return cache.get(planNode);
 
     // apply corresponding translator if possible; also applies locking for parallel materialization
-    bashlog.translation.Translator t = translators.get(planNode.getClass());
+    bashlog.translation.BashTranslator t = translators.get(planNode.getClass());
     if (t != null) {
       Bash result = waitFor(t.translate(planNode, this), planNode.children());
       cache.put(planNode, result);

@@ -10,7 +10,7 @@ import bashlog.command.Bash;
 import bashlog.plan.BashlogOptimizer;
 import bashlog.plan.BashlogPlan;
 import bashlog.plan.SortNode;
-import bashlog.translation.Translator;
+import bashlog.translation.BashTranslator;
 import common.parser.Program;
 import common.plan.LogicalPlanBuilder;
 import common.plan.node.*;
@@ -45,7 +45,7 @@ public class BashlogCompiler {
           new CombineFilter(false)));
   
 
-  private Map<Class<?>, Translator> translators = new HashMap<>();
+  private Map<Class<?>, BashTranslator> translators = new HashMap<>();
 
   public BashlogCompiler(PlanNode planNode) {
     if (planNode == null) {

@@ -9,7 +9,7 @@ import bashlog.plan.CombinedColumnNode;
 import common.plan.node.PlanNode;
 
 /** Translate a combine column to an AWK command */
-public class CombineColumns implements Translator {
+public class CombineColumns implements BashTranslator {
 
   @Override
   public Bash translate(PlanNode planNode, CompilerInternals bc) {

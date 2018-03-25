@@ -13,7 +13,7 @@ import common.plan.node.BashNode;
 import common.plan.node.BuiltinNode;
 
 /** Translate a builtin command, which is a bash command, to a bash command */
-public class BashCmd implements Translator {
+public class BashCmd implements BashTranslator {
 
   @Override
   public Bash translate(PlanNode planNode, CompilerInternals ci) {

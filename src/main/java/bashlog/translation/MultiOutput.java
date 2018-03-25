@@ -13,7 +13,7 @@ import common.plan.node.PlanNode;
  * Translates a multi output plan to one single AWK command.
  * A multi output executes several projections and filters (of several branches) that operate on one input plan.
  */
-public class MultiOutput implements Translator {
+public class MultiOutput implements BashTranslator {
 
   @Override
   public Bash translate(PlanNode planNode, CompilerInternals bc) {

@@ -9,7 +9,7 @@ import common.plan.node.PlanNode;
 import common.plan.node.UnionNode;
 
 /** Translates a union node to a sort command, which removes duplicates */
-public class Union implements Translator {
+public class Union implements BashTranslator {
 
   @Override
   public Bash translate(PlanNode planNode, CompilerInternals bc) {

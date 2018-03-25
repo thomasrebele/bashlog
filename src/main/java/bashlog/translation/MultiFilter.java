@@ -12,7 +12,7 @@ import common.plan.node.PlanNode;
  * Translate multi filter plan to one AWK command.
  * A multi filter are (a union of) filters, projections on the same plan, that build one single plan.
  */
-public class MultiFilter implements Translator {
+public class MultiFilter implements BashTranslator {
 
   @Override
   public Bash translate(PlanNode planNode, CompilerInternals bc) {
