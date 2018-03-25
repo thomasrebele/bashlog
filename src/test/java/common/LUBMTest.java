@@ -57,7 +57,7 @@ public abstract class LUBMTest {
     }
 
     timing.merge("make program", -System.nanoTime(), (a, b) -> a + b);
-    lubmProgram = BashlogLUBM.lubmProgram3(dir, lubm);
+    lubmProgram = BashlogLUBM.lubmProgramOWL3(dir, lubm);
     timing.merge("make program", +System.nanoTime(), (a, b) -> a + b);
 
     Files.write(Paths.get("/tmp/lubm-program.txt"), lubmProgram.toString().getBytes());

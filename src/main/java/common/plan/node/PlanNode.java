@@ -5,6 +5,7 @@ import common.Tools;
 import java.util.*;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * A plan node (like a union or a join) following relational algebra.
@@ -93,7 +94,7 @@ public interface PlanNode {
    * Convenience methods to wrap a plan node in another one
    */
   default PlanNode project(int[] projection) {
-    return project(projection, new Comparable[]{});
+    return project(projection, new Comparable[] {});
   }
 
   /**
@@ -106,7 +107,7 @@ public interface PlanNode {
       return this;
     }
 
-    if(this instanceof ProjectNode) {
+    if (this instanceof ProjectNode) {
       ProjectNode child = (ProjectNode) this;
       projection = Arrays.copyOf(projection, projection.length);
       constants = Arrays.copyOf(constants, constants.length);
@@ -178,6 +179,8 @@ public interface PlanNode {
      *
      * @param originalNode   the node that is currently being transformed
      * @param transformed    a new node similar to originalNode (but new instance), where originalNode's children were already transformed
+     * @param originalPath   list of nodes that were visited to reach originalNode (inclusive), starting from the node on which transform(...) was called (inclusive)
+     *                       The transformation may modify this list. That means, it must be copied if it will be accessed after the transformation
      * @return replacement for current node
      */
     PlanNode apply(PlanNode originalNode, PlanNode transformed, List<PlanNode> originalPath);
@@ -186,16 +189,26 @@ public interface PlanNode {
   /**
    * Transform operator tree.
    * First transforms children, then applies fn to this node which children have been replaced
-   * If you don't want to apply any specific operation just return the parameter
-   * Parameters of fn: (original node, transformed node)
+   * If you don't want to apply any specific operation just return the parameter <br>
+   * Parameters of fn: see {@link TransformFn#apply(PlanNode, PlanNode, List)}
    */
   default PlanNode transform(TransformFn fn, List<PlanNode> originalPath) {
-    return fn.apply(this, this, originalPath);
+    try {
+      Tools.addLast(originalPath, this);
+      return fn.apply(this, this, originalPath);
+    } finally {
+      Tools.removeLast(originalPath);
+    }
   }
 
   /** Get parent from path (e.g., originalPath argument of transform function) */
   static PlanNode parent(List<PlanNode> path) {
     return Tools.index(path, -2);
+  }
+
+  /** Generate a nice string for path */
+  static String pathToString(List<PlanNode> path) {
+    return path.stream().map(p -> p.hash() + " " + p.operatorString()).collect(Collectors.joining("  /  "));
   }
 
   /**
@@ -216,7 +229,7 @@ public interface PlanNode {
    * Check whether plan node contains 'target' as subplan
    */
   default boolean contains(PlanNode target) {
-    boolean[] found = new boolean[]{false};
+    boolean[] found = new boolean[] { false };
     transform((node) -> {
       if (node.equals(target)) {
         found[0] = true;
@@ -265,7 +278,7 @@ public interface PlanNode {
     String operator = operatorString();
     if (this instanceof PlaceholderNode && placeholderToParent != null) {
       PlanNode parent = placeholderToParent.get(this);
-      operator += parent == null ? "NO PARENT" : " for " + parent.operatorString();
+      operator += parent == null ? " (PARENT UNKNOWN)" : " for " + parent.operatorString();
     }
     stringBuilder.append(hash()).append(fn.apply(this, " " + prefixHead + operator + " arity " + getArity())).append("\n");
     List<PlanNode> args = childrenForPrettyString();
@@ -303,5 +316,6 @@ public interface PlanNode {
   default int height() {
     return children().isEmpty() ? 0 : children().stream().mapToInt(PlanNode::height).max().getAsInt() + 1;
   }
+
 
 }

@@ -25,7 +25,7 @@ public class MaterializationNode implements PlanNode {
     PlaceholderNode placeholder;
 
     public Builder(int arity) {
-      placeholder = new PlaceholderNode("mat_{building}", arity);//new ReuseNode(null, arity);
+      placeholder = new PlaceholderNode("reuse_mat", arity);//new ReuseNode(null, arity);
     }
 
     public PlanNode getReuseNode() {

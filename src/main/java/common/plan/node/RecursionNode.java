@@ -38,8 +38,8 @@ public class RecursionNode implements PlanNode {
     public Builder(PlanNode exitPlan) {
       this.exitPlan = exitPlan;
       this.arity = exitPlan.getArity();
-      delta = new PlaceholderNode("delta_{building}", arity);
-      full = new PlaceholderNode("full_{building}", arity);
+      delta = new PlaceholderNode("delta", arity);
+      full = new PlaceholderNode("full", arity);
       recursivePlan = PlanNode.empty(arity);
     }
 
