@@ -1,23 +1,23 @@
 package bashlog;
 
+import common.Evaluator;
+import common.FactsSet;
+import common.SimpleFactsSet;
+import common.TSVWriter;
+import common.parser.ParserReader;
+import common.parser.Program;
+import common.parser.Rule;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import common.Evaluator;
-import common.FactsSet;
-import common.SimpleFactsSet;
-import common.parser.ParserReader;
-import common.parser.Program;
-import common.parser.Rule;
-import common.TSVWriter;
 
 /** Execute bashlog from java */
 public class BashlogEvaluator implements Evaluator {
@@ -95,7 +95,9 @@ public class BashlogEvaluator implements Evaluator {
       }
       timeBash -= System.nanoTime();
       long start = System.nanoTime();
-      Process proc = run.exec(new String[] { "/bin/bash", "-c", query });
+      Path progFile = Files.createTempFile("bashlog-eval-", "");
+      Files.write(progFile, query.getBytes());
+      Process proc = run.exec(new String[] { "/bin/bash", progFile.toAbsolutePath().toString() });
       BufferedReader br = new BufferedReader(new InputStreamReader(proc.getInputStream()));
       String line;
       while ((line = br.readLine()) != null) {
