@@ -144,7 +144,7 @@ public class SqllogCompiler {
     String fields = IntStream.range(0, node.getArity())
             .mapToObj(i -> "C" + i)
             .collect(Collectors.joining(", "));
-    String recursion = closureTable + "(" + fields + ") AS ((" + exit.toString() + ") UNION ALL (" + rec.toString() + "))";
+    String recursion = closureTable + "(" + fields + ") AS ((" + exit.toString() + ") UNION (" + rec.toString() + "))";
     if (!recursiveDirectlyAfterWith) {
       recursion = "RECURSIVE " + recursion;
     }
@@ -207,7 +207,7 @@ public class SqllogCompiler {
       } else if (table.trim().startsWith("(")) {
         s.recursions.add(alias + " AS " + table + "");
       } else {
-        s.recursions.add(alias + " AS (SELECT * FROM " + table + ")");
+        s.recursions.add(alias + " AS (SELECT DISTINCT * FROM " + table + ")");
       }
       return s;
     }
@@ -259,7 +259,7 @@ public class SqllogCompiler {
         builder.append(String.join(", ", recursions));
       }
       String selectColumns = IntStream.range(0, select.size()).mapToObj(i -> select.get(i) + " AS C" + i).collect(Collectors.joining(", "));
-      builder.append("\n SELECT ").append(selectColumns)
+      builder.append("\n SELECT DISTINCT ").append(selectColumns)
               .append(" FROM ").append(String.join(", ", from));
       if (!where.isEmpty()) {
         builder.append(" WHERE ").append(String.join(" and ", where));
