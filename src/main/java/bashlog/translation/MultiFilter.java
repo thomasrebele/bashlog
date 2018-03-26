@@ -16,21 +16,21 @@ public class MultiFilter implements BashTranslator {
 
   @Override
   public Bash translate(PlanNode planNode, CompilerInternals bc) {
-      MultiFilterNode m = (MultiFilterNode) planNode;
-      Bash.Command cmd = new Bash.Command(AwkHelper.AWK);
+    MultiFilterNode m = (MultiFilterNode) planNode;
+    Bash.Command cmd = new Bash.Command(AwkHelper.AWK);
 
-      StringBuilder arg = new StringBuilder();
-      List<PlanNode> remaining = AwkHelper.complexAwkLine(m.getFilter(), null, arg);
+    StringBuilder arg = new StringBuilder();
+    List<PlanNode> remaining = AwkHelper.complexAwkLine(m.getFilter(), 0, null, arg);
 
-      // process remaining filter nodes
-      for (PlanNode c : remaining) {
-        AwkHelper.simpleAwkLine(c, null, arg);
-      }
-      arg.append("' ");
-      cmd.arg(arg.toString());
-      cmd.file(bc.compile(m.getTable()));
+    // process remaining filter nodes
+    for (PlanNode c : remaining) {
+      AwkHelper.simpleAwkLine(c, null, arg);
+    }
+    arg.append("' ");
+    cmd.arg(arg.toString());
+    cmd.file(bc.compile(m.getTable()));
 
-      return cmd;
+    return cmd;
   }
 
   @Override

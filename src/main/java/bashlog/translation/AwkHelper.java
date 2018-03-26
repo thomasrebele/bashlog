@@ -4,11 +4,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import common.plan.node.ConstantEqualityFilterNode;
-import common.plan.node.EqualityFilterNode;
-import common.plan.node.PlanNode;
-import common.plan.node.ProjectNode;
-import common.plan.node.VariableEqualityFilterNode;
+import common.plan.node.*;
 
 /** Stores helper functions that are used during bashlog compilation */
 public class AwkHelper {
@@ -64,7 +60,7 @@ public class AwkHelper {
   * @param filterCols accumulator
   * @return inner plan node
   */
-  private PlanNode getCols(PlanNode node, List<Integer> projCols, Map<Integer, Comparable<?>> filterCols) {
+  private static PlanNode getCols(PlanNode node, List<Integer> projCols, Map<Integer, Comparable<?>> filterCols) {
     if (node instanceof ConstantEqualityFilterNode) {
       ConstantEqualityFilterNode eq = (ConstantEqualityFilterNode) node;
       filterCols.put(eq.getField(), eq.getValue());
@@ -91,13 +87,13 @@ public class AwkHelper {
    * @param awkProg accumulator for the awk program
    * @return remaining all plan nodes that couldn't be processed that way
    */
-  public static List<PlanNode> complexAwkLine(Collection<PlanNode> plans, String output, StringBuilder awkProg) {
+  public static List<PlanNode> complexAwkLine(Collection<PlanNode> plans, int idx, String output, StringBuilder awkProg) {
     // replace value-filters by associative array lookup
     // first, collect all filters that can be combined
     Map<List<Integer>, Map<List<Integer>, List<List<Comparable<?>>>>> outputColToFilteredColToValues = new HashMap<>();
     List<PlanNode> remaining = plans.stream().filter(pn -> {
-    	return true;
-      /*Map<Integer, Comparable<?>> filterCols = new TreeMap<>();
+      //return true;
+      Map<Integer, Comparable<?>> filterCols = new TreeMap<>();
       List<Integer> outputCols = new ArrayList<>();
       getCols(pn, outputCols, filterCols);
       if (outputCols == null || filterCols.size() == 0) return true;
@@ -108,27 +104,28 @@ public class AwkHelper {
           .computeIfAbsent(new ArrayList<>(filterCols.keySet()), k -> new ArrayList<>())//
           .add(new ArrayList<Comparable<?>>(filterCols.values()));
   
-      return false;*/
+      return false;
     }).collect(Collectors.toList());
   
     if (outputColToFilteredColToValues.size() > 0) {
       // create arrays outCOLS_condCOLS[VAL] = "1";
       // where COLS looks like 0c1c2
   
-      awkProg.append("BEGIN { ");
+      awkProg.append("\n  BEGIN { \n ");
       outputColToFilteredColToValues.forEach((outCols, map) -> {
         map.forEach((filterCols, values) -> {
           values.forEach(vals -> {
+            awkProg.append("  ");
             if (output != null) {
-              awkProg.append(output.replace("tmp/", ""));
+              awkProg.append(output.replace("tmp/", "")).append("_");
             }
             awkProg.append("out").append(joinStr(outCols, "c"));
             awkProg.append("_cond").append(joinStr(filterCols, "c"));
-            awkProg.append("[\"").append(joinStr(vals, "\" FS \"")).append("\"] = \"1\"; ");
+            awkProg.append("[\"").append(joinStr(vals, "\" FS \"")).append("\"] = \"1\"; \n ");
           });
         });
       });
-      awkProg.append(" } ");
+      awkProg.append(" }\n\n ");
   
       // filter lines using arrays
       outputColToFilteredColToValues.forEach((outCols, map) -> {
@@ -137,7 +134,7 @@ public class AwkHelper {
           String condition = (String) "(" + joinStr(filterCols.stream().map(i -> "$" + (i + 1)), " FS ") + ")" + //
           " in ";
           if (output != null) {
-            condition += output.replace("tmp/", "");
+            condition += output.replace("tmp/", "") + "_";
           }
           condition += "out" + joinStr(outCols, "c") + "_cond" + joinStr(filterCols, "c");
   
@@ -149,10 +146,29 @@ public class AwkHelper {
         if (output != null) {
           awkProg.append(" >> \"").append(output).append("\"");
         }
-        awkProg.append(" } ");
+        awkProg.append(" } \n ");
       });
     }
     return remaining;
+  }
+
+
+  public static void multioutAwkLine(PlanNode plan, int idx, String output, StringBuilder arg) {
+    if (!(plan instanceof UnionNode)) {
+      simpleAwkLine(plan, output, arg);
+      return;
+    }
+    Map<String, Set<String>> projectToConditions = new HashMap<>();
+    UnionNode u = (UnionNode) plan;
+    /*for (PlanNode p : u.children()) {
+      StringBuilder project = new StringBuilder(), condition = new StringBuilder();
+      simpleAwkLine(p, output, arg, project, condition);
+      projectToConditions.computeIfAbsent(project.toString(), k -> new HashSet<>()).add(condition.toString());
+    }*/
+    complexAwkLine(u.children(), idx, output, arg);
+    arg.append(projectToConditions.entrySet().stream().map(e -> {
+      return e.getValue().stream().collect(Collectors.joining(" || ")) + e.getKey();
+    }).collect(Collectors.joining(" \n ")));
   }
 
   /**
@@ -162,6 +178,13 @@ public class AwkHelper {
    * @return
    */
   public static PlanNode simpleAwkLine(PlanNode plan, String output, StringBuilder arg) {
+    StringBuilder project = new StringBuilder(), condition = new StringBuilder();
+    PlanNode result = simpleAwkLine(plan, output, arg, project, condition);
+    arg.append(condition).append(project);
+    return result;
+  }
+
+  public static PlanNode simpleAwkLine(PlanNode plan, String output, StringBuilder arg, StringBuilder project, StringBuilder condition) {
     ProjectNode p = null;
     List<String> init = new ArrayList<>();
     List<String> conditions = new ArrayList<>();
@@ -180,21 +203,21 @@ public class AwkHelper {
       }
     } while (true);
     if (init.size() > 0) {
-      arg.append("BEGIN { ");
-      arg.append(init.stream().collect(Collectors.joining(" ")));
-      arg.append(" }");
+      arg.append("BEGIN { \n");
+      arg.append("    ").append(init.stream().collect(Collectors.joining(" ")));
+      arg.append(" }\n");
     }
-    arg.append(conditions.stream().collect(Collectors.joining(" && ")));
-    arg.append(" { print ");
+    condition.append("(").append(conditions.stream().collect(Collectors.joining(" && "))).append(")");
+    project.append(" { print ");
     if (p == null) {
-      arg.append("$0");
+      project.append("$0");
     } else {
-      arg.append(awkProject(p));
+      project.append(awkProject(p));
     }
     if (output != null) {
-      arg.append(" >> \"").append(output).append("\"");
+      project.append(" >> \"").append(output).append("\" ");
     }
-    arg.append("} \n ");
+    project.append("} \n ");
     return plan;
   }
 

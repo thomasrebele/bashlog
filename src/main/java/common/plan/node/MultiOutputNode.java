@@ -27,6 +27,10 @@ public class MultiOutputNode implements PlanNode {
       return reuseNodeBuilder;
     }
 
+    public List<PlaceholderNode> getReuseNodes() {
+      return Collections.unmodifiableList(reuseNodes);
+    }
+
     public MultiOutputNode build(PlanNode mainPlan, PlanNode leafPlan, List<PlanNode> reusedPlans) {
       if (reuseNodes == null) throw new IllegalStateException("already built!");
       MultiOutputNode result = new MultiOutputNode(mainPlan, leafPlan, reusedPlans, reuseNodes);
@@ -90,8 +94,8 @@ public class MultiOutputNode implements PlanNode {
       Tools.addLast(originalPath, this);
       PlanNode newMainPlan = mainPlan.transform(fn, originalPath);
       PlanNode newLeafPlan = leafPlan.transform(fn, originalPath);
-      List<PlanNode> newReusedPlans = reusedPlans.stream().map(n -> n.transform(fn, originalPath)).collect(Collectors.toList());
-      //List<PlanNode> newReusedPlans = reusedPlans;
+      //List<PlanNode> newReusedPlans = reusedPlans.stream().map(n -> n.transform(fn, originalPath)).collect(Collectors.toList());
+      List<PlanNode> newReusedPlans = reusedPlans;
       PlanNode newNode = this;
       if (!(mainPlan.equals(newMainPlan) && leafPlan.equals(newLeafPlan) && reusedPlans.equals(newReusedPlans))) {
         try {

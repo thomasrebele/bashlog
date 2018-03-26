@@ -22,7 +22,7 @@ public class MultiOutput implements BashTranslator {
     Bash.Command cmd = result.cmd(AwkHelper.AWK);
     MultiOutputNode mo = (MultiOutputNode) planNode;
 
-    StringBuilder arg = new StringBuilder("\n ");
+    StringBuilder arg = new StringBuilder("");
     List<PlanNode> plans = mo.reusedPlans(), nodes = mo.reuseNodes();
     for (int i = 0; i < plans.size(); i++) {
       PlanNode plan = plans.get(i), node = nodes.get(i);
@@ -33,7 +33,7 @@ public class MultiOutput implements BashTranslator {
 
       //TODO: if there are more conditions on one output file:
       // if (!complexAwkLine(Arrays.asList(plan), matFile, arg).isEmpty()) { ... }
-      AwkHelper.simpleAwkLine(plan, matFile, arg);
+      AwkHelper.multioutAwkLine(plan, i, matFile, arg);
     }
     cmd.arg(arg.toString()).arg("'");
     cmd.file(bc.compile(mo.getLeaf()));
