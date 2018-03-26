@@ -9,7 +9,7 @@ import bashlog.plan.SortNode;
 import common.plan.node.PlanNode;
 
 /** Translates a sort node to a sort command */
-public class Sort implements Translator {
+public class Sort implements BashTranslator {
 
 	@Override
 	public Bash translate(PlanNode p, CompilerInternals bc) {

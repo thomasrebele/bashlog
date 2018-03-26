@@ -21,7 +21,7 @@ public class UnionNode implements PlanNode {
     this(Collections.emptySet(), arity);
   }
 
-  UnionNode(Set<PlanNode> children) {
+  public UnionNode(Set<PlanNode> children) {
     if (children.size() == 0) {
       throw new IllegalArgumentException("Please set the arity of this empty union");
     }

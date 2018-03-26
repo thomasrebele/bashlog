@@ -173,7 +173,7 @@ public class BashlogLUBM {
 
         Program sqlProg = new Program();
         p.rules().forEach(r -> {
-          if (r.body.size() == 1 && "bash_command".equals(r.body.get(0).name)) {
+          if (r instanceof BashRule) {
             // ignore this rule
           } else {
             sqlProg.addRule(r);

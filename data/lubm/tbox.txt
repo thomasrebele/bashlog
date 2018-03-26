@@ -1,111 +1,172 @@
-Employee(X) :- AdministrativeStaff(X).
+Publication(S) :- publicationAuthor(S, O).
+Person(S) :- degreeFrom(S, O).
+Organization(S) :- orgPublication(S, O).
+Organization(S) :- subOrganizationOf(S, O).
+Person(S) :- advisor(S, O).
+Publication(S) :- publicationDate(S, O).
+Organization(S) :- affiliateOf(S, O).
+University(S) :- hasAlumnus(S, O).
+Publication(S) :- publicationResearch(S, O).
+Organization(S) :- affiliatedOrganizationOf(S, O).
+Schedule(S) :- listedCourse(S, O).
+Software(S) :- softwareDocumentation(S, O).
+TeachingAssistant(S) :- teachingAssistantOf(S, O).
+Organization(S) :- member(S, O).
+Software(S) :- softwareVersion(S, O).
+Person(S) :- doctoralDegreeFrom(S, O).
+Professor(S) :- tenured(S, O).
+Faculty(S) :- teacherOf(S, O).
+Person(S) :- mastersDegreeFrom(S, O).
+Person(S) :- undergraduateDegreeFrom(S, O).
+ResearchGroup(S) :- researchProject(S, O).
+Person(S) :- telephone(S, O).
+Person(S) :- age(S, O).
+Person(S) :- emailAddress(S, O).
+Person(S) :- title(S, O).
+Publication(O) :- softwareDocumentation(S, O).
+University(O) :- mastersDegreeFrom(S, O).
+University(O) :- undergraduateDegreeFrom(S, O).
+Publication(O) :- orgPublication(S, O).
+Professor(O) :- advisor(S, O).
+Person(O) :- member(S, O).
+Organization(O) :- subOrganizationOf(S, O).
+Person(O) :- hasAlumnus(S, O).
+Person(O) :- publicationAuthor(S, O).
+Research(O) :- researchProject(S, O).
+Research(O) :- publicationResearch(S, O).
+Organization(O) :- affiliatedOrganizationOf(S, O).
+University(O) :- degreeFrom(S, O).
+Person(O) :- affiliateOf(S, O).
+Course(O) :- teachingAssistantOf(S, O).
+Course(O) :- teacherOf(S, O).
+Course(O) :- listedCourse(S, O).
+University(O) :- doctoralDegreeFrom(S, O).
+subOrganizationOf(X, Z) :- subOrganizationOf(X, Y), subOrganizationOf(Y, Z).
+degreeFrom(S, O) :- doctoralDegreeFrom(S, O).
+memberOf(S, O) :- worksFor(S, O).
+degreeFrom(S, O) :- undergraduateDegreeFrom(S, O).
+worksFor(S, O) :- headOf(S, O).
+degreeFrom(S, O) :- mastersDegreeFrom(S, O).
+degreeFrom(O, S) :- hasAlumnus(S, O).
+hasAlumnus(O, S) :- degreeFrom(S, O).
+member(O, S) :- memberOf(S, O).
+memberOf(O, S) :- member(S, O).
+Professor(X) :- Dean(X).
+Person(X) :- ResearchAssistant(X).
+Work(X) :- Research(X).
 Publication(X) :- Article(X).
+Faculty(X) :- PostDoc(X).
+Article(X) :- JournalArticle(X).
+Publication(X) :- Manual(X).
+Organization(X) :- University(X).
+Person(X) :- GraduateStudent(X).
+AdministrativeStaff(X) :- SystemsStaff(X).
+Professor(X) :- FullProfessor(X).
+Organization(X) :- Department(X).
+Faculty(X) :- Professor(X).
+Publication(X) :- UnofficialPublication(X).
+Employee(X) :- Faculty(X).
+Professor(X) :- VisitingProfessor(X).
+Student(X) :- UndergraduateStudent(X).
+Organization(X) :- Program(X).
 Professor(X) :- AssistantProfessor(X).
-Professor(X) :- AssociateProfessor(X).
-Publication(X) :- Book(X).
-
-Chair(X) :- headOf(X,Y), Department(Y), Person(X).
 Professor(X) :- Chair(X).
-
-AdministrativeStaff(X) :- ClericalStaff(X).
+Article(X) :- TechnicalReport(X).
+Faculty(X) :- Lecturer(X).
+Professor(X) :- AssociateProfessor(X).
+Organization(X) :- Institute(X).
+Course(X) :- GraduateCourse(X).
+Organization(X) :- ResearchGroup(X).
 Organization(X) :- College(X).
+Publication(X) :- Software(X).
+Publication(X) :- Book(X).
 Article(X) :- ConferencePaper(X).
 Work(X) :- Course(X).
-
-Dean(X) :- headOf(X,Y), College(Y), Person(X).
-Professor(X) :- Dean(X).
-
-Director(X) :- headOf(X,Y), Program(Y), Person(X).
-
-Employee(X) :- worksFor(X,Y), Organization(Y), Person(X).
-
-Organization(X) :- Department(X).
-Employee(X) :- Faculty(X).
-Professor(X) :- FullProfessor(X).
-Course(X) :- GraduateCourse(X).
-Person(X) :- GraduateStudent(X).
-
-GraduateStudent(X) :- takesCourse(X,Y), GraduateCourse(Y).
-
-Organization(X) :- Institute(X).
-Article(X) :- JournalArticle(X).
-Faculty(X) :- Lecturer(X).
-Publication(X) :- Manual(X).
-Faculty(X) :- PostDoc(X).
-Faculty(X) :- Professor(X).
-Organization(X) :- Program(X).
-Work(X) :- Research(X).
-Student(X) :- ResearchAssistant(X).
-
-ResearchAssistant(X) :- worksFor(X,Y), ResearchGroup(Y).
-
-Organization(X) :- ResearchGroup(X).
-Publication(X) :- Software(X).
+Employee(X) :- AdministrativeStaff(X).
+AdministrativeStaff(X) :- ClericalStaff(X).
 Publication(X) :- Specification(X).
-AdministrativeStaff(X) :- SystemsStaff(X).
+Person(X) :- Student(X).
+Student(X) :- Person(X), takesCourse(X, SomeValue1), Course(SomeValue1).
+Person(X) :- Chair(X).
+Chair(X) :- Person(X), headOf(X, SomeValue2), Department(SomeValue2).
+Person(X) :- Employee(X).
+Employee(X) :- Person(X), worksFor(X, SomeValue3), Organization(SomeValue3).
+Person(X) :- TeachingAssistant(X).
+TeachingAssistant(X) :- Person(X), teachingAssistantOf(X, SomeValue4), Course(SomeValue4).
+Person(X) :- Director(X).
+Director(X) :- Person(X), headOf(X, SomeValue5), Program(SomeValue5).
+Dean(X) :- headOf(X, SomeValue6), College(SomeValue6).
 
-Student(X) :- takesCourse(X,Y), Course(Y), Person(X).
-
-TeachingAssistant(X) :- teachingAssistantOf(X,Y), Course(Y) , Person(X).
-
-Article(X) :- TechnicalReport(X).
-Student(X) :- UndergraduateStudent(X).
-Organization(X) :- University(X).
-Publication(X) :- UnofficialPublication(X).
-Professor(X) :- VisitingProfessor(X).
-
-
-Person(X) :- advisor(X,Y).
-Professor(Y) :- advisor(X,Y).
-Organization(X) :- affiliatedOrganizationOf(X,Y).
-Organization(Y) :- affiliatedOrganizationOf(X,Y).
-Organization(X) :- affiliateOf(X,Y).
-Person(Y) :- affiliateOf(X,Y).
-Person(X) :- age(X,Y).
-Person(X) :- degreeFrom(X,Y).
-University(Y) :- degreeFrom(X,Y).
-degreeFrom(X,Y) :- hasAlumnus(Y,X).
-hasAlumnus(X,Y) :- degreeFrom(Y,X).
-Person(X) :- doctoralDegreeFrom(X,Y).
-University(Y) :- doctoralDegreeFrom(X,Y).
-degreeFrom(X,Y) :- doctoralDegreeFrom(X,Y).
-Person(X) :- emailAddress(X,Y).
-University(X) :- hasAlumnus(X,Y).
-Person(Y) :- hasAlumnus(X,Y).
-worksFor(X,Y) :- headOf(X,Y).
-Schedule(X) :- listedCourse(X,Y).
-Course(Y) :- listedCourse(X,Y).
-Person(X) :- mastersDegreeFrom(X,Y).
-University(Y) :- mastersDegreeFrom(X,Y).
-degreeFrom(X,Y) :- mastersDegreeFrom(X,Y).
-Organization(X) :- member(X,Y).
-Person(Y) :- member(X,Y).
-memberOf(X,Y) :- member(Y,X).
-member(Y,X) :- memberOf(X,Y).
-Organization(X) :- orgPublication(X,Y).
-Publication(Y) :- orgPublication(X,Y).
-Publication(X) :- publicationAuthor(X,Y).
-Person(Y) :- publicationAuthor(X,Y).
-Publication(X) :- publicationDate(X,Y).
-Publication(X) :- publicationResearch(X,Y).
-Research(Y) :- publicationResearch(X,Y).
-ResearchGroup(X) :- researchProject(X,Y).
-Research(Y) :- researchProject(X,Y).
-Software(X) :- softwareDocumentation(X,Y).
-Publication(Y) :- softwareDocumentation(X,Y).
-Software(X) :- softwareVersion(X,Y).
-Organization(X) :- subOrganizationOf(X,Y).
-Organization(Y) :- subOrganizationOf(X,Y).
-subOrganizationOf(X,Z) :- subOrganizationOf(X,Y),subOrganizationOf(Y,Z).
-Faculty(X) :- teacherOf(X,Y).
-Course(Y) :- teacherOf(X,Y).
-TeachingAssistant(X) :- teachingAssistantOf(X,Y).
-Course(Y) :- teachingAssistantOf(X,Y).
-Person(X) :- telephone(X,Y).
-Professor(X) :- tenured(X,Y).
-Person(X) :- title(X,Y).
-Person(X) :- undergraduateDegreeFrom(X,Y).
-University(Y) :- undergraduateDegreeFrom(X,Y).
-degreeFrom(X,Y) :- undergraduateDegreeFrom(X,Y).
-memberOf(X,Y) :- worksFor(X,Y).
-
+teachingAssistantOf(X, Y) :- allFacts(X, "teachingAssistantOf", Y).
+Manual(X) :- allFacts(X, "rdf:type", "Manual").
+Department(X) :- allFacts(X, "rdf:type", "Department").
+TechnicalReport(X) :- allFacts(X, "rdf:type", "TechnicalReport").
+ConferencePaper(X) :- allFacts(X, "rdf:type", "ConferencePaper").
+Institute(X) :- allFacts(X, "rdf:type", "Institute").
+Chair(X) :- allFacts(X, "rdf:type", "Chair").
+headOf(X, Y) :- allFacts(X, "headOf", Y).
+Schedule(X) :- allFacts(X, "rdf:type", "Schedule").
+researchProject(X, Y) :- allFacts(X, "researchProject", Y).
+ClericalStaff(X) :- allFacts(X, "rdf:type", "ClericalStaff").
+softwareDocumentation(X, Y) :- allFacts(X, "softwareDocumentation", Y).
+name(X, Y) :- allFacts(X, "name", Y).
+University(X) :- allFacts(X, "rdf:type", "University").
+Work(X) :- allFacts(X, "rdf:type", "Work").
+Publication(X) :- allFacts(X, "rdf:type", "Publication").
+worksFor(X, Y) :- allFacts(X, "worksFor", Y).
+teacherOf(X, Y) :- allFacts(X, "teacherOf", Y).
+undergraduateDegreeFrom(X, Y) :- allFacts(X, "undergraduateDegreeFrom", Y).
+advisor(X, Y) :- allFacts(X, "advisor", Y).
+mastersDegreeFrom(X, Y) :- allFacts(X, "mastersDegreeFrom", Y).
+Research(X) :- allFacts(X, "rdf:type", "Research").
+orgPublication(X, Y) :- allFacts(X, "orgPublication", Y).
+FullProfessor(X) :- allFacts(X, "rdf:type", "FullProfessor").
+age(X, Y) :- allFacts(X, "age", Y).
+UndergraduateStudent(X) :- allFacts(X, "rdf:type", "UndergraduateStudent").
+AdministrativeStaff(X) :- allFacts(X, "rdf:type", "AdministrativeStaff").
+affiliateOf(X, Y) :- allFacts(X, "affiliateOf", Y).
+GraduateCourse(X) :- allFacts(X, "rdf:type", "GraduateCourse").
+College(X) :- allFacts(X, "rdf:type", "College").
+title(X, Y) :- allFacts(X, "title", Y).
+VisitingProfessor(X) :- allFacts(X, "rdf:type", "VisitingProfessor").
+Dean(X) :- allFacts(X, "rdf:type", "Dean").
+telephone(X, Y) :- allFacts(X, "telephone", Y).
+member(X, Y) :- allFacts(X, "member", Y).
+Course(X) :- allFacts(X, "rdf:type", "Course").
+SystemsStaff(X) :- allFacts(X, "rdf:type", "SystemsStaff").
+memberOf(X, Y) :- allFacts(X, "memberOf", Y).
+AssistantProfessor(X) :- allFacts(X, "rdf:type", "AssistantProfessor").
+Director(X) :- allFacts(X, "rdf:type", "Director").
+TeachingAssistant(X) :- allFacts(X, "rdf:type", "TeachingAssistant").
+softwareVersion(X, Y) :- allFacts(X, "softwareVersion", Y).
+Faculty(X) :- allFacts(X, "rdf:type", "Faculty").
+JournalArticle(X) :- allFacts(X, "rdf:type", "JournalArticle").
+degreeFrom(X, Y) :- allFacts(X, "degreeFrom", Y).
+affiliatedOrganizationOf(X, Y) :- allFacts(X, "affiliatedOrganizationOf", Y).
+takesCourse(X, Y) :- allFacts(X, "takesCourse", Y).
+ResearchAssistant(X) :- allFacts(X, "rdf:type", "ResearchAssistant").
+Software(X) :- allFacts(X, "rdf:type", "Software").
+listedCourse(X, Y) :- allFacts(X, "listedCourse", Y).
+GraduateStudent(X) :- allFacts(X, "rdf:type", "GraduateStudent").
+subOrganizationOf(X, Y) :- allFacts(X, "subOrganizationOf", Y).
+AssociateProfessor(X) :- allFacts(X, "rdf:type", "AssociateProfessor").
+Person(X) :- allFacts(X, "rdf:type", "Person").
+Professor(X) :- allFacts(X, "rdf:type", "Professor").
+ResearchGroup(X) :- allFacts(X, "rdf:type", "ResearchGroup").
+Book(X) :- allFacts(X, "rdf:type", "Book").
+tenured(X, Y) :- allFacts(X, "tenured", Y).
+UnofficialPublication(X) :- allFacts(X, "rdf:type", "UnofficialPublication").
+Student(X) :- allFacts(X, "rdf:type", "Student").
+Employee(X) :- allFacts(X, "rdf:type", "Employee").
+Lecturer(X) :- allFacts(X, "rdf:type", "Lecturer").
+doctoralDegreeFrom(X, Y) :- allFacts(X, "doctoralDegreeFrom", Y).
+PostDoc(X) :- allFacts(X, "rdf:type", "PostDoc").
+emailAddress(X, Y) :- allFacts(X, "emailAddress", Y).
+publicationResearch(X, Y) :- allFacts(X, "publicationResearch", Y).
+Organization(X) :- allFacts(X, "rdf:type", "Organization").
+Article(X) :- allFacts(X, "rdf:type", "Article").
+Program(X) :- allFacts(X, "rdf:type", "Program").
+Specification(X) :- allFacts(X, "rdf:type", "Specification").
+publicationAuthor(X, Y) :- allFacts(X, "publicationAuthor", Y).
+hasAlumnus(X, Y) :- allFacts(X, "hasAlumnus", Y).
+publicationDate(X, Y) :- allFacts(X, "publicationDate", Y).

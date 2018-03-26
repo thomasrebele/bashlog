@@ -10,7 +10,7 @@ import bashlog.command.Bash;
 import bashlog.plan.BashlogOptimizer;
 import bashlog.plan.BashlogPlan;
 import bashlog.plan.SortNode;
-import bashlog.translation.Translator;
+import bashlog.translation.BashTranslator;
 import common.parser.Program;
 import common.plan.LogicalPlanBuilder;
 import common.plan.node.*;
@@ -38,14 +38,14 @@ public class BashlogCompiler {
   private String debug;
 
   private List<List<Optimizer>> stages = Arrays.asList(//
-      Arrays.asList(new CombineFacts(), new SimplifyRecursion(), new PushDownJoin(), new ReorderJoinLinear(), new PushDownFilterAndProject(),
+      Arrays.asList(new CombineFacts(), new SimplifyRecursion(), new PushDownJoin(), new ReorderJoinTree(), new PushDownFilterAndProject(),
           new SimplifyRecursion(),
           new PushDownFilterAndProject()),
       Arrays.asList(new BashlogPlan(), new BashlogOptimizer(), new MultiOutput(), new CombineFilter(false), new Materialize(),
           new CombineFilter(false)));
   
 
-  private Map<Class<?>, Translator> translators = new HashMap<>();
+  private Map<Class<?>, BashTranslator> translators = new HashMap<>();
 
   public BashlogCompiler(PlanNode planNode) {
     if (planNode == null) {

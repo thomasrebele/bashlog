@@ -13,6 +13,8 @@ public class ReorderJoinLinear implements Optimizer {
 
   private static final Logger LOG = LoggerFactory.getLogger(ReorderJoinLinear.class);
 
+  Random r = new Random();
+
   @Override
   public PlanNode apply(PlanNode node) {
     return node.transform((o, n, op) -> {
@@ -24,12 +26,10 @@ public class ReorderJoinLinear implements Optimizer {
     }, new LinkedList<>());
   }
 
-  Random r = new Random();
-
   /** Search for index of highest value, which is not yet used
    * @return max, index
    */
-  private int[] max(int[] vals, boolean[] available) {
+  protected int[] max(int[] vals, boolean[] available) {
     int max = Integer.MIN_VALUE, maxIdx = -1;
     for (int i = 0; i < vals.length; i++) {
       if (available[i] && vals[i] > max) {
@@ -46,7 +46,7 @@ public class ReorderJoinLinear implements Optimizer {
    * @return max, index
    */
   @SuppressWarnings("unused")
-  private int[] min(int[] vals, boolean[] available) {
+  protected int[] min(int[] vals, boolean[] available) {
     int min = Integer.MAX_VALUE, minIdx = -1;
     for (int i = 0; i < vals.length; i++) {
       if (available[i] && vals[i] < min) {
@@ -63,7 +63,7 @@ public class ReorderJoinLinear implements Optimizer {
    * @return max, index
    */
   @SuppressWarnings("unused")
-  private int[] rnd(int[] vals, boolean[] available) {
+  protected int[] rnd(int[] vals, boolean[] available) {
     List<Integer> l = new ArrayList<>();
     for (int i = 0; i < vals.length; i++) {
       if (available[i]) {
@@ -80,7 +80,7 @@ public class ReorderJoinLinear implements Optimizer {
    * @param newLeaves output parameter, filled by this method
    * @return reordered join plan
    */
-  private PlanNode reorder(JoinInfo info, int[] newLeafOrder, List<PlanNode> newLeaves) {
+  protected PlanNode reorder(JoinInfo info, int[] newLeafOrder, List<PlanNode> newLeaves) {
     int[] oldLeafToNewLeaf = Tools.inverse(newLeafOrder);
     PlanNode result = info.leaves.get(newLeafOrder[0]);
     newLeaves.add(result);
@@ -116,10 +116,13 @@ public class ReorderJoinLinear implements Optimizer {
     return result;
   }
 
-  private PlanNode reorder(JoinNode n) {
+  protected PlanNode reorder(JoinNode n) {
     JoinInfo info = new JoinInfo();
     analyze(n, info);
+    return reorderLinear(n, info);
+  }
 
+  protected PlanNode reorderLinear(JoinNode n, JoinInfo info) {
     // reorder joins
     int[] conditionCount = countJoinConditions(info);
     int[] newLeafOrder = orderJoins(info, conditionCount);
@@ -137,8 +140,14 @@ public class ReorderJoinLinear implements Optimizer {
     LOG.debug("new leaf order: " + Arrays.toString(newLeafOrder));
     PlanNode reorderedJoins = reorder(info, newLeafOrder, newLeaves);
 
+    return reorderedJoins.project(getFinalProjection(info, newLeaves, newLeafOrder));
+  }
+
+  /** Get projection for reordering leaves, so that the output columns have the same order as the original join */
+  // TODO: remove newLeaves parameter
+  protected int[] getFinalProjection(JoinInfo info, List<PlanNode> newLeaves, int[] newLeafOrder) {
     // calculate final projection, to bring columns in right order (the same as n would have produced)
-    int[] finalProj = new int[n.getArity()];
+    int[] finalProj = new int[info.root.getArity()];
     int finalProjIdx = 0; // put next value of finalProj at this index
 
     int[] oldLeafToNewLeaf = Tools.inverse(newLeafOrder);
@@ -148,11 +157,10 @@ public class ReorderJoinLinear implements Optimizer {
         finalProj[finalProjIdx++] = leafIdxToJoinIdx(newLeaves, newLeafIdx, j);
       }
     }
-
-    return reorderedJoins.project(finalProj);
+    return finalProj;
   }
 
-  private int[] countJoinConditions(JoinInfo info) {
+  protected int[] countJoinConditions(JoinInfo info) {
     // count join conditions per leaf node
     int[] useCount = new int[info.leaves.size()];
     for (int[] cond : info.joinConditions) {
@@ -163,7 +171,7 @@ public class ReorderJoinLinear implements Optimizer {
   }
 
   /** Indices of the leaf nodes in which they appear after the reordering */
-  private int[] orderJoins(JoinInfo info, int[] conditionCount) {
+  protected int[] orderJoins(JoinInfo info, int[] conditionCount) {
     // heuristic: use relations with lots of join conditions first
     int[] newLeafOrder = new int[conditionCount.length];
 
@@ -197,9 +205,11 @@ public class ReorderJoinLinear implements Optimizer {
   /**
    * Fill information in JoinInfo
    */
-  private void analyze(PlanNode n, JoinInfo info) {
+  protected void analyze(PlanNode n, JoinInfo info) {
     if (n instanceof JoinNode) {
       JoinNode j = (JoinNode) n;
+      if (info.root == null) info.root = j;
+
       analyze(j.getLeft(), info);
       int leftChildren = info.leaves.size();
       analyze(j.getRight(), info);
@@ -219,7 +229,7 @@ public class ReorderJoinLinear implements Optimizer {
   }
 
   /** Convert leaf index i and its column index j to output index in the join */
-  private int leafIdxToJoinIdx(List<PlanNode> newLeaves, int i, int j) {
+  protected int leafIdxToJoinIdx(List<PlanNode> newLeaves, int i, int j) {
     for (int k = 0; k < i; k++) {
       j += newLeaves.get(k).getArity();
     }
@@ -232,7 +242,7 @@ public class ReorderJoinLinear implements Optimizer {
    * @param colIdx col index at the join node
    * @return [leafIdx, colIdx]
    */
-  private int[] joinIdxToLeafIdx(List<PlanNode> leaves, int start, int colIdx) {
+  protected int[] joinIdxToLeafIdx(List<PlanNode> leaves, int start, int colIdx) {
     for (int i = start; i < leaves.size(); i++) {
       int arity = leaves.get(i).getArity();
       if (colIdx - arity < 0) {
@@ -244,6 +254,8 @@ public class ReorderJoinLinear implements Optimizer {
   }
 
   class JoinInfo {
+
+    JoinNode root = null;
 
     /**
      * First nodes in the subtrees, that are not joins, from left to right

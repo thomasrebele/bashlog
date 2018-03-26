@@ -10,7 +10,7 @@ import bashlog.plan.SortJoinNode;
 import common.plan.node.PlanNode;
 
 /** Translate a join to a join command. It supports a projection after the sort. Also treats antijoin. */
-public class Join implements Translator {
+public class Join implements BashTranslator {
 
   @Override
   public Bash translate(PlanNode planNode, CompilerInternals bc) {

@@ -12,7 +12,7 @@ import common.plan.node.PlanNode;
 /** 
  * Translate a materialization node. The command is just executed and its output stored in a file.
  */
-public class Materialization implements Translator {
+public class Materialization implements BashTranslator {
 
   @Override
   public Bash translate(PlanNode planNode, CompilerInternals bc) {
