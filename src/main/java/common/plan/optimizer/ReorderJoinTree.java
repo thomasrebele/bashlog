@@ -52,7 +52,7 @@ public class ReorderJoinTree extends ReorderJoinLinear {
     ArrayList<Map.Entry<Integer, Integer>> mstEdges = new ArrayList<>();
     for (Map.Entry<Integer, Integer> e : sortedEdges) {
       int node1 = e.getKey(), node2 = e.getValue();
-      int set1 = nodeSet.find(node1); //Find root of 1 vertex of the edge
+      int set1 = nodeSet.find(node1);
       int set2 = nodeSet.find(node2);
 
       if (set1 != set2) { // the two nodes are not yet connected by a path

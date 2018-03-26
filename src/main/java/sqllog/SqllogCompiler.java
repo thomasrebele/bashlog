@@ -1,6 +1,5 @@
 package sqllog;
 
-import common.compiler.CompilerInternals;
 import common.parser.*;
 import common.plan.LogicalPlanBuilder;
 import common.plan.node.*;
