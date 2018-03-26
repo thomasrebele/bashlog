@@ -35,29 +35,31 @@ public class MultiOutput implements Optimizer {
         // make placeholders for subplans
         nodesToInfo.computeIfAbsent(reuseAt, k -> new ArrayList<>()).add(i);
 
-        // group reuse nodes that only appear within a single union together
-        Map<PlanNode, PlanNode> parentToRecycledReuseNode = new HashMap<>();
+        // group reuse nodes that appear within a the same unions
+        Map<Set<PlanNode>, Set<PlanNode>> parentsToPlans = new HashMap<>();
         for (Entry<PlanNode, Set<PlanNode>> e : i.plansToParents.entrySet()) {
-          PlanNode reusedPlan = e.getKey(), reuseNode;
-          
-          if (e.getValue().size() == 1) {
-            PlanNode parent = e.getValue().iterator().next();
-            reuseNode = parentToRecycledReuseNode.computeIfAbsent(parent, k -> i.builder.getNextReuseNode(reusedPlan.getArity()));
-          }
-          else {
-            reuseNode = i.builder.getNextReuseNode(reusedPlan.getArity());
-          }
+          parentsToPlans.computeIfAbsent(e.getValue(), k -> new HashSet<>()).add(e.getKey());
+        }
 
-          nodesToReuseNode.put(reusedPlan, reuseNode);
-          reuseNodeToPlans.computeIfAbsent(reuseNode, k -> new HashSet<>()).add(reusedPlan);
+        // every such group gets one reuse node
+        for (Entry<Set<PlanNode>, Set<PlanNode>> e : parentsToPlans.entrySet()) {
+          int arity = e.getValue().iterator().next().getArity();
+          PlanNode reuseNode = i.builder.getNextReuseNode(arity);
+
+          e.getValue().stream().forEach(reusedPlan -> {
+            nodesToReuseNode.put(reusedPlan, reuseNode);
+          });
+          reuseNodeToPlans.put(reuseNode, e.getValue());
         }
       }
     });
-    
+
+    // create multi output nodes in the plan
     return t.transform((old, node, oldPath) -> {
       if (nodesToReuseNode.containsKey(old)) {
         return nodesToReuseNode.get(old);
       }
+      // for all multi nodes that should be introduced at this node
       List<Info> info = nodesToInfo.get(old);
       if (info != null) {
         PlanNode mat = node;
@@ -65,6 +67,8 @@ public class MultiOutput implements Optimizer {
           List<PlanNode> reusedPlans = i.builder.getReuseNodes().stream().map(p -> {
             Set<PlanNode> replacedNodes = reuseNodeToPlans.get(p);
             PlanNode result = replacedNodes.size() == 1 ? replacedNodes.iterator().next() : new UnionNode(replacedNodes);
+
+            // TODO: is this actually needed?
             result = result.transform((subOld, subNode, subOldPath) -> {
               if (replacedNodes.contains(subOld)) return subNode;
               PlanNode rn = nodesToReuseNode.get(subOld);
@@ -116,8 +120,7 @@ public class MultiOutput implements Optimizer {
       if (leaf != null) {
         return leaf;
       }
-    }
-    else {
+    } else {
       for (PlanNode c : p.children()) {
         PlanNode leaf = analyzeStructure(c, depth + 1);
         if (leaf != null && leaf != c) {
