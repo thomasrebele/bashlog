@@ -1,23 +1,26 @@
 package sparqlog;
 
+import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
+
+
+import common.parser.Program;
+import common.plan.LogicalPlanBuilder;
+import common.plan.node.*;
+import common.plan.optimizer.Optimizer;
+import common.plan.optimizer.PushDownFilterAndProject;
+import common.plan.optimizer.ReorderJoinLinear;
+import common.plan.optimizer.SimplifyRecursion;
+
 public class SparqlogCompiler {
 
-  /*private static final Logger LOGGER = LoggerFactory.getLogger(SparqlogCompiler.class);
   private static final Set<String> BUILDS_IN = Collections.singleton("fact");
+
   private static final List<Optimizer> OPTIMIZERS = Arrays.asList(new SimplifyRecursion(), new ReorderJoinLinear(), new PushDownFilterAndProject());
 
-  private static final String TABLE_ALIAS_PREFIX = "T";
-
-  private Map<PlaceholderNode, PlanNode> placeholderToParent = new HashMap<>();
-  private Map<PlanNode, String> closureTables = new HashMap<>();
-  private int count = 0;
-
-  public String compile(Program program, String tripleRelation, String relationToOutput) {
-    LogicalPlanBuilder planBuilder = new LogicalPlanBuilder(BUILDS_IN, Collections.singleton(relationToOutput));
-    PlanNode plan = optimize(planBuilder.getPlanForProgram(program).get(relationToOutput));
-    placeholderToParent = PlaceholderNode.placeholderToParentMap(plan);
-    return mapPlanNode(plan).toString();
-  }
+  int count = 0;
 
   private PlanNode optimize(PlanNode node) {
     for (Optimizer optimizer : OPTIMIZERS) {
@@ -26,172 +29,95 @@ public class SparqlogCompiler {
     return node;
   }
 
-  private Select mapPlanNode(PlanNode node) {
-    if (node instanceof ConstantEqualityFilterNode) {
-      return mapConstantEqualityFilterNode((ConstantEqualityFilterNode) node);
-    } else if (node instanceof JoinNode) {
-      return mapJoinNode((JoinNode) node);
-    } else if (node instanceof ProjectNode) {
-      return mapProjectNode((ProjectNode) node);
-    } else if (node instanceof RecursionNode) {
-      return mapRecursionNode((RecursionNode) node);
-    } else if (node instanceof PlaceholderNode) {
-      return mapTokenNode((PlaceholderNode) node);
-    } else if (node instanceof UnionNode) {
-      return mapUnionNode((UnionNode) node);
-    } else if (node instanceof VariableEqualityFilterNode) {
-      return mapVariableEqualityFilterNode((VariableEqualityFilterNode) node);
+  public String compile(Program program, String string, String relationToOutput) {
+    LogicalPlanBuilder planBuilder = new LogicalPlanBuilder(BUILDS_IN, Collections.singleton(relationToOutput));
+    PlanNode plan = optimize(planBuilder.getPlanForProgram(program).get(relationToOutput));
+
+    String[] vars = IntStream.range(0, plan.getArity()).mapToObj(i -> "?v" + i).toArray((i) -> new String[i]);
+    List<String> s = mapPlanNode(plan, vars);
+
+    StringBuilder sparql = new StringBuilder();
+    sparql.append("SELECT DISTINCT ");
+    sparql.append(Arrays.stream(vars).collect(Collectors.joining(" ")));
+
+    sparql.append(" WHERE { \n");
+    s.stream().map(k -> "  " + k).forEach(sparql::append);
+    sparql.append("}");
+
+    return sparql.toString();
+  }
+
+  /**
+   * Convert a plan node to sparql snippets
+   * @param plan
+   * @param colToVar which variable should be used for which column
+   * @return
+   */
+  private List<String> mapPlanNode(PlanNode plan, String[] colToVar) {
+    if (plan instanceof ProjectNode) {
+      ProjectNode n = (ProjectNode) plan;
+      String[] newColToVar = new String[n.getTable().getArity()];
+      for(int i=0; i<n.getProjection().length; i++) {
+        newColToVar[n.getProjection()[i]] = colToVar[i];
+      }
+      return mapPlanNode(((ProjectNode) plan).getTable(), newColToVar);
+
+    } else if (plan instanceof ConstantEqualityFilterNode) {
+      ConstantEqualityFilterNode n = (ConstantEqualityFilterNode) plan;
+      colToVar[n.getField()] = n.getValue().toString();
+      return mapPlanNode(n.getTable(), colToVar);
+
+    } else if (plan instanceof JoinNode) {
+      JoinNode n = (JoinNode) plan;
+      int leftArity = n.getLeft().getArity();
+      String[] leftColToVar = new String[n.getLeft().getArity()];
+      String[] rightColToVar = new String[n.getLeft().getArity()];
+
+      System.arraycopy(colToVar, 0, leftColToVar, 0, n.getLeft().getArity());
+      System.arraycopy(colToVar, leftArity, rightColToVar, 0, n.getRight().getArity());
+
+      for (int i = 0; i < n.getLeftProjection().length; i++) {
+        int leftField = n.getLeftProjection()[i];
+        int rightField = n.getRightProjection()[i] ;
+        int outRightField = rightField + leftArity;
+
+        String var;
+        if (colToVar[leftField] == null && colToVar[outRightField] == null) {
+          var = "?t" + count++;
+        } else if (colToVar[leftField] != null || colToVar[outRightField] != null) {
+          var = Optional.ofNullable(colToVar[leftField]).orElse(colToVar[outRightField]);
+        } else {
+          throw new IllegalStateException("unsupported");
+        }
+        leftColToVar[leftField] = var;
+        rightColToVar[rightField] = var;
+      }
+
+      return Stream.concat(mapPlanNode(n.getLeft(), leftColToVar).stream(), mapPlanNode(n.getRight(), rightColToVar).stream())
+          .collect(Collectors.toList());
+
+    } else if (plan instanceof UnionNode) {
+      List<String> result = new ArrayList<>();
+      result.add("{ { \n");
+      String sep = "";
+      for (PlanNode child : plan.children()) {
+        result.add(sep);
+        sep = "} UNION { \n ";
+        result.addAll(mapPlanNode(child, colToVar));
+      }
+      result.add("} } \n");
+
+      return result;
+
+    } else if (plan instanceof BashNode) {
+      if (colToVar.length != 3) {
+        throw new UnsupportedOperationException("can only translate triples");
+      }
+      return Collections.singletonList(Arrays.stream(colToVar).map(var -> var == null ? "[]" : var).collect(Collectors.joining(" ")) + " .\n");
     } else {
-      throw new IllegalArgumentException("Unknown node type: " + node.toString() + " operator " + node.operatorString());
-    }
-  }
-
-  private Select mapConstantEqualityFilterNode(ConstantEqualityFilterNode node) {
-    Select parent = mapPlanNode(node.getTable());
-    return parent.withWhere("FILTER(" + parent.select.get(node.getField()) + " = \"" + node.getValue() + "\")");
-  }
-
-  private Select mapJoinNode(JoinNode node) {
-    Select left = mapPlanNode(node.getLeft());
-    Select right = mapPlanNode(node.getRight());
-    Select result = new Select(merge(left.select, right.select), merge(left.where, right.where));
-    for (int i = 0; i < node.getLeftProjection().length; i++) {
-      result.where.add("FILTER(" + left.select.get(node.getLeftProjection()[i]) + " = " + right.select.get(node.getRightProjection()[i]) + ")");
-    }
-    return result;
-  }
-
-  private Select mapProjectNode(ProjectNode node) {
-    Select parent = mapPlanNode(node.getTable());
-    int[] projection = node.getProjection();
-    Comparable[] constants = node.getConstants();
-    List<String> select = new ArrayList<>(projection.length);
-    for (int i = 0; i < projection.length; i++) {
-      if (projection[i] >= 0) {
-        select.add(parent.select.get(projection[i]));
-      } else if (constants.length > i) {
-        select.add("BIND(\"" + constants[i].toString() + "\" AS " + newVariable() + ")"); //TODO won't work everywhere
-      } else {
-        throw new IllegalArgumentException("No value for tuple argument");
-      }
-    }
-    return new Select(select, parent.where);
-  }
-
-  private Select mapRecursionNode(RecursionNode node) {
-    String closureTable = newAlias();
-    closureTables.put(node, closureTable);
-
-    Select exit = mapPlanNode(node.getExitPlan());
-    Select rec = mapPlanNode(node.getRecursivePlan());
-
-    String fields = IntStream.range(0, node.getArity())
-            .mapToObj(i -> "C" + i)
-            .collect(Collectors.joining(", "));
-    String recursion = closureTable + "(" + fields + ") AS ((" + exit.toString() + ") UNION (" + rec.toString() + "))";
-    if (!recursiveDirectlyAfterWith) {
-      recursion = "RECURSIVE " + recursion;
+      throw new UnsupportedOperationException(plan.getClass() + " not supported");
     }
 
-    Select end = newTable(closureTable, node.getArity());
-    end.recursions.add(recursion);
-    return end;
   }
 
-  private Select mapTokenNode(PlaceholderNode node) {
-    return newTable(closureTables.get(placeholderToParent.get(node)), node.getArity());
-  }
-
-  private Select mapUnionNode(UnionNode node) {
-    String union = node.getChildren().stream()
-            .map(child -> "{" + mapPlanNode(child).toString() + "}")
-        .collect(Collectors.joining("\n UNION "));
-    return newTable(union, node.getArity());
-  }
-
-  private Select mapVariableEqualityFilterNode(VariableEqualityFilterNode node) {
-    Select parent = mapPlanNode(node.getTable());
-    return parent.withWhere(parent.select.get(node.getField1()) + " = '" + parent.select.get(node.getField2()) + "'");
-  }
-
-  private String toCol(String table, int pos) {
-    return table + ".C" + pos;
-  }
-
-  private String newVariable() {
-    return "v" + (count++);
-  }
-
-  private <T> List<T> merge(List<T> a, List<T> b) {
-    List<T> res = new ArrayList<>(a);
-    res.addAll(b);
-    return res;
-  }
-
-  private <T> Set<T> merge(Set<T> a, Set<T> b) {
-    Set<T> res = new HashSet<>(a);
-    res.addAll(b);
-    return res;
-  }
-
-  private Select newTable(String table, int arity) {
-    String alias = newAlias();
-    if (table.trim().startsWith(TABLE_ALIAS_PREFIX)) {
-      alias = table;
-    }
-    String fAlias = alias;
-
-    List<String> select = IntStream.range(0, arity)
-        .mapToObj(i -> toCol(fAlias, i))
-            .collect(Collectors.toList());
-    if (useWithForAliases) {
-      Select s = new Select(select, alias);
-      if (table.trim().startsWith(TABLE_ALIAS_PREFIX)) {
-      } else if (table.trim().startsWith("(")) {
-        s.recursions.add(alias + " AS " + table + "");
-      } else {
-        s.recursions.add(alias + " AS (SELECT DISTINCT * FROM " + table + ")");
-      }
-      return s;
-    }
-    else {
-      return new Select(select, table + " AS " + alias);
-    }
-  }
-
-  private class Select {
-    List<String> select;
-    Set<String> where = Collections.emptySet();
-
-    Select(List<String> select, Set<String> where) {
-      this.select = select;
-      this.where = where;
-    }
-
-    Select(List<String> select, String from) {
-      this.select = select;
-    }
-
-    Select withWhere(String cond) {
-      return new Select(select, addToSet(where, cond));
-    }
-
-    private <T> Set<T> addToSet(Set<T> ens, T ele) {
-      Set<T> n = new HashSet<>(ens);
-      n.add(ele);
-      return n;
-    }
-
-    @Override
-    public String toString() {
-      StringBuilder builder = new StringBuilder();
-      String selectColumns = IntStream.range(0, select.size()).mapToObj(i -> select.get(i) + " AS C" + i).collect(Collectors.joining(", "));
-      builder.append("\n SELECT DISTINCT ").append(selectColumns)
-              .append(" FROM ").append(String.join(", ", from));
-      if (!where.isEmpty()) {
-        builder.append(" WHERE {\n").append(String.join(".\n", where)).append("\n}");
-      }
-      return builder.toString();
-    }
-  }*/
 }

@@ -3,10 +3,15 @@ package experiments;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.util.Arrays;
+import java.util.HashSet;
 
 import bashlog.BashlogCompiler;
+import common.parser.BashRule;
 import common.parser.Program;
 import experiments.lubm.BashlogLUBM;
+import sparqlog.SparqlogCompiler;
+import sparqlog.SparqlogCompiler;
 
 public class MainThomas {
 
@@ -33,12 +38,12 @@ public class MainThomas {
     //relation = "takesCourse/2";
     //relation = BashlogLUBM.queries[2];
     //for (int i = 1; i <= 14; i++) {
-    for (int i = 11; i <= 11; i++) {
+    for (int i = 3; i <= 3; i++) {
       relation = BashlogLUBM.queries[i - 1];
       p.rulesForRelation(relation).forEach(r -> System.out.println(r));
       BashlogCompiler bc = BashlogCompiler.prepareQuery(p, relation);
 
-      try {
+      /*try {
         String script = bc.compile();
         Files.write(new File("/home/tr/tmp/bashlog/new_query" + i).toPath(), script.getBytes());
         System.out.println(bc.debugInfo());
@@ -46,18 +51,19 @@ public class MainThomas {
       } catch (Exception e) {
         System.err.println("problem with lubm query " + i);
         e.printStackTrace();
-      }
+      }*/
 
-      /*SqllogCompiler sc = new SqllogCompiler(true, true);
+      //SqllogCompiler sc = new SqllogCompiler(true, true);
+      SparqlogCompiler sc = new SparqlogCompiler();
       Program sqlProg = new Program();
       p.rules().forEach(r -> {
-        if (r.body.size() == 1 && "bash_command".equals(r.body.get(0).name)) {
+        /*if (r instanceof BashRule) {
           // ignore this rule
-        } else {
+        } else {*/
           sqlProg.addRule(r);
-        }
+        //}
       });
-      System.out.println(sc.compile(sqlProg, new HashSet<>(Arrays.asList("allFacts/3")), relation));*/
+      System.out.println(sc.compile(sqlProg, "allFacts/3", relation));
     }
 
     //--------------------------------------------------------------------------------
