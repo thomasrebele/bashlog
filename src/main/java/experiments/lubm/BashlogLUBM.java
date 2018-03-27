@@ -7,8 +7,10 @@ import org.semanticweb.owlapi.model.IRI;
 import org.semanticweb.owlapi.model.OWLOntology;
 import org.semanticweb.owlapi.model.OWLOntologyCreationException;
 import org.semanticweb.owlapi.model.OWLOntologyManager;
-import owl.OntologyConverter;
-import owl.OntologyConverterTriple;
+import rdf.OWL2RLOntologyConverter;
+import rdf.OntologyConverter;
+import rdf.RDFSpecificTuplesSerializer;
+import rdf.RDFTripleTupleSerializer;
 import sqllog.SqllogCompiler;
 
 import java.io.File;
@@ -105,7 +107,9 @@ public class BashlogLUBM {
       } catch (OWLOntologyCreationException e) {
         throw new IOException(e);
       }
-      OntologyConverter converter = new OntologyConverter();
+      OntologyConverter converter = new OntologyConverter(new RDFSpecificTuplesSerializer(
+              Collections.singletonMap("http://swat.cse.lehigh.edu/onto/univ-bench.owl#", "")
+      ));
       ontologyProgram = converter.convert(ontology);
     }
 
@@ -127,7 +131,7 @@ public class BashlogLUBM {
       } catch (OWLOntologyCreationException e) {
         throw new IOException(e);
       }
-      OntologyConverterTriple converter = new OntologyConverterTriple("allFacts");
+      OWL2RLOntologyConverter converter = new OWL2RLOntologyConverter(new RDFTripleTupleSerializer("allFacts"));
       ontologyProgram = normalizeProgram(converter.convert(ontology));
     }
 
