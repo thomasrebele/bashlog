@@ -1,16 +1,15 @@
 package experiments.lubm;
 
 import bashlog.BashlogCompiler;
-import common.parser.*;
+import common.parser.BashRule;
+import common.parser.ParserReader;
+import common.parser.Program;
 import org.semanticweb.owlapi.apibinding.OWLManager;
 import org.semanticweb.owlapi.model.IRI;
 import org.semanticweb.owlapi.model.OWLOntology;
 import org.semanticweb.owlapi.model.OWLOntologyCreationException;
 import org.semanticweb.owlapi.model.OWLOntologyManager;
-import rdf.OWL2RLOntologyConverter;
-import rdf.OntologyConverter;
-import rdf.RDFSpecificTuplesSerializer;
-import rdf.RDFTripleTupleSerializer;
+import rdf.*;
 import sqllog.SqllogCompiler;
 
 import java.io.File;
@@ -20,7 +19,6 @@ import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.stream.Collectors;
 
 public class BashlogLUBM {
 
@@ -93,72 +91,55 @@ public class BashlogLUBM {
     return lubmProgram;
   }
 
-  private static Program ontologyProgram;
-
   /** LUBM queries for 3-column TSV */
   public static Program lubmProgramOWL3(String lubmDir, String queryDir) throws IOException {
-    OWLOntologyManager ontologyManager = OWLManager.createOWLOntologyManager();
-    IRI ontologyIRI = IRI.create("file:data/lubm/univ-bench.owl");
+    RDFTupleSerializer tupleSerializer = new RDFSpecificTuplesSerializer(Collections.singletonMap(
+            "http://swat.cse.lehigh.edu/onto/univ-bench.owl#", ""
+    ));
 
-    if (ontologyProgram == null) {
-      OWLOntology ontology;
-      try {
-        ontology = ontologyManager.loadOntology(ontologyIRI);
-      } catch (OWLOntologyCreationException e) {
-        throw new IOException(e);
-      }
-      OntologyConverter converter = new OntologyConverter(new RDFSpecificTuplesSerializer(
-              Collections.singletonMap("http://swat.cse.lehigh.edu/onto/univ-bench.owl#", "")
-      ));
-      ontologyProgram = converter.convert(ontology);
+    try {
+      OWLOntologyManager ontologyManager = OWLManager.createOWLOntologyManager();
+      IRI ontologyIRI = IRI.create("file:data/lubm/univ-bench.owl");
+      OWLOntology ontology = ontologyManager.loadOntology(ontologyIRI);
+      OntologyConverter converter = new OntologyConverter(tupleSerializer);
+      Program ontologyProgram = converter.convert(ontology);
+
+      Program lubmProgram = Program.merge(ontologyProgram, lubmSPARQLProgram(queryDir, tupleSerializer));
+      String script = lubmScript3(lubmDir, lubmProgram);
+      lubmProgram.addRules(Program.read(new ParserReader(script)));
+      return lubmProgram;
+    } catch (OWLOntologyCreationException e) {
+      throw new IOException(e);
     }
-
-    Program lubmProgram = Program.merge(ontologyProgram, Program.loadFile(queryDir + "/queries.txt"));
-    String script = lubmScript3(lubmDir, lubmProgram);
-    lubmProgram.addRules(Program.read(new ParserReader(script)));
-    return lubmProgram;
   }
 
   /** LUBM queries for 3-column TSV */
   public static Program lubmProgramOWLRL(String lubmDir, String queryDir) throws IOException {
-    OWLOntologyManager ontologyManager = OWLManager.createOWLOntologyManager();
-    IRI ontologyIRI = IRI.create("file:data/lubm/univ-bench.owl");
+    RDFTupleSerializer tupleSerializer = new RDFTripleTupleSerializer("allFacts");
+    try {
+      OWLOntologyManager ontologyManager = OWLManager.createOWLOntologyManager();
+      IRI ontologyIRI = IRI.create("file:data/lubm/univ-bench.owl");
+      OWLOntology ontology = ontologyManager.loadOntology(ontologyIRI);
+      OWL2RLOntologyConverter converter = new OWL2RLOntologyConverter(tupleSerializer);
+      Program ontologyProgram = converter.convert(ontology);
 
-    if (ontologyProgram == null) {
-      OWLOntology ontology;
-      try {
-        ontology = ontologyManager.loadOntology(ontologyIRI);
-      } catch (OWLOntologyCreationException e) {
-        throw new IOException(e);
-      }
-      OWL2RLOntologyConverter converter = new OWL2RLOntologyConverter(new RDFTripleTupleSerializer("allFacts"));
-      ontologyProgram = normalizeProgram(converter.convert(ontology));
+      Program lubmProgram = Program.merge(ontologyProgram, lubmSPARQLProgram(queryDir, tupleSerializer));
+      String script = lubmScript3(lubmDir, lubmProgram);
+      lubmProgram.addRules(Program.read(new ParserReader(script)));
+      return lubmProgram;
+    } catch (OWLOntologyCreationException e) {
+      throw new IOException(e);
     }
-
-    Program lubmProgram = Program.merge(ontologyProgram, Program.loadFile(queryDir + "/queries.txt"));
-    String script = lubmScript3(lubmDir, lubmProgram);
-    lubmProgram.addRules(Program.read(new ParserReader(script)));
-    return lubmProgram;
   }
 
-  private static Program normalizeProgram(Program program) {
-    return new Program(program.rules().stream().map(rule ->
-            new Rule(
-                    normalizeCompoundTerm(rule.head),
-                    rule.body.stream().map(BashlogLUBM::normalizeCompoundTerm).collect(Collectors.toList()))
-    ));
-  }
-
-  private static CompoundTerm normalizeCompoundTerm(CompoundTerm compoundTerm) {
-    return new CompoundTerm(compoundTerm.name, compoundTerm.negated, Arrays.stream(compoundTerm.args).map(term -> {
-      if(term instanceof Constant) {
-        Object v = ((Constant) term).getValue();
-        if(v instanceof String) {
-          return new Constant<>(((String) v).replace("http://swat.cse.lehigh.edu/onto/univ-bench.owl#", "").replace("http://www.w3.org/1999/02/22-rdf-syntax-ns#", "rdf:"));
-        }
-      }
-      return term;
-    }).toArray(Term[]::new));
+  private static Program lubmSPARQLProgram(String queryDir, RDFTupleSerializer tupleSerializer) throws IOException {
+    SPARQLConverter sparqlConverter = new SPARQLConverter(tupleSerializer);
+    Program program = new Program();
+    int i = 1;
+    for(String query : new String(Files.readAllBytes(Paths.get(queryDir + "/queries.sparql"))).split("\n\n")) {
+      program.addRules(sparqlConverter.convert(query, "query" + (i++)));
+    }
+    return program;
   }
 
   public static void main(String[] args) throws IOException {

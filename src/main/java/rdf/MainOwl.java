@@ -1,18 +1,36 @@
 package rdf;
 
+import common.parser.Program;
 import org.semanticweb.owlapi.apibinding.OWLManager;
 import org.semanticweb.owlapi.model.IRI;
 import org.semanticweb.owlapi.model.OWLOntologyManager;
 
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.Collections;
+
 public class MainOwl {
   public static void main(String[] args) throws Exception {
+    RDFTupleSerializer serializer = new RDFSpecificTuplesSerializer(Collections.singletonMap(
+            "http://swat.cse.lehigh.edu/onto/univ-bench.owl#", ""
+    ));
+
     OWLOntologyManager ontologyManager = OWLManager.createOWLOntologyManager();
     IRI ontologyIRI = IRI.create("http://swat.cse.lehigh.edu/onto/univ-bench.owl");
     ontologyManager.loadOntologyFromOntologyDocument(ontologyIRI);
 
-    OWL2RLOntologyConverter converter = new OWL2RLOntologyConverter(new RDFTripleTupleSerializer("fact"));
-    converter.convert(ontologyManager.getOntology(ontologyIRI)).rules().forEach(rule ->
-            System.out.println(rule.toString())
-    );
+    OntologyConverter owlConverter = new OntologyConverter(serializer);
+    Program ontologyProgram = owlConverter.convert(ontologyManager.getOntology(ontologyIRI));
+
+    SPARQLConverter sparqlConverter = new SPARQLConverter(serializer);
+    int i = 1;
+    for(String query : new String(Files.readAllBytes(Paths.get( "data/lubm/queries.sparql"))).split("\n\n")) {
+      Program program = sparqlConverter.convert(query, "query" + (i++));
+      if(i == 8) {
+        System.out.println(query);
+        System.out.println(program);
+        return;
+      }
+    }
   }
 }
