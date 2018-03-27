@@ -4,14 +4,11 @@ import common.parser.Program;
 import experiments.lubm.BashlogLUBM;
 import experiments.lubm.generator.Tsv3Writer;
 import javatools.filehandlers.TSVFile;
-
-import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import yago4.Tools;
 
 import java.io.File;

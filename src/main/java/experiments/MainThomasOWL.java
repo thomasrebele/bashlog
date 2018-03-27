@@ -6,9 +6,11 @@ import common.parser.Program;
 import org.semanticweb.owlapi.apibinding.OWLManager;
 import org.semanticweb.owlapi.model.IRI;
 import org.semanticweb.owlapi.model.OWLOntologyManager;
-import owl.OntologyConverter;
+import rdf.OntologyConverter;
+import rdf.RDFSpecificTuplesSerializer;
 
 import java.io.File;
+import java.util.Collections;
 
 public class MainThomasOWL {
 
@@ -42,7 +44,9 @@ public class MainThomasOWL {
     OWLOntologyManager ontologyManager = OWLManager.createOWLOntologyManager();
     IRI ontologyIRI = IRI.create("http://swat.cse.lehigh.edu/onto/univ-bench.owl");
     ontologyManager.loadOntology(ontologyIRI);
-    OntologyConverter converter = new OntologyConverter();
+    OntologyConverter converter = new OntologyConverter(new RDFSpecificTuplesSerializer(
+            Collections.singletonMap("http://swat.cse.lehigh.edu/onto/univ-bench.owl#", "")
+    ));
     return converter.convert(ontologyManager.getOntology(ontologyIRI));
   }
 
