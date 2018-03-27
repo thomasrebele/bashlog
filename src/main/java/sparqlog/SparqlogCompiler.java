@@ -29,7 +29,8 @@ public class SparqlogCompiler {
     return node;
   }
 
-  public String compile(Program program, String string, String relationToOutput) {
+  public String compile(Program program, String relationToOutput) {
+    System.out.println(program);
     LogicalPlanBuilder planBuilder = new LogicalPlanBuilder(BUILDS_IN, Collections.singleton(relationToOutput));
     PlanNode plan = optimize(planBuilder.getPlanForProgram(program).get(relationToOutput));
 
@@ -37,7 +38,7 @@ public class SparqlogCompiler {
     List<String> s = mapPlanNode(plan, vars);
 
     StringBuilder sparql = new StringBuilder();
-    sparql.append("SELECT DISTINCT ");
+    sparql.append("SELECT ");
     sparql.append(Arrays.stream(vars).collect(Collectors.joining(" ")));
 
     sparql.append(" WHERE { \n");
@@ -71,7 +72,7 @@ public class SparqlogCompiler {
       JoinNode n = (JoinNode) plan;
       int leftArity = n.getLeft().getArity();
       String[] leftColToVar = new String[n.getLeft().getArity()];
-      String[] rightColToVar = new String[n.getLeft().getArity()];
+      String[] rightColToVar = new String[n.getRight().getArity()];
 
       System.arraycopy(colToVar, 0, leftColToVar, 0, n.getLeft().getArity());
       System.arraycopy(colToVar, leftArity, rightColToVar, 0, n.getRight().getArity());
@@ -113,7 +114,25 @@ public class SparqlogCompiler {
       if (colToVar.length != 3) {
         throw new UnsupportedOperationException("can only translate triples");
       }
-      return Collections.singletonList(Arrays.stream(colToVar).map(var -> var == null ? "[]" : var).collect(Collectors.joining(" ")) + " .\n");
+
+      // hack for Torpedo/RDFSlice {
+      if (colToVar[0] != null && !colToVar[0].startsWith("?")) {
+        colToVar[0] = "<" + colToVar[0] + ">";
+      }
+
+      if (colToVar[1] != null && !colToVar[1].startsWith("?")) {
+        if (!colToVar[1].startsWith("rdf:")) colToVar[1] = "ub:" + colToVar[1];
+        colToVar[1] = "<" + colToVar[1] + ">";
+      }
+
+      if (colToVar[2] != null && !colToVar[2].startsWith("?")) {
+        if (!colToVar[2].startsWith("http")) colToVar[2] = "ub:" + colToVar[2];
+        colToVar[2] = "<" + colToVar[2] + ">";
+      }
+      // }
+
+      return Collections.singletonList(Arrays.stream(colToVar)//
+          .map(var -> var == null ? "?v" + count++ : var).collect(Collectors.joining(" ")) + " .\n");
     } else {
       throw new UnsupportedOperationException(plan.getClass() + " not supported");
     }

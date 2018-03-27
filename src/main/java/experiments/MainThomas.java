@@ -38,7 +38,7 @@ public class MainThomas {
     //relation = "takesCourse/2";
     //relation = BashlogLUBM.queries[2];
     //for (int i = 1; i <= 14; i++) {
-    for (int i = 3; i <= 3; i++) {
+    for (int i = 4; i <= 4; i++) {
       relation = BashlogLUBM.queries[i - 1];
       p.rulesForRelation(relation).forEach(r -> System.out.println(r));
       BashlogCompiler bc = BashlogCompiler.prepareQuery(p, relation);
@@ -63,7 +63,7 @@ public class MainThomas {
           sqlProg.addRule(r);
         //}
       });
-      System.out.println(sc.compile(sqlProg, "allFacts/3", relation));
+      System.out.println(sc.compile(p, relation));
     }
 
     //--------------------------------------------------------------------------------

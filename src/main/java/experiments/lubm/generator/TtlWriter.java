@@ -45,7 +45,7 @@ public class TtlWriter implements Writer {
   @Override
   public void startSection(int classType, String id) {
     currentInstance = id;
-    writer.append("<").append(id).append(">\trdf:type\tub:").append(Generator.CLASS_TOKEN[classType]).append(".").println();
+    writer.append("<").append(id).append(">\trdf:type\tub:").append(Generator.CLASS_TOKEN[classType]).append("\t.").println();
   }
 
   @Override
