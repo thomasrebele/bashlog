@@ -30,7 +30,8 @@ public class ProjectNode implements PlanNode {
 
     this.table = table;
     this.projection = projection;
-    this.constants = constants;
+    this.constants = IntStream.range(0, projection.length).mapToObj(i -> i < constants.length ? constants[i] : null)
+        .toArray(i -> new Comparable<?>[i]);
   }
 
   /** Table the projection applies to */
