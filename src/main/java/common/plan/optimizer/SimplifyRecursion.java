@@ -59,6 +59,14 @@ public class SimplifyRecursion implements Optimizer {
       return exitPlan;
     }
 
+    // optimization for transitive closure
+    PlanNode transClosure = (node.getDelta().join(node.getFull(), new int[] { 1 }, new int[] { 0 }))
+        .union(node.getFull().join(node.getDelta(), new int[] { 1 }, new int[] { 0 })).project(new int[] { 0, 3 });
+
+    if (recursivePlan.equals(transClosure)) {
+      recursivePlan = node.getDelta().join(node.getFull(), new int[] { 1 }, new int[] { 0 }).project(new int[] { 0, 3 });
+    }
+
     // something changed, create new recursion node
     if (!Objects.equals(exitPlan, node.getExitPlan()) || !Objects.equals(recursivePlan, node.getRecursivePlan())) {
       return new RecursionNode(exitPlan, recursivePlan, node.getDelta(), node.getFull());
