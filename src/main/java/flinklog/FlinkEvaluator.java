@@ -38,7 +38,7 @@ public class FlinkEvaluator implements Evaluator {
 
   private ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
   private FactsSet factsSet;
-  private Map<PlanNode, Optional<DataSet<Tuple>>> cache;
+  private Map<PlanNode, DataSet<Tuple>> cache;
 
   public FlinkEvaluator() {
     env.getConfig().enableObjectReuse();
@@ -186,20 +186,18 @@ public class FlinkEvaluator implements Evaluator {
 
     SimpleFactsSet result = new SimpleFactsSet();
     (new LogicalPlanBuilder(BUILDS_IN, relationsToOutput)).getPlanForProgram(program).entrySet().stream()
-            .flatMap(relationPlan -> {
+            .map(relationPlan -> {
               String relation = relationPlan.getKey();
               PlanNode plan = optimize(relationPlan.getValue());
               LOGGER.info("Evaluating relation " + relation + " with plan:\n" + plan.toPrettyString());
-              return stream(mapPlanNode(plan).map(dataSet ->
-                      (DataSet<Tuple2<String, Comparable[]>>) dataSet.map((MapFunction<Tuple, Tuple2<String, Comparable[]>>) row -> {
-                        Comparable[] args = new Comparable[row.getArity()];
-                        for (int i = 0; i < args.length; i++) {
-                          args[i] = row.getField(i);
-                        }
-                        return new Tuple2<>(relation, args);
-                      }).returns(new TypeHint<Tuple2<String, Comparable[]>>() {
-                      })
-              ));
+              return (DataSet<Tuple2<String, Comparable[]>>) mapPlanNode(plan).map((MapFunction<Tuple, Tuple2<String, Comparable[]>>) row -> {
+                Comparable[] args = new Comparable[row.getArity()];
+                for (int i = 0; i < args.length; i++) {
+                  args[i] = row.getField(i);
+                }
+                return new Tuple2<>(relation, args);
+              }).returns(new TypeHint<Tuple2<String, Comparable[]>>() {
+              });
             })
             .reduce(DataSet::union)
             .ifPresent(dataSet -> {
@@ -212,14 +210,14 @@ public class FlinkEvaluator implements Evaluator {
     return result;
   }
 
-  private Optional<DataSet<Tuple>> mapPlanNode(PlanNode planNode) {
+  private DataSet<Tuple> mapPlanNode(PlanNode planNode) {
     if (!cache.containsKey(planNode)) {
       cache.put(planNode, buildForPlanNode(planNode));
     }
     return cache.get(planNode);
   }
 
-  private Optional<DataSet<Tuple>> buildForPlanNode(PlanNode node) {
+  private DataSet<Tuple> buildForPlanNode(PlanNode node) {
     if (node instanceof BuiltinNode) {
       return mapBuiltinNode((BuiltinNode) node);
     } else if (node instanceof ConstantEqualityFilterNode) {
@@ -245,137 +243,111 @@ public class FlinkEvaluator implements Evaluator {
     }
   }
 
-  private Optional<DataSet<Tuple>> mapBuiltinNode(BuiltinNode node) {
+  private DataSet<Tuple> mapBuiltinNode(BuiltinNode node) {
     String name = node.compoundTerm.name;
     switch (name) {
       case "flink_entry_values":
         String relation = ((String) ((Constant) node.compoundTerm.args[0]).getValue()).trim();
         //TODO: do not materialize here
         List<Tuple> tuples = factsSet.getByRelation(relation).map(FlinkEvaluator::newTuple).collect(Collectors.toList());
-        if (tuples.isEmpty()) {
-          LOGGER.info("Empty relation: " + relation);
-          return Optional.empty();
-        } else {
-          return Optional.of(env.fromCollection(tuples, typeInfo(node.getArity())));
-        }
+        return env.fromCollection(tuples, typeInfo(node.getArity()));
       default:
         throw new IllegalArgumentException("Unsupported build-in: " + node.toString());
     }
   }
 
-  private Optional<DataSet<Tuple>> mapConstantEqualityFilterNode(ConstantEqualityFilterNode node) {
-    return mapPlanNode(node.getTable()).map(dataSet -> {
-      int field = node.getField();
-      Comparable value = node.getValue();
-      return dataSet.filter(row -> value.equals(row.getField(field)));
-    });
+  private DataSet<Tuple> mapConstantEqualityFilterNode(ConstantEqualityFilterNode node) {
+    int field = node.getField();
+    Comparable value = node.getValue();
+    return mapPlanNode(node.getTable()).filter(row -> value.equals(row.getField(field)));
   }
 
-  private Optional<DataSet<Tuple>> mapJoinNode(JoinNode node) {
-    if(node.getLeftProjection().length == 0 && node.getRightProjection().length == 0) {
-      return mapPlanNode(node.getLeft()).flatMap(left ->
-              mapPlanNode(node.getRight()).map(right ->
-                      left.cross(right)
-                              .with(FlinkEvaluator::concatTuples)
-                              .returns(typeInfo(node.getArity()))
-              )
-      );
+  private DataSet<Tuple> mapJoinNode(JoinNode node) {
+    DataSet<Tuple> left = mapPlanNode(node.getLeft());
+    DataSet<Tuple> right = mapPlanNode(node.getRight());
+    if (node.getLeftProjection().length == 0 && node.getRightProjection().length == 0) {
+      return left.cross(right)
+              .with(FlinkEvaluator::concatTuples)
+              .returns(typeInfo(node.getArity()));
     } else {
-      return mapPlanNode(node.getLeft()).flatMap(left ->
-              mapPlanNode(node.getRight()).map(right ->
-                      left.join(right)
-                              .where(node.getLeftProjection())
-                              .equalTo(node.getRightProjection())
-                              .with(FlinkEvaluator::concatTuples)
-                              .returns(typeInfo(node.getArity()))
-
-              )
-      );
+      return left.join(right)
+              .where(node.getLeftProjection())
+              .equalTo(node.getRightProjection())
+              .with(FlinkEvaluator::concatTuples)
+              .returns(typeInfo(node.getArity()));
     }
   }
 
-  private Optional<DataSet<Tuple>> mapAntiJoinNode(AntiJoinNode node) {
-    return mapPlanNode(node.getLeft()).flatMap(left ->
-            mapPlanNode(node.getRight()).map(right ->
-                    left.coGroup(right)
-                            .where(node.getLeftProjection())
-                            .equalTo("*")
-                            .with((left1, right1, collector) -> {
-                              if (!right1.iterator().hasNext()) {
-                                left1.forEach(collector::collect);
-                              }
-                            })
-                            .returns(typeInfo(node.getArity()))
-
-            )
-    );
+  private DataSet<Tuple> mapAntiJoinNode(AntiJoinNode node) {
+    DataSet<Tuple> left = mapPlanNode(node.getLeft());
+    DataSet<Tuple> right = mapPlanNode(node.getRight());
+    return left.coGroup(right)
+            .where(node.getLeftProjection())
+            .equalTo("*")
+            .with((left1, right1, collector) -> {
+              if (!right1.iterator().hasNext()) {
+                left1.forEach(collector::collect);
+              }
+            })
+            .returns(typeInfo(node.getArity()));
   }
 
-  private Optional<DataSet<Tuple>> mapProjectNode(ProjectNode node) {
-    return mapPlanNode(node.getTable()).map(dataSet -> {
-      int[] projection = node.getProjection();
-      Comparable[] constants = node.getConstants();
-      return dataSet.map(row -> {
-        int arity = projection.length;
-        Tuple result = newTuple(arity);
-        for (int i = 0; i < arity; i++) {
-          if (projection[i] >= 0) {
-            result.setField(row.getField(projection[i]), i);
-          } else if (constants.length > i) {
-            result.setField(constants[i], i);
-          }
+  private DataSet<Tuple> mapProjectNode(ProjectNode node) {
+    int[] projection = node.getProjection();
+    Comparable[] constants = node.getConstants();
+    return mapPlanNode(node.getTable()).map(row -> {
+      int arity = projection.length;
+      Tuple result = newTuple(arity);
+      for (int i = 0; i < arity; i++) {
+        if (projection[i] >= 0) {
+          result.setField(row.getField(projection[i]), i);
+        } else if (constants.length > i) {
+          result.setField(constants[i], i);
         }
-        return result;
-      }).returns(typeInfo(node.getArity()));
-    });
+      }
+      return result;
+    }).returns(typeInfo(node.getArity()));
   }
 
-  private Optional<DataSet<Tuple>> mapRecursionNode(RecursionNode node) {
-    return mapPlanNode(node.getExitPlan()).map(initialSet -> {
-      DeltaIteration<Tuple, Tuple> iteration = initialSet.iterateDelta(initialSet, MAX_ITERATION, range(node.getArity()));
-      cache.put(node.getDelta(), Optional.of(iteration.getWorkset()));
-      cache.put(node.getFull(), Optional.of(iteration.getSolutionSet()));
-      return mapPlanNode(node.getRecursivePlan())
-              .map(recursivePlan -> iteration.closeWith(recursivePlan, recursivePlan))
-              .orElse(initialSet);
-    });
+  private DataSet<Tuple> mapRecursionNode(RecursionNode node) {
+    DataSet<Tuple> initialSet = mapPlanNode(node.getExitPlan());
+    DeltaIteration<Tuple, Tuple> iteration = initialSet.iterateDelta(initialSet, MAX_ITERATION, range(node.getArity()));
+    cache.put(node.getDelta(), iteration.getWorkset());
+    cache.put(node.getFull(), iteration.getSolutionSet());
+    DataSet<Tuple> recursivePlan = mapPlanNode(node.getRecursivePlan());
+    return iteration.closeWith(recursivePlan, recursivePlan);
   }
 
-  private Optional<DataSet<Tuple>> mapFactNode(FactNode node) {
+  private DataSet<Tuple> mapFactNode(FactNode node) {
     List<Tuple> tuples = node.getFacts().stream().map(FlinkEvaluator::newTuple).collect(Collectors.toList());
-    if (tuples.isEmpty()) {
-      return Optional.empty();
-    } else {
-      return Optional.of(env.fromCollection(tuples, typeInfo(node.getArity())));
-    }
+    return env.fromCollection(tuples, typeInfo(node.getArity()));
   }
 
-  private Optional<DataSet<Tuple>> mapTSVFileNode(TSVFileNode node) {
+  private DataSet<Tuple> mapTSVFileNode(TSVFileNode node) {
     Pattern pattern = Pattern.compile("[ \t\r\n]");
-    return Optional.of(env.readTextFile("file://" + Paths.get(node.getPath()).toAbsolutePath().toString()).map(line ->
+    return env.readTextFile("file://" + Paths.get(node.getPath()).toAbsolutePath().toString()).map(line ->
             newTuple(Arrays.stream(pattern.split(line)).toArray(Comparable[]::new))
-    ).returns(typeInfo(node.getArity())));
+    ).returns(typeInfo(node.getArity()));
   }
 
   private int[] range(int bound) {
     return IntStream.range(0, bound).toArray();
   }
 
-  private Optional<DataSet<Tuple>> mapUnionNode(UnionNode node) {
+  private DataSet<Tuple> mapUnionNode(UnionNode node) {
     return node.getChildren().stream()
-            .flatMap(child -> stream(this.mapPlanNode(child)))
-            .reduce(DataSet::union);
+            .map(this::mapPlanNode)
+            .reduce(DataSet::union)
+            .orElseGet(() -> env.fromCollection(Collections.emptyList(), typeInfo(node.getArity())));
   }
 
-  private Optional<DataSet<Tuple>> mapVariableEqualityFilterNode(VariableEqualityFilterNode node) {
-    return mapPlanNode(node.getTable()).map(dataSet -> {
-      int field1 = node.getField1();
-      int field2 = node.getField2();
-      return dataSet.filter(row -> {
-        Object v1 = row.getField(field1);
-        Object v2 = row.getField(field2);
-        return v1 == null ? v2 == null : v1.equals(v2);
-      });
+  private DataSet<Tuple> mapVariableEqualityFilterNode(VariableEqualityFilterNode node) {
+    int field1 = node.getField1();
+    int field2 = node.getField2();
+    return mapPlanNode(node.getTable()).filter(row -> {
+      Object v1 = row.getField(field1);
+      Object v2 = row.getField(field2);
+      return v1 == null ? v2 == null : v1.equals(v2);
     });
   }
 }
