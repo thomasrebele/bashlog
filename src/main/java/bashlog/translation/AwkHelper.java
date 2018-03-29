@@ -129,8 +129,7 @@ public class AwkHelper {
   
       // filter lines using arrays
       outputColToFilteredColToValues.forEach((outCols, map) -> {
-        awkProg.append("(");
-        awkProg.append(map.keySet().stream().map(filterCols -> {
+        String conditions = map.keySet().stream().map(filterCols -> {
           String condition = (String) "(" + joinStr(filterCols.stream().map(i -> "$" + (i + 1)), " FS ") + ")" + //
           " in ";
           if (output != null) {
@@ -139,9 +138,11 @@ public class AwkHelper {
           condition += "out" + joinStr(outCols, "c") + "_cond" + joinStr(filterCols, "c");
   
           return condition;
-        }).collect(Collectors.joining(" || ")));
-  
-        awkProg.append(") ");
+        }).collect(Collectors.joining(" || ")).trim();
+
+        if (conditions.length() > 0) {
+          awkProg.append("(").append(conditions).append(")");
+        }
         awkProg.append("{ print ").append(joinStr(outCols.stream().map(i -> "$" + (i + 1)), " FS "));
         if (output != null) {
           awkProg.append(" >> \"").append(output).append("\"");
@@ -207,7 +208,10 @@ public class AwkHelper {
       arg.append("    ").append(init.stream().collect(Collectors.joining(" ")));
       arg.append(" }\n");
     }
-    condition.append("(").append(conditions.stream().collect(Collectors.joining(" && "))).append(")");
+    String awkConditions = conditions.stream().collect(Collectors.joining(" && ")).trim();
+    if (awkConditions.length() > 0) {
+      condition.append("(").append(awkConditions).append(")");
+    }
     project.append(" { print ");
     if (p == null) {
       project.append("$0");
