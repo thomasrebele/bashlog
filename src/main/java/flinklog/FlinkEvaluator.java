@@ -6,10 +6,7 @@ import common.SimpleFactsSet;
 import common.parser.*;
 import common.plan.LogicalPlanBuilder;
 import common.plan.node.*;
-import common.plan.optimizer.Optimizer;
-import common.plan.optimizer.PushDownFilterAndProject;
-import common.plan.optimizer.ReorderJoinLinear;
-import common.plan.optimizer.SimplifyRecursion;
+import common.plan.optimizer.*;
 import org.apache.commons.compress.utils.Sets;
 import org.apache.flink.api.common.functions.MapFunction;
 import org.apache.flink.api.common.typeinfo.TypeHint;
@@ -37,7 +34,7 @@ public class FlinkEvaluator implements Evaluator {
   private static final Logger LOGGER = LoggerFactory.getLogger(FlinkEvaluator.class);
   private static final int MAX_ITERATION = Integer.MAX_VALUE;
   private static final Set<String> BUILDS_IN = Sets.newHashSet("flink_entry_values", "bash_command");
-  private static final List<Optimizer> OPTIMIZERS = Arrays.asList(new SimplifyRecursion(), new ReorderJoinLinear(), new PushDownFilterAndProject(), new SimplifyRecursion());
+  private static final List<Optimizer> OPTIMIZERS = Arrays.asList(new SimplifyRecursion(), new PushDownFilterAndProject(), new PushDownJoin(), new ReorderJoinLinear(), new ReorderJoinTree());
 
   private ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
   private FactsSet factsSet;
@@ -284,16 +281,26 @@ public class FlinkEvaluator implements Evaluator {
   }
 
   private Optional<DataSet<Tuple>> mapJoinNode(JoinNode node) {
-    return mapPlanNode(node.getLeft()).flatMap(left ->
-            mapPlanNode(node.getRight()).map(right ->
-                    left.join(right)
-                            .where(node.getLeftProjection())
-                            .equalTo(node.getRightProjection())
-                            .with(FlinkEvaluator::concatTuples)
-                            .returns(typeInfo(node.getArity()))
+    if(node.getLeftProjection().length == 0 && node.getRightProjection().length == 0) {
+      return mapPlanNode(node.getLeft()).flatMap(left ->
+              mapPlanNode(node.getRight()).map(right ->
+                      left.cross(right)
+                              .with(FlinkEvaluator::concatTuples)
+                              .returns(typeInfo(node.getArity()))
+              )
+      );
+    } else {
+      return mapPlanNode(node.getLeft()).flatMap(left ->
+              mapPlanNode(node.getRight()).map(right ->
+                      left.join(right)
+                              .where(node.getLeftProjection())
+                              .equalTo(node.getRightProjection())
+                              .with(FlinkEvaluator::concatTuples)
+                              .returns(typeInfo(node.getArity()))
 
-            )
-    );
+              )
+      );
+    }
   }
 
   private Optional<DataSet<Tuple>> mapAntiJoinNode(AntiJoinNode node) {
