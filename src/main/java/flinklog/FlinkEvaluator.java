@@ -1,5 +1,6 @@
 package flinklog;
 
+import bashlog.plan.TSVFileNode;
 import common.Evaluator;
 import common.FactsSet;
 import common.SimpleFactsSet;
@@ -18,7 +19,6 @@ import org.apache.flink.api.java.tuple.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.regex.Pattern;
@@ -34,7 +34,7 @@ public class FlinkEvaluator implements Evaluator {
   private static final Logger LOGGER = LoggerFactory.getLogger(FlinkEvaluator.class);
   private static final int MAX_ITERATION = Integer.MAX_VALUE;
   private static final Set<String> BUILDS_IN = Sets.newHashSet("flink_entry_values", "bash_command");
-  private static final List<Optimizer> OPTIMIZERS = Arrays.asList(new SimplifyRecursion(), new PushDownFilterAndProject(), new PushDownJoin(), new ReorderJoinLinear(), new ReorderJoinTree());
+  private static final List<Optimizer> OPTIMIZERS = Arrays.asList(new CatToFile(), new SimplifyRecursion(), new PushDownFilterAndProject(), new PushDownJoin(), new ReorderJoinLinear(), new ReorderJoinTree());
 
   private ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
   private FactsSet factsSet;
@@ -238,6 +238,8 @@ public class FlinkEvaluator implements Evaluator {
       return mapVariableEqualityFilterNode((VariableEqualityFilterNode) node);
     } else if (node instanceof FactNode) {
       return mapFactNode((FactNode) node);
+    } else if (node instanceof TSVFileNode) {
+      return mapTSVFileNode((TSVFileNode) node);
     } else {
       throw new IllegalArgumentException("Unknown node type: " + node.toString());
     }
@@ -255,17 +257,6 @@ public class FlinkEvaluator implements Evaluator {
           return Optional.empty();
         } else {
           return Optional.of(env.fromCollection(tuples, typeInfo(node.getArity())));
-        }
-      case "bash_command":
-        String command = ((String) ((Constant) node.compoundTerm.args[0]).getValue()).trim();
-        if (command.startsWith("cat")) {
-          Path file = Paths.get(command.substring(4).trim()).toAbsolutePath();
-          Pattern pattern = Pattern.compile("[ \t\r\n]");
-          return Optional.of(env.readTextFile("file://" + file.toString()).map(line ->
-                  newTuple(Arrays.stream(pattern.split(line)).toArray(Comparable[]::new))
-          ).returns(typeInfo(node.getArity())));
-        } else {
-          throw new IllegalArgumentException("Unsupported bash command: " + node.toString());
         }
       default:
         throw new IllegalArgumentException("Unsupported build-in: " + node.toString());
@@ -357,6 +348,13 @@ public class FlinkEvaluator implements Evaluator {
     } else {
       return Optional.of(env.fromCollection(tuples, typeInfo(node.getArity())));
     }
+  }
+
+  private Optional<DataSet<Tuple>> mapTSVFileNode(TSVFileNode node) {
+    Pattern pattern = Pattern.compile("[ \t\r\n]");
+    return Optional.of(env.readTextFile("file://" + Paths.get(node.getPath()).toAbsolutePath().toString()).map(line ->
+            newTuple(Arrays.stream(pattern.split(line)).toArray(Comparable[]::new))
+    ).returns(typeInfo(node.getArity())));
   }
 
   private int[] range(int bound) {
