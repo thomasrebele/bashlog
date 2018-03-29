@@ -1,6 +1,7 @@
 package common.plan.node;
 
 import java.util.*;
+
 public class FactNode implements PlanNode {
 
   private final List<Comparable<?>[]> facts;
@@ -46,7 +47,7 @@ public class FactNode implements PlanNode {
 
   @Override
   public int hashCode() {
-    return facts.stream().mapToInt(f -> f.hashCode()).reduce(0, (a, b) -> a ^ b);
+    return facts.stream().mapToInt(Object::hashCode).reduce(0, (a, b) -> a ^ b);
   }
 
   @Override
@@ -60,7 +61,7 @@ public class FactNode implements PlanNode {
     if (obj.getClass() != this.getClass()) {
       return false;
     }
-    
+
     FactNode node = (FactNode) obj;
     return facts.equals(node.facts);
   }

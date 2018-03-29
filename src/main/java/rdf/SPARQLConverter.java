@@ -9,6 +9,8 @@ import org.eclipse.rdf4j.query.parser.QueryParser;
 import org.eclipse.rdf4j.query.parser.sparql.SPARQLParser;
 
 import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class SPARQLConverter {
 
@@ -26,7 +28,9 @@ public class SPARQLConverter {
   public Program convert(String query, String resultRelation) {
     ConversionResult result = convert(query);
     Program program = result.getProgram();
-    program.addRule(new Rule(newTuple(resultRelation, result.resultVars), newTuple(result.resultRelation, result.resultVars)));
+    result.results.forEach(resultTuple ->
+      program.addRule(new Rule(newTuple(resultRelation, resultTuple.vars), newTuple(resultTuple)))
+    );
     return program;
   }
 
@@ -39,10 +43,14 @@ public class SPARQLConverter {
   private ConversionResult convert(TupleExpr expr) {
     if(expr instanceof Join) {
       return convert((Join) expr);
+    } else if(expr instanceof LeftJoin) {
+      return convert((LeftJoin) expr);
     } else if(expr instanceof Projection) {
       return convert((Projection) expr);
     } else if(expr instanceof StatementPattern) {
       return convert((StatementPattern) expr);
+    } else if(expr instanceof Union) {
+      return convert((Union) expr);
     } else {
       throw new UnsupportedOperationException("Not supported TupleExpr: " + expr);
     }
@@ -51,25 +59,41 @@ public class SPARQLConverter {
   private ConversionResult convert(Join join) {
     ConversionResult left = convert(join.getLeftArg());
     ConversionResult right = convert(join.getRightArg());
-    String tupleName = newTupleName();
-    List<Var> resultVars = mergeWithDeduplication(left.resultVars, right.resultVars);
-    return new ConversionResult(tupleName, resultVars, merge(
-            left.rules, right.rules,
-            new Rule(newTuple(tupleName, resultVars), newTuple(left.resultRelation, left.resultVars), newTuple(right.resultRelation, right.resultVars))
-    ));
+    Set<Rule> rules = merge(left.rules, right.rules);
+    return new ConversionResult(left.results.stream().flatMap(resultLeft -> right.results.stream().map(resultRight -> {
+      String tupleName = newTupleName();
+      List<Var> resultVars = mergeWithDeduplication(resultLeft.vars, resultRight.vars);
+      rules.add(new Rule(newTuple(tupleName, resultVars), newTuple(resultLeft), newTuple(resultRight)));
+      return new ResultTuple(tupleName, resultVars);
+    })).collect(Collectors.toSet()), rules);
+  }
+
+  private ConversionResult convert(LeftJoin leftJoin) {
+    ConversionResult left = convert(leftJoin.getLeftArg());
+    ConversionResult right = convert(leftJoin.getRightArg());
+    Set<Rule> rules = merge(left.rules, right.rules);
+    return new ConversionResult(left.results.stream().flatMap(resultLeft -> right.results.stream().flatMap(resultRight -> {
+      String joinedTupleName = newTupleName();
+      String leftTupleName = newTupleName();
+      String rightFilterTupleName = newTupleName();
+      List<Var> allResultVars = mergeWithDeduplication(resultLeft.vars, resultRight.vars);
+      List<Var> rightFilterVars = intersected(resultLeft.vars, resultLeft.vars);
+      rules.add(new Rule(newTuple(joinedTupleName, allResultVars), newTuple(resultLeft), newTuple(resultRight)));
+      rules.add(new Rule(newTuple(leftTupleName, resultLeft.vars), newTuple(resultLeft), newNegatedTuple(rightFilterTupleName, rightFilterVars)));
+      rules.add(new Rule(newTuple(rightFilterTupleName, rightFilterVars), newTuple(resultRight)));
+      return Stream.of(new ResultTuple(joinedTupleName, allResultVars), new ResultTuple(leftTupleName, resultLeft.vars));
+    })).collect(Collectors.toSet()), rules);
   }
 
   private ConversionResult convert(Projection projection) {
     ConversionResult arg = convert(projection.getArg());
     String tupleName = newTupleName();
-    List<Var> resultVars = new ArrayList<>();
-    projection.getProjectionElemList().getElements().forEach(projectionElem -> resultVars.add(new Var(projectionElem.getTargetName())));
-    if(resultVars.equals(arg.resultVars)) {
-      return arg; //Identity projection
-    }
-    return new ConversionResult(tupleName, resultVars, merge(arg.rules,
-            new Rule(newTuple(tupleName, resultVars), newTuple(arg.resultRelation, arg.resultVars))
-    ));
+    List<Var> resultVars = projection.getProjectionElemList().getElements().stream()
+            .map(projectionElem -> new Var(projectionElem.getTargetName()))
+            .collect(Collectors.toList());
+    return new ConversionResult(new ResultTuple(tupleName, resultVars), merge(arg.rules,
+            arg.results.stream().map(result -> new Rule(newTuple(tupleName, resultVars), newTuple(result))
+    )));
   }
 
   private ConversionResult convert(StatementPattern pattern) {
@@ -86,11 +110,17 @@ public class SPARQLConverter {
     }
     //TODO: graph
 
-    return new ConversionResult(tupleName, resultVars, new Rule(newTuple(tupleName, resultVars), tupleSerializer.convertTriple(
+    return new ConversionResult(new ResultTuple(tupleName, resultVars), new Rule(newTuple(tupleName, resultVars), tupleSerializer.convertTriple(
             convert(pattern.getSubjectVar()),
             convert(pattern.getPredicateVar()),
             convert(pattern.getObjectVar())
     )));
+  }
+
+  private ConversionResult convert(Union union) {
+    ConversionResult left = convert(union.getLeftArg());
+    ConversionResult right = convert(union.getRightArg());
+    return new ConversionResult(merge(left.results,right.results), merge(left.rules, right.rules));
   }
 
   private Term convert(Var var) {
@@ -107,8 +137,16 @@ public class SPARQLConverter {
     return tupleSerializer.convertTerm(RDF4J.asRDFTerm(value, SALT));
   }
 
+  private CompoundTerm newTuple(ResultTuple tuple) {
+    return newTuple(tuple.name, tuple.vars);
+  }
+
   private CompoundTerm newTuple(String name, List<Var> varList) {
     return new CompoundTerm(name, varList.stream().map(this::convert).toArray(Term[]::new));
+  }
+
+  private CompoundTerm newNegatedTuple(String name, List<Var> varList) {
+    return new CompoundTerm(name, false, varList.stream().map(this::convert).toArray(Term[]::new));
   }
 
   private String newTupleName() {
@@ -125,36 +163,67 @@ public class SPARQLConverter {
     return result;
   }
 
-  private<T> Set<T> merge(Set<T> a, T element) {
-    Set<T> result = new HashSet<>(a);
-    result.add(element);
+  private<T> List<T> intersected(List<T> a, List<T> b) {
+    List<T> result = new ArrayList<>();
+    for(T e : a) {
+      if(b.contains(e)) {
+        result.add(e);
+      }
+    }
     return result;
   }
 
-  private<T> Set<T> merge(Set<T> a, Set<T> b, T element) {
+  private<T> Set<T> merge(Set<T> a, Set<T> b) {
     Set<T> result = new HashSet<>(a);
     result.addAll(b);
-    result.add(element);
+    return result;
+  }
+
+  private <T> Set<T> merge(Set<T> a, Stream<T> b) {
+    Set<T> result = new HashSet<>(a);
+    b.forEach(result::add);
     return result;
   }
 
   public static class ConversionResult {
-    private String resultRelation;
-    private List<Var> resultVars;
+    private Set<ResultTuple> results;
     private Set<Rule> rules;
 
-    ConversionResult(String resultRelation, List<Var> resultVars, Set<Rule> rules) {
-      this.resultRelation = resultRelation;
-      this.resultVars = resultVars;
+    ConversionResult(Set<ResultTuple> results, Set<Rule> rules) {
+      this.results = results;
       this.rules = rules;
     }
 
-    ConversionResult(String resultRelation, List<Var> resultVars, Rule rule) {
-      this(resultRelation, resultVars, Collections.singleton(rule));
+    ConversionResult(ResultTuple result, Set<Rule> rules) {
+      this(Collections.singleton(result), rules);
+    }
+
+    ConversionResult(ResultTuple result, Rule rule) {
+      this(Collections.singleton(result), Collections.singleton(rule));
     }
 
     public Program getProgram() {
       return new Program(rules.stream());
+    }
+  }
+
+  public static class ResultTuple {
+    private String name;
+    private List<Var> vars;
+
+    ResultTuple(String name, List<Var> vars) {
+      this.name = name;
+      this.vars = vars;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+      return obj instanceof ResultTuple && name.equals(((ResultTuple) obj).name) && vars.equals(((ResultTuple) obj).vars);
+    }
+
+    @Override
+    public int hashCode() {
+      return name.hashCode() ^ vars.hashCode();
     }
   }
 }
