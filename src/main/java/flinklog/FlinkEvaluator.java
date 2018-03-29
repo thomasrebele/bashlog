@@ -239,6 +239,8 @@ public class FlinkEvaluator implements Evaluator {
       return mapUnionNode((UnionNode) node);
     } else if (node instanceof VariableEqualityFilterNode) {
       return mapVariableEqualityFilterNode((VariableEqualityFilterNode) node);
+    } else if (node instanceof FactNode) {
+      return mapFactNode((FactNode) node);
     } else {
       throw new IllegalArgumentException("Unknown node type: " + node.toString());
     }
@@ -339,6 +341,15 @@ public class FlinkEvaluator implements Evaluator {
               .map(recursivePlan -> iteration.closeWith(recursivePlan, recursivePlan))
               .orElse(initialSet);
     });
+  }
+
+  private Optional<DataSet<Tuple>> mapFactNode(FactNode node) {
+    List<Tuple> tuples = node.getFacts().stream().map(FlinkEvaluator::newTuple).collect(Collectors.toList());
+    if (tuples.isEmpty()) {
+      return Optional.empty();
+    } else {
+      return Optional.of(env.fromCollection(tuples, typeInfo(node.getArity())));
+    }
   }
 
   private int[] range(int bound) {
