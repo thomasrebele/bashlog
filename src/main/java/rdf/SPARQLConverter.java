@@ -41,10 +41,22 @@ public class SPARQLConverter {
   }
 
   private ConversionResult convert(TupleExpr expr) {
-    if(expr instanceof Join) {
+    if (expr instanceof ArbitraryLengthPath) {
+      return convert((ArbitraryLengthPath) expr);
+    } else if (expr instanceof BindingSetAssignment) {
+      return convert((BindingSetAssignment) expr);
+    } else if (expr instanceof Difference) {
+      return convert((Difference) expr);
+    } else if(expr instanceof EmptySet) {
+      return convert((EmptySet) expr);
+    } else if(expr instanceof Intersection) {
+      return convert((Intersection) expr);
+    } else if(expr instanceof Join) {
       return convert((Join) expr);
     } else if(expr instanceof LeftJoin) {
       return convert((LeftJoin) expr);
+    } else if(expr instanceof MultiProjection) {
+      return convert((MultiProjection) expr);
     } else if(expr instanceof Projection) {
       return convert((Projection) expr);
     } else if(expr instanceof StatementPattern) {
@@ -54,6 +66,26 @@ public class SPARQLConverter {
     } else {
       throw new UnsupportedOperationException("Not supported TupleExpr: " + expr);
     }
+  }
+
+  private ConversionResult convert(ArbitraryLengthPath arbitraryLengthPath) {
+    throw new UnsupportedOperationException("ArbitraryLengthPath is not supported yet");
+  }
+
+  private ConversionResult convert(BindingSetAssignment bindingSetAssignment) {
+    throw new UnsupportedOperationException("BindingSetAssignment is not supported yet");
+  }
+
+  private ConversionResult convert(Difference difference) {
+    throw new UnsupportedOperationException("Difference is not supported yet");
+  }
+
+  private ConversionResult convert(EmptySet emptySet) {
+    return new ConversionResult(Collections.emptySet(), Collections.emptySet());
+  }
+
+  private ConversionResult convert(Intersection intersection) {
+    throw new UnsupportedOperationException("Intersection is not supported yet");
   }
 
   private ConversionResult convert(Join join) {
@@ -83,6 +115,10 @@ public class SPARQLConverter {
       rules.add(new Rule(newTuple(rightFilterTupleName, rightFilterVars), newTuple(resultRight)));
       return Stream.of(new ResultTuple(joinedTupleName, allResultVars), new ResultTuple(leftTupleName, resultLeft.vars));
     })).collect(Collectors.toSet()), rules);
+  }
+
+  private ConversionResult convert(MultiProjection multiProjection) {
+    throw new UnsupportedOperationException("MultiProjection is not supported yet");
   }
 
   private ConversionResult convert(Projection projection) {
