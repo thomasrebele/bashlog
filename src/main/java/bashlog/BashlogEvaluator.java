@@ -77,6 +77,9 @@ public class BashlogEvaluator implements Evaluator {
       Runtime run = Runtime.getRuntime();
       timeCompile -= System.nanoTime();
       BashlogCompiler bc = BashlogCompiler.prepareQuery(program, relation);
+      if (debug) {
+        bc.enableDebug();
+      }
       String query = null;
       try {
         query = bc.compile();
@@ -97,6 +100,7 @@ public class BashlogEvaluator implements Evaluator {
       long start = System.nanoTime();
       Path progFile = Files.createTempFile("bashlog-eval-", "");
       Files.write(progFile, query.getBytes());
+      LOG.info("saving program to {}", progFile);
       Process proc = run.exec(new String[] { "/bin/bash", progFile.toAbsolutePath().toString() });
       BufferedReader br = new BufferedReader(new InputStreamReader(proc.getInputStream()));
       String line;

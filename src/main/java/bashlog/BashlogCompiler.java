@@ -51,7 +51,10 @@ public class BashlogCompiler {
     if (planNode == null) {
       throw new IllegalArgumentException("cannot compile an empty plan");
     }
-    
+    this.root = planNode;
+  }
+
+  private void init() {
     // register translators
     Arrays.asList(
         new bashlog.translation.BashCmd(),
@@ -68,7 +71,6 @@ public class BashlogCompiler {
         new bashlog.translation.Fact()
     ).forEach(t -> t.supports().forEach(c -> translators.put(c, t)));
     
-    root = planNode;
     if (debugBuilder != null) {
       debugBuilder.append("orig\n");
       debugBuilder.append(root.toPrettyString() + "\n");
@@ -88,6 +90,7 @@ public class BashlogCompiler {
 
   public String compile() {
     if (bash == null) {
+      init();
       bash = compile("", true);
     }
     return bash;
