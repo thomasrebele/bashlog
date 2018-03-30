@@ -13,7 +13,8 @@ public class SortNode implements PlanNode {
 
   public SortNode(PlanNode child, int[] sortColumns) {
     this.child = child;
-    this.sortColumns = sortColumns == null ? Tools.sequence(child.getArity()) : sortColumns;
+    //this.sortColumns = sortColumns == null ? Tools.sequence(child.getArity()) : sortColumns;
+    this.sortColumns = sortColumns;
   }
 
   @Override
@@ -41,6 +42,7 @@ public class SortNode implements PlanNode {
   }
 
   public int[] sortColumns() {
+    if (sortColumns == null) return Tools.sequence(getArity());
     return sortColumns;
   }
 

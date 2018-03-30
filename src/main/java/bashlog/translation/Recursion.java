@@ -3,7 +3,6 @@ package bashlog.translation;
 import java.util.Arrays;
 import java.util.List;
 
-import bashlog.BashlogCompiler;
 import bashlog.CompilerInternals;
 import bashlog.command.Bash;
 import common.plan.node.PlanNode;
@@ -15,7 +14,7 @@ public class Recursion implements BashTranslator {
   private Bash setMinusSorted(Bash prev, String filename) {
     Bash.Pipe result = prev.pipe();
     result.cmd("comm")//
-        .arg("--nocheck-order").arg("-23").arg("-")//
+        .arg("-23").arg("-")//
         .file(filename);
     return result;
   }
