@@ -18,10 +18,16 @@ public class SimplifyRecursion implements Optimizer {
 
   private static final Logger LOG = LoggerFactory.getLogger(SimplifyRecursion.class);
 
+  Map<PlaceholderNode, PlanNode> placeholderToParent = null;
+
   public PlanNode apply(PlanNode node) {
+    placeholderToParent = PlaceholderNode.placeholderToParentMap(node);
     return node.transform((n) -> {
       if (n instanceof RecursionNode) {
         return simplify((RecursionNode) n);
+      } else if (n instanceof JoinNode) {
+        // TODO: ...
+        return n;
       } else {
         return n;
       }
@@ -46,6 +52,8 @@ public class SimplifyRecursion implements Optimizer {
       }
       recursivePlan = newRecursivePlan;
     }
+    recursivePlan = introduceDeltaRecursion(recursivePlan, node.getDelta(), node.getFull());
+
 
     // we make sure that exit and recursive plans are simplified
     exitPlan = apply(exitPlan);
@@ -75,6 +83,24 @@ public class SimplifyRecursion implements Optimizer {
       return new RecursionNode(exitPlan, recursivePlan, node.getDelta(), node.getFull());
     }
     return node;
+  }
+
+  private PlanNode introduceDeltaRecursion(PlanNode baseNode, PlanNode delta, PlanNode full) {
+    return baseNode.transform(n -> {
+      //We look for joins between to subtrees depending on dela and we replace one by Full
+      if (n == full) {
+        return delta;
+      }
+
+      if (n instanceof JoinNode) {
+        JoinNode join = (JoinNode) n;
+        if (join.getLeft().contains(delta) && join.getRight().contains(delta)) {
+          return join.getLeft().join(join.getRight().replace(delta, full), join.getLeftProjection(), join.getRightProjection())
+              .union(join.getLeft().replace(delta, full).join(join.getRight(), join.getLeftProjection(), join.getRightProjection()));
+        }
+      }
+      return n;
+    });
   }
 
   /**

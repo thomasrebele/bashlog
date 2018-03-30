@@ -10,7 +10,8 @@ import java.util.stream.Stream;
 public class LogicalPlanBuilder {
   private Set<String> builtin;
   private Set<String> relationsToOutput;
-  private Map<RelationWithDeltaNodes, PlanNode> planForRelation;
+
+  private Map<RelationWithRecursionPlaceholder, PlanNode> planForRelation;
   private Program program;
 
   public LogicalPlanBuilder(Set<String> builtin, Set<String> relationsToOutput) {
@@ -44,27 +45,28 @@ public class LogicalPlanBuilder {
     return planNodes;
   }
 
-  private PlanNode getPlanForRelation(String relation, Map<String, PlanNode> deltaNodes) {
-    //If we should use a delta node
-    if (deltaNodes.containsKey(relation)) {
-      return deltaNodes.get(relation);
+  private PlanNode getPlanForRelation(String relation, Map<String, PlanNode> recCallNodes) {
+    //If we should use a recursion placeholder node
+    if (recCallNodes.containsKey(relation)) {
+      return recCallNodes.get(relation);
     }
 
-    //We filter the delta node map to remove not useful deltas
-    Map<String, PlanNode> filteredDeltaNode = new HashMap<>();
-    deltaNodes.forEach((key, value) -> {
+    //We filter the recursive call node map to remove not useful ones
+    Map<String, PlanNode> filteredRecursionPlaceholderNode = new HashMap<>();
+    recCallNodes.forEach((key, value) -> {
       if (program.hasAncestor(relation, key)) {
-        filteredDeltaNode.put(key, value);
+        filteredRecursionPlaceholderNode.put(key, value);
       }
     });
 
-    RelationWithDeltaNodes relationWithDeltaNodes = new RelationWithDeltaNodes(relation, filteredDeltaNode);
-    if (!planForRelation.containsKey(relationWithDeltaNodes)) {
+    RelationWithRecursionPlaceholder relationWithPlaceholder = new RelationWithRecursionPlaceholder(relation,
+        filteredRecursionPlaceholderNode);
+    if (!planForRelation.containsKey(relationWithPlaceholder)) {
       //We split rules between exit ones and recursive ones
       List<Rule> exitRules = new ArrayList<>();
       List<Rule> recursiveRules = new ArrayList<>();
       program.rulesForRelation(relation).forEach(rule -> {
-        if (program.isRecursive(rule, deltaNodes.keySet())) { //We do not want to tag as recursive rules that are already in a loop
+        if (program.isRecursive(rule, recCallNodes.keySet())) { //We do not want to tag as recursive rules that are already in a loop
           recursiveRules.add(rule);
         } else {
           exitRules.add(rule);
@@ -73,7 +75,7 @@ public class LogicalPlanBuilder {
 
       //We map exit rules
       PlanNode plan = exitRules.stream()
-              .map(rule -> getPlanForRule(rule, filteredDeltaNode))
+          .map(rule -> getPlanForRule(rule, filteredRecursionPlaceholderNode))
               .reduce(PlanNode::union)
               .orElseGet(() -> PlanNode.empty(CompoundTerm.parseRelationArity(relation)));
 
@@ -82,47 +84,33 @@ public class LogicalPlanBuilder {
         RecursionNode.Builder builder = new RecursionNode.Builder(plan);
         //RecursionNode recursionPlan = plan.recursion();
         //plan = recursionPlan;
-        Map<String, PlanNode> newDeltaNodes = withEntry(filteredDeltaNode, relation, builder.getDelta());
+        Map<String, PlanNode> newPlaceholderNodes = withEntry(filteredRecursionPlaceholderNode, relation, builder.getFull());
         recursiveRules.forEach(rule ->
-        builder.addRecursivePlan(introduceFullRecursion(getPlanForRule(rule, newDeltaNodes), builder.getDelta(), builder.getFull()))
+        //builder.addRecursivePlan(introduceFullRecursion(getPlanForRule(rule, newPlaceholderNodes), builder.getDelta(), builder.getFull()))
+        builder.addRecursivePlan(getPlanForRule(rule, newPlaceholderNodes))
         );
 
         plan = builder.build();
       }
-      planForRelation.put(relationWithDeltaNodes, plan);
+      planForRelation.put(relationWithPlaceholder, plan);
     }
-    return planForRelation.get(relationWithDeltaNodes);
+    return planForRelation.get(relationWithPlaceholder);
   }
 
-  private PlanNode introduceFullRecursion(PlanNode baseNode, PlanNode delta, PlanNode full) {
-    return baseNode.transform(n -> {
-      //We look for joins between to subtrees depending on dela and we replace one by Full
-      if (n instanceof JoinNode) {
-        JoinNode join = (JoinNode) n;
-        if (join.getLeft().contains(delta) && join.getRight().contains(delta)) {
-          return join.getLeft().join(join.getRight().replace(delta, full), join.getLeftProjection(), join.getRightProjection()).union(
-                  join.getLeft().replace(delta, full).join(join.getRight(), join.getLeftProjection(), join.getRightProjection())
-          );
-        }
-      }
-      return n;
-    });
-  }
-
-  private PlanNode getPlanForBashRule(BashRule bashRule, Map<String, PlanNode> deltaNodes) {
+  private PlanNode getPlanForBashRule(BashRule bashRule, Map<String, PlanNode> recursionPlaceholderNodes) {
     List<PlanNode> children = new ArrayList<>();
 
     for (String rel : bashRule.relations) {
-      children.add(getPlanForRelation(rel, deltaNodes));
+      children.add(getPlanForRelation(rel, recursionPlaceholderNodes));
     }
 
     int arity = (int) bashRule.head.getVariables().count();
     return new BashNode(bashRule.command, bashRule.commandParts, children, arity);
   }
 
-  private PlanNode getPlanForRule(Rule rule, Map<String, PlanNode> deltaNodes) {
+  private PlanNode getPlanForRule(Rule rule, Map<String, PlanNode> recursionPlaceholderNodes) {
     if (rule instanceof BashRule) {
-      return getPlanForBashRule((BashRule) rule, deltaNodes);
+      return getPlanForBashRule((BashRule) rule, recursionPlaceholderNodes);
     }
     if (rule.body.size() == 0) { // facts
       if (Arrays.stream(rule.head.args).anyMatch(t -> !(t instanceof Constant<?>))) {
@@ -158,7 +146,7 @@ public class LogicalPlanBuilder {
           varToCol[colToVar[i]] = i;
         }
       } else {
-        termNode = getPlanForRelation(term.getRelation(), deltaNodes);
+        termNode = getPlanForRelation(term.getRelation(), recursionPlaceholderNodes);
         for (int i = 0; i < term.args.length; i++) {
           Term arg = term.args[i];
           if (arg instanceof Variable) {
@@ -306,21 +294,21 @@ public class LogicalPlanBuilder {
     }
   }
 
-  private static class RelationWithDeltaNodes {
+  private static class RelationWithRecursionPlaceholder {
 
     private String relation;
 
-    private Map<String, PlanNode> deltaNodes;
+    private Map<String, PlanNode> placeholder;
 
-    RelationWithDeltaNodes(String relation, Map<String, PlanNode> deltaNodes) {
+    RelationWithRecursionPlaceholder(String relation, Map<String, PlanNode> recursionPlaceholderNodes) {
       this.relation = relation;
-      this.deltaNodes = deltaNodes;
+      this.placeholder = recursionPlaceholderNodes;
     }
 
     @Override
     public boolean equals(Object obj) {
-      return obj instanceof RelationWithDeltaNodes && relation.equals(((RelationWithDeltaNodes) obj).relation)
-          && deltaNodes.equals(((RelationWithDeltaNodes) obj).deltaNodes);
+      return obj instanceof RelationWithRecursionPlaceholder && relation.equals(((RelationWithRecursionPlaceholder) obj).relation)
+          && placeholder.equals(((RelationWithRecursionPlaceholder) obj).placeholder);
     }
 
     @Override

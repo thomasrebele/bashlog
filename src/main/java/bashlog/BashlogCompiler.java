@@ -54,7 +54,11 @@ public class BashlogCompiler {
     this.root = planNode;
   }
 
+  private boolean isInitialized = false;
+
   private void init() {
+    if (isInitialized) return;
+    isInitialized = true;
     // register translators
     Arrays.asList(
         new bashlog.translation.BashCmd(),
@@ -90,13 +94,13 @@ public class BashlogCompiler {
 
   public String compile() {
     if (bash == null) {
-      init();
       bash = compile("", true);
     }
     return bash;
   }
 
   public String compile(String indent, boolean comments) {
+    init();
     StringBuilder header = new StringBuilder();
     // we generate a bash script (shebang)
     header.append("#!/bin/bash\n");
