@@ -25,13 +25,13 @@
 			<AppenderRef ref="ErrConsole"/>
 		</Root>
 		<!-- change level for classes -->
-		<Logger name="yago4.predicates.Predicate" level="debug" additivity="false">
+		<!-- <Logger name="yago4.predicates.Predicate" level="debug" additivity="false">
 			<AppenderRef ref="Console"/>
 			<AppenderRef ref="ErrConsole" />
 		</Logger>
 		<Logger name="yago4.predicates.builtin.Sub" level="debug" additivity="false">
 			<AppenderRef ref="Console"/>
 			<AppenderRef ref="ErrConsole" />
-		</Logger>
+		</Logger>-->
 	</Loggers>
 </Configuration>

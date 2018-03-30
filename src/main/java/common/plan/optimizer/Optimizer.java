@@ -12,6 +12,15 @@ import common.plan.node.PlanNode;
 /** A plan node optimizer transforms one plan node to another one */
 public interface Optimizer extends Function<PlanNode, PlanNode> {
 
+  static PlanNode applyOptimizer(PlanNode root, List<List<Optimizer>> stages) {
+    for (List<Optimizer> stage : stages) {
+      for (Optimizer o : stage) {
+        root = o.apply(root);
+      }
+    }
+    return root;
+  }
+
   static PlanNode applyOptimizer(PlanNode root, List<String> stageNames, List<List<Optimizer>> stages, StringBuilder debugBuilder) {
     Iterator<String> it = stageNames.iterator();
     PlanValidator check = new PlanValidator(debugBuilder);
@@ -19,7 +28,7 @@ public interface Optimizer extends Function<PlanNode, PlanNode> {
       debugBuilder.append("\n\n").append(it.hasNext() ? it.next() : "").append("\n");
       for (Optimizer o : stage) {
         root = o.apply(root);
-  
+
         debugBuilder.append("applied ").append(o.getClass()).append(" \n");
         debugBuilder.append(root.toPrettyString()).append("\n");
 

@@ -33,7 +33,7 @@ public class BashlogCompiler {
   private String bash = null;
 
   /** Save debug information (query plans)*/
-  private StringBuilder debugBuilder = new StringBuilder();
+  private StringBuilder debugBuilder = null; //new StringBuilder();
 
   private String debug;
 
@@ -69,14 +69,21 @@ public class BashlogCompiler {
     ).forEach(t -> t.supports().forEach(c -> translators.put(c, t)));
     
     root = planNode;
-    debugBuilder.append("orig\n");
-    debugBuilder.append(root.toPrettyString() + "\n");
+    if (debugBuilder != null) {
+      debugBuilder.append("orig\n");
+      debugBuilder.append(root.toPrettyString() + "\n");
+    }
     root = new SortNode(root, null);
 
 
     List<String> stageNames = Arrays.asList("simplification", "optimization", "transforming to bashlog plan");
-    root = Optimizer.applyOptimizer(root, stageNames, stages, debugBuilder);
-    debug = "#" + debugBuilder.toString().replaceAll("\n", "\n# ");
+    //root = Optimizer.applyOptimizer(root, stageNames, stages, debugBuilder);
+    if (debugBuilder == null) {
+      root = Optimizer.applyOptimizer(root, stages);
+    } else {
+      root = Optimizer.applyOptimizer(root, stageNames, stages, debugBuilder);
+      debug = "#" + debugBuilder.toString().replaceAll("\n", "\n# ");
+    }
   }
 
   public String compile() {
@@ -141,7 +148,12 @@ public class BashlogCompiler {
     if(pn == null) {
       SortedMap<String, PlanNode> candidates = plan.tailMap(query + '/').headMap(query + ('/' + 1));
       if(candidates.size() > 1) {
-        throw new IllegalArgumentException("cannot compile plan, predicate '" + query + "' ambigous, did you mean '" + candidates.firstKey() + "'?");
+        Iterator<String> keys = candidates.keySet().iterator();
+        keys.next();
+        List<String> others = new ArrayList<>();
+        keys.forEachRemaining(others::add);
+        throw new IllegalArgumentException(
+            "cannot compile plan, predicate '" + query + "' ambigous, did you mean '" + candidates.firstKey() + "'? Other possiblities: " + others);
       }
       else if(candidates.size() == 1) {
         pn = candidates.get(candidates.firstKey());
@@ -152,6 +164,12 @@ public class BashlogCompiler {
     }
     BashlogCompiler bc = new BashlogCompiler(pn);
     return bc;
+  }
+
+  public void enableDebug() {
+    if (this.debugBuilder == null) {
+      this.debugBuilder = new StringBuilder();
+    }
   }
 
   /*public static void main(String[] args) {

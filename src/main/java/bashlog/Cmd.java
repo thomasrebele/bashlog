@@ -1,6 +1,9 @@
 package bashlog;
 
 import java.io.IOException;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
@@ -27,6 +30,10 @@ public class Cmd {
   }
 
   public static void main(String[] argv) throws IOException {
+    if (argv.length == 0) {
+      argv = new String[] { "--query-file", "data/lubm/bashlog-all.txt", "--query-pred", "query1/" };
+    }
+
     // parse arguments
     Args args = new Args();
     JCommander cmd = JCommander.newBuilder().addObject(args).build();
@@ -40,7 +47,9 @@ public class Cmd {
     }
 
     // translate/compile
-    Program p = Program.loadFile(args.queryFile, BashlogCompiler.BASHLOG_PARSER_FEATURES);
+    Set<String> features = BashlogCompiler.BASHLOG_PARSER_FEATURES;
+    Program p = Program.loadFile(args.queryFile, features);
+
     BashlogCompiler bc = BashlogCompiler.prepareQuery(p, args.queryPredicate);
     try {
       String bash = bc.compile("", false);

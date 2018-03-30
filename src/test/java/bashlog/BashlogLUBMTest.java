@@ -9,7 +9,7 @@ public class BashlogLUBMTest extends common.LUBMTest {
 
   @Override
   public Evaluator evaluator() {
-    return new BashlogEvaluator("/tmp/bashlog-test/", true);
+    return new BashlogEvaluator("/tmp/bashlog-test/", false);
   }
 
   @Rule

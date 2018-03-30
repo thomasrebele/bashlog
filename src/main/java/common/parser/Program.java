@@ -118,11 +118,11 @@ public class Program implements Parseable {
     if (relation.equals(ancestor)) {
       return true;
     }
-    Set<String> parents = rulesForRelation(relation).stream()
+    List<String> parents = rulesForRelation(relation).stream()
             .flatMap(t -> t.body.stream())
             .map(CompoundTerm::getRelation)
             .filter(rel -> !ignoredRelation.contains(rel))
-            .collect(Collectors.toSet());
+            .collect(Collectors.toList());
     Set<String> newIgnoredRelations = new HashSet<>(ignoredRelation);
     newIgnoredRelations.addAll(parents);
     return parents.stream().anyMatch(rel -> hasAncestor(rel, ancestor, newIgnoredRelations));
