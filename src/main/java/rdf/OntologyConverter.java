@@ -150,7 +150,7 @@ public class OntologyConverter {
       ontology.objectPropertiesInSignature().forEach(pr ->
               program.addRule(new Rule(term(s, pr, o2), term(o, OWL_SAME_AS, o2), term(s, pr, o))));
 
-      // eq-dff1
+      // eq-diff1
       program.addRule(new Rule(FALSE, term(x, OWL_SAME_AS, y), term(x, OWL_DIFFERENT_FROM, y)));
 
       //TODO: eq-diff2 and eq-diff3
@@ -261,7 +261,7 @@ public class OntologyConverter {
     // Table 6. The Semantics of Classes
 
     // cls-nothing2
-    program.addRule(new Rule(FALSE, term(x, RDF_TYPE, OWL_NOTHING)));
+    // program.addRule(new Rule(FALSE, term(x, RDF_TYPE, OWL_NOTHING)));
 
     //TODO: cls-int1, cls-int2, cls-uni
     //TODO: other axioms
@@ -334,7 +334,12 @@ public class OntologyConverter {
           LOGGER.warn(((OWLObjectMaxCardinality) type).getCardinality() + " is not a supported cardinality in head expression: " + type);
           return Stream.empty();
       }
-
+    } else if(type instanceof OWLObjectComplementOf) {
+      return bodyTerm(((OWLObjectComplementOf) type).getOperand(), instance).map(filterClauses -> new Rule(FALSE, filterClauses));
+    } else if(type instanceof OWLObjectAllValuesFrom) {
+      Variable filler = newVariable("filler");
+      OWLPropertyExpression prop = ((OWLObjectAllValuesFrom) type).getProperty();
+      return headRules(((OWLObjectAllValuesFrom) type).getFiller(), filler).map(headRule -> headRule.withBodyClause(term(instance, prop, filler)));
     } else {
       LOGGER.warn("Not supported class expression in head: " + type);
       return Stream.empty();
