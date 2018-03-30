@@ -83,7 +83,7 @@ public class PushDownFilterAndProject implements Optimizer {
         count[0]--;
         return recursion.getDelta();
       }
-      if (recursion.getDelta().equals(t)) {
+      if (recursion.getDelta().equals(t) || recursion.getFull().equals(t)) {
         count[0]++;
       }
       return t;
