@@ -11,7 +11,6 @@ public class LogicalPlanBuilder {
   private Set<String> builtin;
   private Set<String> relationsToOutput;
 
-  private Map<RelationWithRecursionPlaceholder, PlanNode> planForRelation;
   private Program program;
 
   public LogicalPlanBuilder(Set<String> builtin, Set<String> relationsToOutput) {
@@ -30,7 +29,6 @@ public class LogicalPlanBuilder {
   }
 
   public TreeMap<String, PlanNode> getPlanForProgram(Program program) {
-    planForRelation = new HashMap<>();
     this.program = program;
 
     //We fill relationsToOutput if needed
@@ -51,50 +49,30 @@ public class LogicalPlanBuilder {
       return recCallNodes.get(relation);
     }
 
-    //We filter the recursive call node map to remove not useful ones
-    Map<String, PlanNode> filteredRecursionPlaceholderNode = new HashMap<>();
-    recCallNodes.forEach((key, value) -> {
-      if (program.hasAncestor(relation, key)) {
-        filteredRecursionPlaceholderNode.put(key, value);
-      }
-    });
+    List<Rule> exitRules = new ArrayList<>();
+    List<Rule> recursiveRules = new ArrayList<>();
+    //program.rulesForRelation(relation).forEach(rule -> {
+    //  if (program.isRecursive(rule, recCallNodes.keySet())) { //We do not want to tag as recursive rules that are already in a loop
+    //    recursiveRules.add(rule);
+    //  } else {
+    //    exitRules.add(rule);
+    //  }
+    //});
+    recursiveRules = program.rulesForRelation(relation);
 
-    RelationWithRecursionPlaceholder relationWithPlaceholder = new RelationWithRecursionPlaceholder(relation,
-        filteredRecursionPlaceholderNode);
-    if (!planForRelation.containsKey(relationWithPlaceholder)) {
-      //We split rules between exit ones and recursive ones
-      List<Rule> exitRules = new ArrayList<>();
-      List<Rule> recursiveRules = new ArrayList<>();
-      program.rulesForRelation(relation).forEach(rule -> {
-        if (program.isRecursive(rule, recCallNodes.keySet())) { //We do not want to tag as recursive rules that are already in a loop
-          recursiveRules.add(rule);
-        } else {
-          exitRules.add(rule);
-        }
-      });
+    //We map exit rules
+    PlanNode plan = exitRules.stream().map(rule -> getPlanForRule(rule, recCallNodes)).reduce(PlanNode::union)
+        .orElseGet(() -> PlanNode.empty(CompoundTerm.parseRelationArity(relation)));
 
-      //We map exit rules
-      PlanNode plan = exitRules.stream()
-          .map(rule -> getPlanForRule(rule, filteredRecursionPlaceholderNode))
-              .reduce(PlanNode::union)
-              .orElseGet(() -> PlanNode.empty(CompoundTerm.parseRelationArity(relation)));
+    if (!recursiveRules.isEmpty()) {
+      //We build recursion
+      RecursionNode.Builder builder = new RecursionNode.Builder(plan);
+      Map<String, PlanNode> newPlaceholderNodes = withEntry(recCallNodes, relation, builder.getFull());
+      recursiveRules.forEach(rule -> builder.addRecursivePlan(getPlanForRule(rule, newPlaceholderNodes)));
 
-      if (!recursiveRules.isEmpty()) {
-        //We build recursion
-        RecursionNode.Builder builder = new RecursionNode.Builder(plan);
-        //RecursionNode recursionPlan = plan.recursion();
-        //plan = recursionPlan;
-        Map<String, PlanNode> newPlaceholderNodes = withEntry(filteredRecursionPlaceholderNode, relation, builder.getFull());
-        recursiveRules.forEach(rule ->
-        //builder.addRecursivePlan(introduceFullRecursion(getPlanForRule(rule, newPlaceholderNodes), builder.getDelta(), builder.getFull()))
-        builder.addRecursivePlan(getPlanForRule(rule, newPlaceholderNodes))
-        );
-
-        plan = builder.build();
-      }
-      planForRelation.put(relationWithPlaceholder, plan);
+      plan = builder.build();
     }
-    return planForRelation.get(relationWithPlaceholder);
+    return plan;
   }
 
   private PlanNode getPlanForBashRule(BashRule bashRule, Map<String, PlanNode> recursionPlaceholderNodes) {
@@ -295,22 +273,22 @@ public class LogicalPlanBuilder {
   }
 
   private static class RelationWithRecursionPlaceholder {
-
+  
     private String relation;
-
+  
     private Map<String, PlanNode> placeholder;
-
+  
     RelationWithRecursionPlaceholder(String relation, Map<String, PlanNode> recursionPlaceholderNodes) {
       this.relation = relation;
       this.placeholder = recursionPlaceholderNodes;
     }
-
+  
     @Override
     public boolean equals(Object obj) {
       return obj instanceof RelationWithRecursionPlaceholder && relation.equals(((RelationWithRecursionPlaceholder) obj).relation)
           && placeholder.equals(((RelationWithRecursionPlaceholder) obj).placeholder);
     }
-
+  
     @Override
     public int hashCode() {
       return relation.hashCode();
