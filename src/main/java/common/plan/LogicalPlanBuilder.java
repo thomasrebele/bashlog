@@ -96,9 +96,6 @@ public class LogicalPlanBuilder {
   */
   private PlanNode getPlanForRelation(String relation, Cache cache) {
     //If we should use a recursion placeholder node
-    if (cache.recCallNodes.containsKey(relation)) {
-      return cache.call(relation);
-    }
     PlanNode result;
     if ((result = cache.call(relation)) != null) {
       return result;
@@ -117,7 +114,7 @@ public class LogicalPlanBuilder {
       List<PlanNode> recursivePlans = new ArrayList<>();
       program.rulesForRelation(relation).forEach(rule -> {
         PlanNode plan = getPlanForRule(rule, cache);
-        if (cache.calledRelations.contains(relation)) {
+        if (cache.wasCalled(relation)) {
           recursivePlans.add(plan);
         } else {
           exitPlans.add(plan);
@@ -137,7 +134,8 @@ public class LogicalPlanBuilder {
       }
 
       // remember 
-      cache.relationToPlan.put(relation, plan);
+      cache.store(relation, plan);
+      // TODO: here
       calls.stream().map(cache.recCallToRelation::get).forEach(c -> cache.unregister.computeIfAbsent(c, k -> new ArrayList<>()).add(relation));
 
       return plan;
@@ -344,26 +342,39 @@ public class LogicalPlanBuilder {
     }
   }
 
-  private static class Cache {
 
-    Set<String> calledRelations = new HashSet<>();
+  class Cache {
+
+    private Set<String> calledRelations = new HashSet<>();
 
     Map<PlaceholderNode, String> recCallToRelation = new HashMap<>();
 
-    Map<String, PlaceholderNode> recCallNodes = new HashMap<>();
+    private Map<String, PlaceholderNode> recCallNodes = new HashMap<>();
 
-    Map<String, PlanNode> relationToPlan = new HashMap<>();
+    private Map<String, PlanNode> relationToPlan = new HashMap<>();
 
     Map<String, List<String>> unregister = new HashMap<>();
 
-    //Deque<Set<PlaceholderNode>> calledRelations = new ArrayDeque<>();
+    Deque<Set<String>> calledRelationsStack = new ArrayDeque<>();
+
+    Cache() {
+      calledRelationsStack.addLast(new HashSet<>());
+    }
 
     public PlanNode call(String relation) {
       if (recCallNodes.containsKey(relation)) {
-      calledRelations.add(relation);
-      return recCallNodes.get(relation);
-    }
+        calledRelations.add(relation);
+        return recCallNodes.get(relation);
+      }
       return null;
+    }
+
+    public void store(String relation, PlanNode plan) {
+      relationToPlan.put(relation, plan);
+    }
+
+    public boolean wasCalled(String relation) {
+      return calledRelations.contains(relation);
     }
 
     public Collection<PlaceholderNode> getCalls() {
@@ -394,4 +405,5 @@ public class LogicalPlanBuilder {
     }
 
   }
+
 }
