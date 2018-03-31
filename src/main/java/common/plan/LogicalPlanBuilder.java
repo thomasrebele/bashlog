@@ -50,42 +50,42 @@ public class LogicalPlanBuilder {
    *        This function adds new entries temporarily.
    * @return
    */
-  private PlanNode getPlanForRelationOld(String relation, Cache cache) {
-    //If we should use a recursion placeholder node
-    if (cache.recCallNodes.containsKey(relation)) {
-      cache.calledRelations.add(relation);
-      return cache.recCallNodes.get(relation);
-    }
-
-    List<Rule> exitRules = new ArrayList<>();
-    List<Rule> recursiveRules = new ArrayList<>();
-    //program.rulesForRelation(relation).forEach(rule -> {
-    //  if (program.isRecursive(rule, recCallNodes.keySet())) { //We do not want to tag as recursive rules that are already in a loop
-    //    recursiveRules.add(rule);
-    //  } else {
-    //    exitRules.add(rule);
-    //  }
-    //});
-    recursiveRules = program.rulesForRelation(relation);
-
-    int arity = CompoundTerm.parseRelationArity(relation);
-    //We map exit rules
-    PlanNode plan = exitRules.stream().map(rule -> getPlanForRule(rule, cache)).reduce(PlanNode::union)
-        .orElseGet(() -> PlanNode.empty(arity));
-
-    if (!recursiveRules.isEmpty()) {
-      try {
-        //We build recursion
-        RecursionNode.Builder builder = new RecursionNode.Builder(arity);
-        cache.recCallNodes.put(relation, builder.getFull());
-        recursiveRules.forEach(rule -> builder.addRecursivePlan(getPlanForRule(rule, cache)));
-        plan = builder.build(plan);
-      } finally {
-        cache.recCallNodes.remove(relation);
-      }
-    }
-    return plan;
-  }
+  //  private PlanNode getPlanForRelationOld(String relation, Cache cache) {
+  //    //If we should use a recursion placeholder node
+  //    if (cache.recCallNodes.containsKey(relation)) {
+  //      cache.calledRelations.add(relation);
+  //      return cache.recCallNodes.get(relation);
+  //    }
+  //
+  //    List<Rule> exitRules = new ArrayList<>();
+  //    List<Rule> recursiveRules = new ArrayList<>();
+  //    //program.rulesForRelation(relation).forEach(rule -> {
+  //    //  if (program.isRecursive(rule, recCallNodes.keySet())) { //We do not want to tag as recursive rules that are already in a loop
+  //    //    recursiveRules.add(rule);
+  //    //  } else {
+  //    //    exitRules.add(rule);
+  //    //  }
+  //    //});
+  //    recursiveRules = program.rulesForRelation(relation);
+  //
+  //    int arity = CompoundTerm.parseRelationArity(relation);
+  //    //We map exit rules
+  //    PlanNode plan = exitRules.stream().map(rule -> getPlanForRule(rule, cache)).reduce(PlanNode::union)
+  //        .orElseGet(() -> PlanNode.empty(arity));
+  //
+  //    if (!recursiveRules.isEmpty()) {
+  //      try {
+  //        //We build recursion
+  //        RecursionNode.Builder builder = new RecursionNode.Builder(arity);
+  //        cache.recCallNodes.put(relation, builder.getFull());
+  //        recursiveRules.forEach(rule -> builder.addRecursivePlan(getPlanForRule(rule, cache)));
+  //        plan = builder.build(plan);
+  //      } finally {
+  //        cache.recCallNodes.remove(relation);
+  //      }
+  //    }
+  //    return plan;
+  //  }
 
   /**
   * Get plan for relation
@@ -97,14 +97,20 @@ public class LogicalPlanBuilder {
   private PlanNode getPlanForRelation(String relation, Cache cache) {
     //If we should use a recursion placeholder node
     if (cache.recCallNodes.containsKey(relation)) {
-      cache.calledRelations.add(relation);
-      return cache.recCallNodes.get(relation);
+      return cache.call(relation);
+    }
+    PlanNode result;
+    if ((result = cache.call(relation)) != null) {
+      return result;
+    }
+    if ((result = cache.reuse(relation)) != null) {
+      return result;
     }
 
+    int arity = CompoundTerm.parseRelationArity(relation);
+    RecursionNode.Builder builder = new RecursionNode.Builder(arity);
     try {
-      int arity = CompoundTerm.parseRelationArity(relation);
-      RecursionNode.Builder builder = new RecursionNode.Builder(arity);
-      cache.recCallNodes.put(relation, builder.getFull());
+      cache.registerRelation(relation, builder.getFull());
 
       // translate rules
       List<PlanNode> exitPlans = new ArrayList<>();
@@ -117,6 +123,9 @@ public class LogicalPlanBuilder {
           exitPlans.add(plan);
         }
       });
+      Collection<PlaceholderNode> calls = Stream.concat(exitPlans.stream(), recursivePlans.stream())//
+          .flatMap(p -> PlaceholderNode.searchInPlan(p).stream()).collect(Collectors.toSet());
+      //Collection<PlaceholderNode> calls = cache.getCalls();
 
       //We map exit rules
       PlanNode plan = exitPlans.stream().reduce(PlanNode::union).orElseGet(() -> PlanNode.empty(arity));
@@ -126,10 +135,15 @@ public class LogicalPlanBuilder {
         recursivePlans.forEach(recursivePlan -> builder.addRecursivePlan(recursivePlan));
         plan = builder.build(plan);
       }
+
+      // remember 
+      cache.relationToPlan.put(relation, plan);
+      calls.stream().map(cache.recCallToRelation::get).forEach(c -> cache.unregister.computeIfAbsent(c, k -> new ArrayList<>()).add(relation));
+
       return plan;
     } finally {
-      cache.recCallNodes.remove(relation);
-      cache.calledRelations.remove(relation);
+      cache.unregisterRelation(relation, builder.getFull());
+
     }
   }
 
@@ -334,6 +348,50 @@ public class LogicalPlanBuilder {
 
     Set<String> calledRelations = new HashSet<>();
 
-    Map<String, PlanNode> recCallNodes = new HashMap<>();
+    Map<PlaceholderNode, String> recCallToRelation = new HashMap<>();
+
+    Map<String, PlaceholderNode> recCallNodes = new HashMap<>();
+
+    Map<String, PlanNode> relationToPlan = new HashMap<>();
+
+    Map<String, List<String>> unregister = new HashMap<>();
+
+    //Deque<Set<PlaceholderNode>> calledRelations = new ArrayDeque<>();
+
+    public PlanNode call(String relation) {
+      if (recCallNodes.containsKey(relation)) {
+      calledRelations.add(relation);
+      return recCallNodes.get(relation);
+    }
+      return null;
+    }
+
+    public Collection<PlaceholderNode> getCalls() {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    public void unregisterRelation(String relation, PlaceholderNode full) {
+      recCallNodes.remove(relation);
+      recCallToRelation.remove(full);
+      calledRelations.remove(relation);
+      List<String> x = unregister.remove(relation);
+      if (x != null) {
+        x.forEach(invalidated -> relationToPlan.remove(invalidated));
+      }
+    }
+
+    public PlanNode reuse(String relation) {
+      if (relationToPlan.containsKey(relation)) {
+        return relationToPlan.get(relation);
+      }
+      return null;
+    }
+
+    public void registerRelation(String relation, PlaceholderNode full) {
+      recCallNodes.put(relation, full);
+      recCallToRelation.put(full, relation);
+    }
+
   }
 }

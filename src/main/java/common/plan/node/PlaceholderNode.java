@@ -81,4 +81,16 @@ public class PlaceholderNode implements PlanNode {
     return nodeToContained.entrySet().stream().filter(e -> !e.getValue()).map(e -> e.getKey()).collect(Collectors.toSet());
   }
 
+  /** Get all placeholders that occur in a plan */
+  public static Set<PlaceholderNode> searchInPlan(PlanNode plan) {
+    Set<PlaceholderNode> placeholders = new HashSet<>();
+    plan.transform(x -> {
+      if (x instanceof PlaceholderNode) {
+        placeholders.add((PlaceholderNode) x);
+      }
+      return x;
+    });
+    return placeholders;
+  }
+
 }
