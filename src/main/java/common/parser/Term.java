@@ -32,7 +32,7 @@ public abstract class Term implements Parseable, Comparable<Object> {
         pr.error("variables need to start with an uppercase character", null);
       }
       Atom a = new Atom();
-      a.name = pr.readName();
+      a.name = pr.readName().toString();
 
       pr.skipComments();
       if (pr.peek() == '(') {

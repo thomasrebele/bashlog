@@ -21,7 +21,7 @@ public class Variable extends Term implements Parseable {
     pr.debug();
     pr.skipComments();
     if (pr.peek() == null) return null;
-    String name = pr.readName();
+    String name = pr.readName().toString();
     if ("_".equals(name)) {
       name = "Var_" + varMap.size();
     }
