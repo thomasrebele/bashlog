@@ -38,7 +38,7 @@ public class LogicalPlanBuilder {
 
     TreeMap<String, PlanNode> planNodes = new TreeMap<>();
     relationsToOutput.forEach(relation ->
-      planNodes.put(relation, getPlanForRelation(relation, new HashMap<>()))
+    planNodes.put(relation, getPlanForRelation(relation, new Cache()))
     );
     return planNodes;
   }
@@ -50,10 +50,10 @@ public class LogicalPlanBuilder {
    *        This function adds new entries temporarily.
    * @return
    */
-  private PlanNode getPlanForRelation(String relation, Map<String, PlanNode> recCallNodes) {
+  private PlanNode getPlanForRelation(String relation, Cache cache) {
     //If we should use a recursion placeholder node
-    if (recCallNodes.containsKey(relation)) {
-      return recCallNodes.get(relation);
+    if (cache.recCallNodes.containsKey(relation)) {
+      return cache.recCallNodes.get(relation);
     }
 
     List<Rule> exitRules = new ArrayList<>();
@@ -68,38 +68,38 @@ public class LogicalPlanBuilder {
     recursiveRules = program.rulesForRelation(relation);
 
     //We map exit rules
-    PlanNode plan = exitRules.stream().map(rule -> getPlanForRule(rule, recCallNodes)).reduce(PlanNode::union)
+    PlanNode plan = exitRules.stream().map(rule -> getPlanForRule(rule, cache)).reduce(PlanNode::union)
         .orElseGet(() -> PlanNode.empty(CompoundTerm.parseRelationArity(relation)));
 
     if (!recursiveRules.isEmpty()) {
       try {
         //We build recursion
         RecursionNode.Builder builder = new RecursionNode.Builder(plan);
-        recCallNodes.put(relation, builder.getFull());
-        recursiveRules.forEach(rule -> builder.addRecursivePlan(getPlanForRule(rule, recCallNodes)));
+        cache.recCallNodes.put(relation, builder.getFull());
+        recursiveRules.forEach(rule -> builder.addRecursivePlan(getPlanForRule(rule, cache)));
         plan = builder.build();
       }
       finally {
-        recCallNodes.remove(relation);
+        cache.recCallNodes.remove(relation);
       }
     }
     return plan;
   }
 
-  private PlanNode getPlanForBashRule(BashRule bashRule, Map<String, PlanNode> recursionPlaceholderNodes) {
+  private PlanNode getPlanForBashRule(BashRule bashRule, Cache cache) {
     List<PlanNode> children = new ArrayList<>();
 
     for (String rel : bashRule.relations) {
-      children.add(getPlanForRelation(rel, recursionPlaceholderNodes));
+      children.add(getPlanForRelation(rel, cache));
     }
 
     int arity = (int) bashRule.head.getVariables().count();
     return new BashNode(bashRule.command, bashRule.commandParts, children, arity);
   }
 
-  private PlanNode getPlanForRule(Rule rule, Map<String, PlanNode> recursionPlaceholderNodes) {
+  private PlanNode getPlanForRule(Rule rule, Cache cache) {
     if (rule instanceof BashRule) {
-      return getPlanForBashRule((BashRule) rule, recursionPlaceholderNodes);
+      return getPlanForBashRule((BashRule) rule, cache);
     }
     if (rule.body.size() == 0) { // facts
       if (Arrays.stream(rule.head.args).anyMatch(t -> !(t instanceof Constant<?>))) {
@@ -135,7 +135,7 @@ public class LogicalPlanBuilder {
           varToCol[colToVar[i]] = i;
         }
       } else {
-        termNode = getPlanForRelation(term.getRelation(), recursionPlaceholderNodes);
+        termNode = getPlanForRelation(term.getRelation(), cache);
         for (int i = 0; i < term.args.length; i++) {
           Term arg = term.args[i];
           if (arg instanceof Variable) {
@@ -283,5 +283,8 @@ public class LogicalPlanBuilder {
     }
   }
 
-  
+  private static class Cache {
+
+    Map<String, PlanNode> recCallNodes = new HashMap<>();
+  }
 }
