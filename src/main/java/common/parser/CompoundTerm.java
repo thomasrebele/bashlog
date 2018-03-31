@@ -35,9 +35,9 @@ public class CompoundTerm extends Term implements Parseable {
     pr.skipComments();
     boolean negated = (pr.consume("not") != null);
     pr.skipComments();
-    String name = pr.readName();
+    CharSequence name = pr.readName();
     if (name == null) return null;
-    return read(name, negated, pr, varMap, supportedFeatures);
+    return read(name.toString(), negated, pr, varMap, supportedFeatures);
   }
 
   public static CompoundTerm read(String name, boolean negated, ParserReader pr, Map<String, Variable> varMap, Set<String> supportedFeatures) {

@@ -33,17 +33,16 @@ public class RecursionNode implements PlanNode {
 
     PlaceholderNode delta, full;
 
-    PlanNode exitPlan, recursivePlan;
+    PlanNode recursivePlan;
 
-    public Builder(PlanNode exitPlan) {
-      this.exitPlan = exitPlan;
-      this.arity = exitPlan.getArity();
+    public Builder(int arity) {
+      this.arity = arity;
       delta = new PlaceholderNode("delta", arity);
       full = new PlaceholderNode("full", arity);
       recursivePlan = PlanNode.empty(arity);
     }
 
-    public RecursionNode build() {
+    public RecursionNode build(PlanNode exitPlan) {
       RecursionNode r = new RecursionNode(exitPlan, recursivePlan, Builder.this);
       return r;
     }
@@ -57,9 +56,8 @@ public class RecursionNode implements PlanNode {
     }
 
     public void addRecursivePlan(PlanNode addedRecursivePlan) {
-      if (addedRecursivePlan.getArity() != exitPlan.getArity()) {
-        throw new IllegalArgumentException("The recursions should have the same arity as the recursion entry.\nRecursion plan:\n" + addedRecursivePlan
-            + "\nExit plan:\n" + exitPlan);
+      if (addedRecursivePlan.getArity() != arity) {
+        throw new IllegalArgumentException("Wrong arity for recursive plan.\nRecursion plan:\n" + addedRecursivePlan + "\nexpected arity:\n" + arity);
       }
       recursivePlan = recursivePlan.union(addedRecursivePlan);
     }

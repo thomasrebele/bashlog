@@ -152,11 +152,22 @@ public class ParserReader {
   }
 
   /** Read a name consisting of letters, digits, and underscores */
-  public String readName() {
+  public CharSequence readName() {
     debug();
     skipComments();
 
-    return readWhile((c, sb) -> Character.isAlphabetic(c) || c == '_' || (sb.length() > 0 && Character.isDigit(c)));
+    StringBuilder sb = new StringBuilder();
+    Character c;
+    while ((c = peek()) != '\0') {
+      if (Character.isAlphabetic(c) || c == '_' || (sb.length() > 0 && Character.isDigit(c))) {
+        sb.append(read());
+      } else {
+        break;
+      }
+    }
+    debug();
+    if (sb.length() == 0) return null;
+    return sb;
   }
 
   /** While next character is a '%', advance to first non-space character in next line. */

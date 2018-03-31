@@ -42,13 +42,13 @@ public class BashRule extends Rule {
       commandParts.add(command.substring(prev, start + 1));
 
       ParserReader prName = new ParserReader(command, start + 2);
-      String name = prName.readName();
+      CharSequence name = prName.readName();
 
       if (prName.consume("/") != null) {
-        name += "/" + prName.readInteger();
+        name = name + "/" + prName.readInteger();
       }
 
-      relations.add(name);
+      relations.add(name.toString());
 
       start = prName.pos();
       prev = start;

@@ -11,7 +11,6 @@ public class LogicalPlanBuilder {
   private Set<String> builtin;
   private Set<String> relationsToOutput;
 
-  private Map<RelationWithRecursionPlaceholder, PlanNode> planForRelation;
   private Program program;
 
   public LogicalPlanBuilder(Set<String> builtin, Set<String> relationsToOutput) {
@@ -30,7 +29,6 @@ public class LogicalPlanBuilder {
   }
 
   public TreeMap<String, PlanNode> getPlanForProgram(Program program) {
-    planForRelation = new HashMap<>();
     this.program = program;
 
     //We fill relationsToOutput if needed
@@ -39,78 +37,129 @@ public class LogicalPlanBuilder {
     }
 
     TreeMap<String, PlanNode> planNodes = new TreeMap<>();
+    Cache c = new Cache();
     relationsToOutput.forEach(relation ->
-            planNodes.put(relation, getPlanForRelation(relation, Collections.emptyMap()))
+    planNodes.put(relation, getPlanForRelation(relation, c))
     );
     return planNodes;
   }
 
-  private PlanNode getPlanForRelation(String relation, Map<String, PlanNode> recCallNodes) {
+  /**
+   * Get plan for relation
+   * @param relation
+   * @param recCallNodes map from relation to placeholder for all relations which are already available as full nodes
+   *        This function adds new entries temporarily.
+   * @return
+   */
+  //  private PlanNode getPlanForRelationOld(String relation, Cache cache) {
+  //    //If we should use a recursion placeholder node
+  //    if (cache.recCallNodes.containsKey(relation)) {
+  //      cache.calledRelations.add(relation);
+  //      return cache.recCallNodes.get(relation);
+  //    }
+  //
+  //    List<Rule> exitRules = new ArrayList<>();
+  //    List<Rule> recursiveRules = new ArrayList<>();
+  //    //program.rulesForRelation(relation).forEach(rule -> {
+  //    //  if (program.isRecursive(rule, recCallNodes.keySet())) { //We do not want to tag as recursive rules that are already in a loop
+  //    //    recursiveRules.add(rule);
+  //    //  } else {
+  //    //    exitRules.add(rule);
+  //    //  }
+  //    //});
+  //    recursiveRules = program.rulesForRelation(relation);
+  //
+  //    int arity = CompoundTerm.parseRelationArity(relation);
+  //    //We map exit rules
+  //    PlanNode plan = exitRules.stream().map(rule -> getPlanForRule(rule, cache)).reduce(PlanNode::union)
+  //        .orElseGet(() -> PlanNode.empty(arity));
+  //
+  //    if (!recursiveRules.isEmpty()) {
+  //      try {
+  //        //We build recursion
+  //        RecursionNode.Builder builder = new RecursionNode.Builder(arity);
+  //        cache.recCallNodes.put(relation, builder.getFull());
+  //        recursiveRules.forEach(rule -> builder.addRecursivePlan(getPlanForRule(rule, cache)));
+  //        plan = builder.build(plan);
+  //      } finally {
+  //        cache.recCallNodes.remove(relation);
+  //      }
+  //    }
+  //    return plan;
+  //  }
+
+  /**
+  * Get plan for relation
+  * @param relation
+  * @param recCallNodes map from relation to placeholder for all relations which are already available as full nodes
+  *        This function adds new entries temporarily.
+  * @return
+  */
+  private PlanNode getPlanForRelation(String relation, Cache cache) {
     //If we should use a recursion placeholder node
-    if (recCallNodes.containsKey(relation)) {
-      return recCallNodes.get(relation);
+    //System.out.println("plan for relation " + relation);
+    PlanNode result;
+    if ((result = cache.call(relation)) != null) {
+      return result;
     }
+    if ((result = cache.reuse(relation)) != null) {
+      return result;
+    }
+    //System.out.println("plan for relation " + relation + " not found, generating");
 
-    //We filter the recursive call node map to remove not useful ones
-    Map<String, PlanNode> filteredRecursionPlaceholderNode = new HashMap<>();
-    recCallNodes.forEach((key, value) -> {
-      if (program.hasAncestor(relation, key)) {
-        filteredRecursionPlaceholderNode.put(key, value);
-      }
-    });
+    int arity = CompoundTerm.parseRelationArity(relation);
+    RecursionNode.Builder builder = new RecursionNode.Builder(arity);
+    try {
+      cache.registerRelation(relation, builder.getFull());
 
-    RelationWithRecursionPlaceholder relationWithPlaceholder = new RelationWithRecursionPlaceholder(relation,
-        filteredRecursionPlaceholderNode);
-    if (!planForRelation.containsKey(relationWithPlaceholder)) {
-      //We split rules between exit ones and recursive ones
-      List<Rule> exitRules = new ArrayList<>();
-      List<Rule> recursiveRules = new ArrayList<>();
+      // translate rules
+      List<PlanNode> exitPlans = new ArrayList<>();
+      List<PlanNode> recursivePlans = new ArrayList<>();
       program.rulesForRelation(relation).forEach(rule -> {
-        if (program.isRecursive(rule, recCallNodes.keySet())) { //We do not want to tag as recursive rules that are already in a loop
-          recursiveRules.add(rule);
+        PlanNode plan = getPlanForRule(rule, cache);
+        if (cache.wasCalled(relation)) {
+          recursivePlans.add(plan);
         } else {
-          exitRules.add(rule);
+          exitPlans.add(plan);
         }
       });
 
       //We map exit rules
-      PlanNode plan = exitRules.stream()
-          .map(rule -> getPlanForRule(rule, filteredRecursionPlaceholderNode))
-              .reduce(PlanNode::union)
-              .orElseGet(() -> PlanNode.empty(CompoundTerm.parseRelationArity(relation)));
+      PlanNode plan = exitPlans.stream().reduce(PlanNode::union).orElseGet(() -> PlanNode.empty(arity));
 
-      if (!recursiveRules.isEmpty()) {
+      if (!recursivePlans.isEmpty()) {
         //We build recursion
-        RecursionNode.Builder builder = new RecursionNode.Builder(plan);
-        //RecursionNode recursionPlan = plan.recursion();
-        //plan = recursionPlan;
-        Map<String, PlanNode> newPlaceholderNodes = withEntry(filteredRecursionPlaceholderNode, relation, builder.getFull());
-        recursiveRules.forEach(rule ->
-        //builder.addRecursivePlan(introduceFullRecursion(getPlanForRule(rule, newPlaceholderNodes), builder.getDelta(), builder.getFull()))
-        builder.addRecursivePlan(getPlanForRule(rule, newPlaceholderNodes))
-        );
-
-        plan = builder.build();
+        recursivePlans.forEach(recursivePlan -> builder.addRecursivePlan(recursivePlan));
+        plan = builder.build(plan);
       }
-      planForRelation.put(relationWithPlaceholder, plan);
+
+      // remember 
+      cache.store(relation, plan);
+      // TODO: here
+      //calls.stream().map(cache.recCallToRelation::get).forEach(c -> cache.unregister.computeIfAbsent(c, k -> new ArrayList<>()).add(relation));
+
+      return plan;
+    } finally {
+      cache.unregisterRelation(relation, builder.getFull());
+
     }
-    return planForRelation.get(relationWithPlaceholder);
   }
 
-  private PlanNode getPlanForBashRule(BashRule bashRule, Map<String, PlanNode> recursionPlaceholderNodes) {
+  private PlanNode getPlanForBashRule(BashRule bashRule, Cache cache) {
     List<PlanNode> children = new ArrayList<>();
 
     for (String rel : bashRule.relations) {
-      children.add(getPlanForRelation(rel, recursionPlaceholderNodes));
+      children.add(getPlanForRelation(rel, cache));
     }
 
     int arity = (int) bashRule.head.getVariables().count();
     return new BashNode(bashRule.command, bashRule.commandParts, children, arity);
   }
 
-  private PlanNode getPlanForRule(Rule rule, Map<String, PlanNode> recursionPlaceholderNodes) {
+  private PlanNode getPlanForRule(Rule rule, Cache cache) {
+    //System.out.println("get plan for rule " + rule);
     if (rule instanceof BashRule) {
-      return getPlanForBashRule((BashRule) rule, recursionPlaceholderNodes);
+      return getPlanForBashRule((BashRule) rule, cache);
     }
     if (rule.body.size() == 0) { // facts
       if (Arrays.stream(rule.head.args).anyMatch(t -> !(t instanceof Constant<?>))) {
@@ -146,7 +195,7 @@ public class LogicalPlanBuilder {
           varToCol[colToVar[i]] = i;
         }
       } else {
-        termNode = getPlanForRelation(term.getRelation(), recursionPlaceholderNodes);
+        termNode = getPlanForRelation(term.getRelation(), cache);
         for (int i = 0; i < term.args.length; i++) {
           Term arg = term.args[i];
           if (arg instanceof Variable) {
@@ -294,26 +343,72 @@ public class LogicalPlanBuilder {
     }
   }
 
-  private static class RelationWithRecursionPlaceholder {
 
-    private String relation;
+  class Cache {
 
-    private Map<String, PlanNode> placeholder;
+    private Map<String, PlaceholderNode> recCallNodes = new HashMap<>();
 
-    RelationWithRecursionPlaceholder(String relation, Map<String, PlanNode> recursionPlaceholderNodes) {
-      this.relation = relation;
-      this.placeholder = recursionPlaceholderNodes;
+    private Map<String, PlanNode> relationToPlan = new HashMap<>();
+
+    Map<String, List<String>> unregister = new HashMap<>();
+
+    private Deque<Set<String>> calledRelationsStack = new ArrayDeque<>();
+
+    Cache() {
+      //System.out.println("NEW CACHE");
+      calledRelationsStack.addLast(new HashSet<>());
     }
 
-    @Override
-    public boolean equals(Object obj) {
-      return obj instanceof RelationWithRecursionPlaceholder && relation.equals(((RelationWithRecursionPlaceholder) obj).relation)
-          && placeholder.equals(((RelationWithRecursionPlaceholder) obj).placeholder);
+    public PlanNode call(String relation) {
+      if (recCallNodes.containsKey(relation)) {
+        calledRelationsStack.getLast().add(relation);
+        return recCallNodes.get(relation);
+      }
+      return null;
     }
 
-    @Override
-    public int hashCode() {
-      return relation.hashCode();
+    public void store(String relation, PlanNode plan) {
+      relationToPlan.put(relation, plan);
+      //System.out.println("storing plan for relation " + relation);
     }
+
+    public boolean wasCalled(String relation) {
+      return calledRelationsStack.getLast().contains(relation);
+    }
+
+    public Collection<String> getCalls() {
+      return calledRelationsStack.getLast();
+    }
+
+    public void unregisterRelation(String relation, PlaceholderNode full) {
+      // 
+      getCalls().forEach(c -> unregister.computeIfAbsent(c, k -> new ArrayList<>()).add(relation));
+
+      recCallNodes.remove(relation);
+      Set<String> called = calledRelationsStack.pop();
+      calledRelationsStack.getLast().remove(relation);
+      calledRelationsStack.getLast().addAll(called);
+      List<String> x = unregister.remove(relation);
+      if (x != null) {
+        x.forEach(invalidated -> relationToPlan.remove(invalidated));
+        //System.out.println("-- removed plans for relations " + x);
+      }
+    }
+
+    public PlanNode reuse(String relation) {
+      //System.out.println("  available: " + relationToPlan.keySet());
+      if (relationToPlan.containsKey(relation)) {
+        //System.err.println("reused " + relation + " plan " + relationToPlan.get(relation));
+        return relationToPlan.get(relation);
+      }
+      return null;
+    }
+
+    public void registerRelation(String relation, PlaceholderNode full) {
+      recCallNodes.put(relation, full);
+      calledRelationsStack.push(new HashSet<>());
+    }
+
   }
+
 }

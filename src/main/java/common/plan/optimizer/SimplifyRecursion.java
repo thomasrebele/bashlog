@@ -188,13 +188,13 @@ public class SimplifyRecursion implements Optimizer {
 
   // TODO: move to test
   public static void main(String[] args) {
-    RecursionNode.Builder builder = new RecursionNode.Builder(new FactNode("abc", "def"));
+    RecursionNode.Builder builder = new RecursionNode.Builder(2);
     builder.addRecursivePlan(builder.getDelta());
     /*builder.addRecursivePlan(builder.getDelta().union(builder.getFull()));
     builder.addRecursivePlan(builder.getDelta().join(builder.getFull(), new int[] { 1 }, new int[] { 0 }).project(new int[] { 0, 3 }));
     builder.addRecursivePlan(builder.getDelta().join(builder.getFull(), new int[] { 1 }, new int[] { 0 }).project(new int[] { 0, 1 }));
     builder.addRecursivePlan(builder.getDelta().project(new int[] { 1, 0 }));*/
-    PlanNode p = builder.build();
+    PlanNode p = builder.build(new FactNode("abc", "def"));
 
     System.out.println(p.toPrettyString());
     System.out.println("---");

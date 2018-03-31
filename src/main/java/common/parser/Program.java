@@ -145,7 +145,7 @@ public class Program implements Parseable {
   }
 
   public String searchRelation(String query) {
-    Set<String> all = allRelations();
+    Set<String> all = outputRelations();
     if (all.contains(query)) return query;
     TreeSet<String> ts = new TreeSet<>(all);
     SortedSet<String> candidates = ts.tailSet(query + '/').headSet(query + ('/' + 1));
