@@ -43,6 +43,13 @@ public class LogicalPlanBuilder {
     return planNodes;
   }
 
+  /**
+   * Get plan for relation
+   * @param relation
+   * @param recCallNodes map from relation to placeholder for all relations which are already available as full nodes
+   *        This function adds new entries temporarily.
+   * @return
+   */
   private PlanNode getPlanForRelation(String relation, Map<String, PlanNode> recCallNodes) {
     //If we should use a recursion placeholder node
     if (recCallNodes.containsKey(relation)) {
@@ -70,7 +77,6 @@ public class LogicalPlanBuilder {
         RecursionNode.Builder builder = new RecursionNode.Builder(plan);
         recCallNodes.put(relation, builder.getFull());
         recursiveRules.forEach(rule -> builder.addRecursivePlan(getPlanForRule(rule, recCallNodes)));
-
         plan = builder.build();
       }
       finally {
@@ -277,26 +283,5 @@ public class LogicalPlanBuilder {
     }
   }
 
-  private static class RelationWithRecursionPlaceholder {
   
-    private String relation;
-  
-    private Map<String, PlanNode> placeholder;
-  
-    RelationWithRecursionPlaceholder(String relation, Map<String, PlanNode> recursionPlaceholderNodes) {
-      this.relation = relation;
-      this.placeholder = recursionPlaceholderNodes;
-    }
-  
-    @Override
-    public boolean equals(Object obj) {
-      return obj instanceof RelationWithRecursionPlaceholder && relation.equals(((RelationWithRecursionPlaceholder) obj).relation)
-          && placeholder.equals(((RelationWithRecursionPlaceholder) obj).placeholder);
-    }
-  
-    @Override
-    public int hashCode() {
-      return relation.hashCode();
-    }
-  }
 }
