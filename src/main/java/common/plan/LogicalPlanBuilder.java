@@ -37,8 +37,9 @@ public class LogicalPlanBuilder {
     }
 
     TreeMap<String, PlanNode> planNodes = new TreeMap<>();
+    Cache c = new Cache();
     relationsToOutput.forEach(relation ->
-    planNodes.put(relation, getPlanForRelation(relation, new Cache()))
+    planNodes.put(relation, getPlanForRelation(relation, c))
     );
     return planNodes;
   }
@@ -96,6 +97,7 @@ public class LogicalPlanBuilder {
   */
   private PlanNode getPlanForRelation(String relation, Cache cache) {
     //If we should use a recursion placeholder node
+    //System.out.println("plan for relation " + relation);
     PlanNode result;
     if ((result = cache.call(relation)) != null) {
       return result;
@@ -103,6 +105,7 @@ public class LogicalPlanBuilder {
     if ((result = cache.reuse(relation)) != null) {
       return result;
     }
+    //System.out.println("plan for relation " + relation + " not found, generating");
 
     int arity = CompoundTerm.parseRelationArity(relation);
     RecursionNode.Builder builder = new RecursionNode.Builder(arity);
@@ -120,9 +123,6 @@ public class LogicalPlanBuilder {
           exitPlans.add(plan);
         }
       });
-      Collection<PlaceholderNode> calls = Stream.concat(exitPlans.stream(), recursivePlans.stream())//
-          .flatMap(p -> PlaceholderNode.searchInPlan(p).stream()).collect(Collectors.toSet());
-      //Collection<PlaceholderNode> calls = cache.getCalls();
 
       //We map exit rules
       PlanNode plan = exitPlans.stream().reduce(PlanNode::union).orElseGet(() -> PlanNode.empty(arity));
@@ -136,7 +136,7 @@ public class LogicalPlanBuilder {
       // remember 
       cache.store(relation, plan);
       // TODO: here
-      calls.stream().map(cache.recCallToRelation::get).forEach(c -> cache.unregister.computeIfAbsent(c, k -> new ArrayList<>()).add(relation));
+      //calls.stream().map(cache.recCallToRelation::get).forEach(c -> cache.unregister.computeIfAbsent(c, k -> new ArrayList<>()).add(relation));
 
       return plan;
     } finally {
@@ -157,6 +157,7 @@ public class LogicalPlanBuilder {
   }
 
   private PlanNode getPlanForRule(Rule rule, Cache cache) {
+    //System.out.println("get plan for rule " + rule);
     if (rule instanceof BashRule) {
       return getPlanForBashRule((BashRule) rule, cache);
     }
@@ -345,25 +346,22 @@ public class LogicalPlanBuilder {
 
   class Cache {
 
-    private Set<String> calledRelations = new HashSet<>();
-
-    Map<PlaceholderNode, String> recCallToRelation = new HashMap<>();
-
     private Map<String, PlaceholderNode> recCallNodes = new HashMap<>();
 
     private Map<String, PlanNode> relationToPlan = new HashMap<>();
 
     Map<String, List<String>> unregister = new HashMap<>();
 
-    Deque<Set<String>> calledRelationsStack = new ArrayDeque<>();
+    private Deque<Set<String>> calledRelationsStack = new ArrayDeque<>();
 
     Cache() {
+      //System.out.println("NEW CACHE");
       calledRelationsStack.addLast(new HashSet<>());
     }
 
     public PlanNode call(String relation) {
       if (recCallNodes.containsKey(relation)) {
-        calledRelations.add(relation);
+        calledRelationsStack.getLast().add(relation);
         return recCallNodes.get(relation);
       }
       return null;
@@ -371,29 +369,36 @@ public class LogicalPlanBuilder {
 
     public void store(String relation, PlanNode plan) {
       relationToPlan.put(relation, plan);
+      //System.out.println("storing plan for relation " + relation);
     }
 
     public boolean wasCalled(String relation) {
-      return calledRelations.contains(relation);
+      return calledRelationsStack.getLast().contains(relation);
     }
 
-    public Collection<PlaceholderNode> getCalls() {
-      // TODO Auto-generated method stub
-      return null;
+    public Collection<String> getCalls() {
+      return calledRelationsStack.getLast();
     }
 
     public void unregisterRelation(String relation, PlaceholderNode full) {
+      // 
+      getCalls().forEach(c -> unregister.computeIfAbsent(c, k -> new ArrayList<>()).add(relation));
+
       recCallNodes.remove(relation);
-      recCallToRelation.remove(full);
-      calledRelations.remove(relation);
+      Set<String> called = calledRelationsStack.pop();
+      calledRelationsStack.getLast().remove(relation);
+      calledRelationsStack.getLast().addAll(called);
       List<String> x = unregister.remove(relation);
       if (x != null) {
         x.forEach(invalidated -> relationToPlan.remove(invalidated));
+        //System.out.println("-- removed plans for relations " + x);
       }
     }
 
     public PlanNode reuse(String relation) {
+      //System.out.println("  available: " + relationToPlan.keySet());
       if (relationToPlan.containsKey(relation)) {
+        //System.err.println("reused " + relation + " plan " + relationToPlan.get(relation));
         return relationToPlan.get(relation);
       }
       return null;
@@ -401,7 +406,7 @@ public class LogicalPlanBuilder {
 
     public void registerRelation(String relation, PlaceholderNode full) {
       recCallNodes.put(relation, full);
-      recCallToRelation.put(full, relation);
+      calledRelationsStack.push(new HashSet<>());
     }
 
   }
