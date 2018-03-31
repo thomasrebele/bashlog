@@ -110,6 +110,7 @@ public class Program implements Parseable {
             .anyMatch(rel -> hasAncestor(rel, rule.head.getRelation(), ignoredRelations));
   }
 
+  /** Check whether a 'relation' depends on 'ancestor' */
   public boolean hasAncestor(String relation, String ancestor) {
     return hasAncestor(relation, ancestor, Collections.emptySet());
   }

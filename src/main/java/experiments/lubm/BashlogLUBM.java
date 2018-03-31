@@ -105,7 +105,7 @@ public class BashlogLUBM {
       OntologyConverter converter = new OntologyConverter(tupleSerializer);
       Program ontologyProgram = converter.convert(ontology);
 
-      Program lubmProgram = Program.merge(ontologyProgram, lubmSPARQLProgram(queryDir, tupleSerializer));
+      Program lubmProgram = Program.merge(ontologyProgram, Program.loadFile(queryDir + "/queries.txt") /*lubmSPARQLProgram(queryDir, tupleSerializer)*/);
       String script = lubmScript3(lubmDir, lubmProgram);
       lubmProgram.addRules(Program.read(new ParserReader(script)));
       return lubmProgram;

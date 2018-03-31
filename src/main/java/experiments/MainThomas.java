@@ -38,12 +38,13 @@ public class MainThomas {
     //relation = "takesCourse/2";
     //relation = BashlogLUBM.queries[2];
     //for (int i = 1; i <= 14; i++) {
-    for (int i = 4; i <= 4; i++) {
+    for (int i = 11; i <= 11; i++) {
       relation = BashlogLUBM.queries[i - 1];
       p.rulesForRelation(relation).forEach(r -> System.out.println(r));
       BashlogCompiler bc = BashlogCompiler.prepareQuery(p, relation);
 
-      /*try {
+      try {
+        bc.enableDebug();
         String script = bc.compile();
         Files.write(new File("/home/tr/tmp/bashlog/new_query" + i).toPath(), script.getBytes());
         System.out.println(bc.debugInfo());
@@ -51,7 +52,7 @@ public class MainThomas {
       } catch (Exception e) {
         System.err.println("problem with lubm query " + i);
         e.printStackTrace();
-      }*/
+      }
 
       //SqllogCompiler sc = new SqllogCompiler(true, true);
       SparqlogCompiler sc = new SparqlogCompiler();
