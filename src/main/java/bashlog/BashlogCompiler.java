@@ -87,8 +87,13 @@ public class BashlogCompiler {
     if (debugBuilder == null) {
       root = Optimizer.applyOptimizer(root, stages);
     } else {
-      root = Optimizer.applyOptimizer(root, stageNames, stages, debugBuilder);
-      debug = "#" + debugBuilder.toString().replaceAll("\n", "\n# ");
+      try {
+        root = Optimizer.applyOptimizer(root, stageNames, stages, debugBuilder);
+      } catch (Exception e) {
+        throw e;
+      } finally {
+        debug = "#" + debugBuilder.toString().replaceAll("\n", "\n# ");
+      }
     }
   }
 
@@ -149,27 +154,12 @@ public class BashlogCompiler {
   public static BashlogCompiler prepareQuery(Program p, String query) {
     Set<String> builtin = new HashSet<>();
     builtin.add("bash_command");
-    TreeMap<String, PlanNode> plan = new LogicalPlanBuilder(builtin).getPlanForProgram(p);
 
-    PlanNode pn = plan.get(query);
-    if(pn == null) {
-      SortedMap<String, PlanNode> candidates = plan.tailMap(query + '/').headMap(query + ('/' + 1));
-      if(candidates.size() > 1) {
-        Iterator<String> keys = candidates.keySet().iterator();
-        keys.next();
-        List<String> others = new ArrayList<>();
-        keys.forEachRemaining(others::add);
-        throw new IllegalArgumentException(
-            "cannot compile plan, predicate '" + query + "' ambigous, did you mean '" + candidates.firstKey() + "'? Other possiblities: " + others);
-      }
-      else if(candidates.size() == 1) {
-        pn = candidates.get(candidates.firstKey());
-      }
-    }
-    if(pn == null) {
-      throw new IllegalArgumentException("cannot compile plan, predicate '" + query + "' not found");
-    }
-    BashlogCompiler bc = new BashlogCompiler(pn);
+    String relation = p.searchRelation(query);
+    if (relation == null) throw new IllegalArgumentException("relation not found");
+    TreeMap<String, PlanNode> plan = new LogicalPlanBuilder(builtin, Collections.singleton(relation)).getPlanForProgram(p);
+
+    BashlogCompiler bc = new BashlogCompiler(plan.firstEntry().getValue());
     return bc;
   }
 
