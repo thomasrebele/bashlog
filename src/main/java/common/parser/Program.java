@@ -144,6 +144,27 @@ public class Program implements Parseable {
     return result;
   }
 
+  public String searchRelation(String query) {
+    Set<String> all = allRelations();
+    if (all.contains(query)) return query;
+    TreeSet<String> ts = new TreeSet<>(all);
+    SortedSet<String> candidates = ts.tailSet(query + '/').headSet(query + ('/' + 1));
+    if (candidates.size() > 1) {
+      Iterator<String> keys = candidates.iterator();
+      String first = keys.next();
+      if (first.startsWith(query + "/")) {
+        return first;
+      }
+      List<String> others = new ArrayList<>();
+      keys.forEachRemaining(others::add);
+      throw new IllegalArgumentException(
+          "cannot compile plan, predicate '" + query + "' ambigous, did you mean '" + candidates.first() + "'? Other possiblities: " + others);
+    } else if (candidates.size() == 1) {
+      return candidates.first();
+    }
+    return null;
+  }
+
   public static void main(String[] args) throws IOException {
     Program p = loadFile("data/rules.y4", Parseable.ALL_FEATURES);
     System.out.println(p.toString());
