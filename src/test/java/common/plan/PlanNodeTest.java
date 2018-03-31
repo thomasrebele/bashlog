@@ -100,24 +100,24 @@ public class PlanNodeTest {
     PlanNode foo = new BuiltinNode(new CompoundTerm("foo", args2));
     PlanNode bar = new BuiltinNode(new CompoundTerm("bar", args2));
 
-    RecursionNode.Builder builder = new RecursionNode.Builder(foo);
+    RecursionNode.Builder builder = new RecursionNode.Builder(foo.getArity());
     builder.addRecursivePlan(builder.getDelta().join(bar, new int[] { 0 }, new int[] { 0 }).project(new int[] { 0, 1 }));
-    RecursionNode recursionNode = builder.build();
+    RecursionNode recursionNode = builder.build(foo);
     Assert.assertTrue(simplifier.apply(recursionNode) instanceof RecursionNode);
 
-    builder = new RecursionNode.Builder(PlanNode.empty(2));
+    builder = new RecursionNode.Builder(2);
     builder.addRecursivePlan(builder.getDelta());
-    RecursionNode recursionNode2 = builder.build();
+    RecursionNode recursionNode2 = builder.build(PlanNode.empty(2));
     Assert.assertEquals(PlanNode.empty(2), simplifier.apply(recursionNode2));
 
-    builder = new RecursionNode.Builder(foo);
+    builder = new RecursionNode.Builder(foo.getArity());
     builder.addRecursivePlan(bar);
-    RecursionNode recursionNode3 = builder.build();
+    RecursionNode recursionNode3 = builder.build(foo);
     Assert.assertEquals(foo.union(bar), simplifier.apply(recursionNode3));
 
-    builder = new RecursionNode.Builder(PlanNode.empty(2));
+    builder = new RecursionNode.Builder(2);
     builder.addRecursivePlan(foo.union(builder.getDelta()));
-    RecursionNode recursionNode4 = builder.build();
+    RecursionNode recursionNode4 = builder.build(PlanNode.empty(2));
     Assert.assertEquals(foo, simplifier.apply(recursionNode4));
   }
 
@@ -204,13 +204,15 @@ public class PlanNodeTest {
 
     PlanNode baz = new BuiltinNode(new CompoundTerm("baz", args3));
 
-    RecursionNode.Builder builder = new RecursionNode.Builder(baz.project(new int[] { 0, 2 }));
+    PlanNode exit = baz.project(new int[] { 0, 2 });
+    RecursionNode.Builder builder = new RecursionNode.Builder(exit.getArity());
     builder.addRecursivePlan(builder.getDelta().join(baz, new int[] { 0 }, new int[] { 0 }).project(new int[] { 0, 1 }));
-    RecursionNode input = builder.build();
+    RecursionNode input = builder.build(exit);
 
-    builder = new RecursionNode.Builder(baz.equalityFilter(2, "xyz").project(new int[] { 0, 2 }));
+    exit = baz.equalityFilter(2, "xyz").project(new int[] { 0, 2 });
+    builder = new RecursionNode.Builder(exit.getArity());
     builder.addRecursivePlan(builder.getDelta().join(baz.project(new int[] { 0 }), new int[] { 0 }, new int[] { 0 }).project(new int[] { 0, 1 }));
-    RecursionNode expected = builder.build();
+    RecursionNode expected = builder.build(exit);
 
     assertEquals(
             expected,
