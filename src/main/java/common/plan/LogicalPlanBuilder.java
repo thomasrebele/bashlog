@@ -38,7 +38,7 @@ public class LogicalPlanBuilder {
 
     TreeMap<String, PlanNode> planNodes = new TreeMap<>();
     relationsToOutput.forEach(relation ->
-            planNodes.put(relation, getPlanForRelation(relation, Collections.emptyMap()))
+      planNodes.put(relation, getPlanForRelation(relation, new HashMap<>()))
     );
     return planNodes;
   }
@@ -65,12 +65,17 @@ public class LogicalPlanBuilder {
         .orElseGet(() -> PlanNode.empty(CompoundTerm.parseRelationArity(relation)));
 
     if (!recursiveRules.isEmpty()) {
-      //We build recursion
-      RecursionNode.Builder builder = new RecursionNode.Builder(plan);
-      Map<String, PlanNode> newPlaceholderNodes = withEntry(recCallNodes, relation, builder.getFull());
-      recursiveRules.forEach(rule -> builder.addRecursivePlan(getPlanForRule(rule, newPlaceholderNodes)));
+      try {
+        //We build recursion
+        RecursionNode.Builder builder = new RecursionNode.Builder(plan);
+        recCallNodes.put(relation, builder.getFull());
+        recursiveRules.forEach(rule -> builder.addRecursivePlan(getPlanForRule(rule, recCallNodes)));
 
-      plan = builder.build();
+        plan = builder.build();
+      }
+      finally {
+        recCallNodes.remove(relation);
+      }
     }
     return plan;
   }
