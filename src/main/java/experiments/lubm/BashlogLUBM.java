@@ -4,6 +4,8 @@ import bashlog.BashlogCompiler;
 import common.parser.BashRule;
 import common.parser.ParserReader;
 import common.parser.Program;
+import common.parser.Rule;
+
 import org.semanticweb.owlapi.apibinding.OWLManager;
 import org.semanticweb.owlapi.model.IRI;
 import org.semanticweb.owlapi.model.OWLOntology;
@@ -60,20 +62,25 @@ public class BashlogLUBM {
   }
 
   /** LUBM queries for 3-column TSV */
-  public static String lubmScript3(String lubmDir, Program p) {
-    StringBuilder sb = new StringBuilder();
-    sb.append("allFacts(X,Y,Z) :~ cat ").append(lubmDir).append("/all\n");
+  public static Program lubmInputRules3(String lubmDir, Program p) {
+    Program result = new Program();
+    result.addRule(Rule.read(new ParserReader("allFacts(X,Y,Z) :~ cat " + lubmDir + "/all\n"), BashlogCompiler.BASHLOG_PARSER_FEATURES));
+
     for (String rel : p.allRelations()) {
       if (rel.startsWith("query")) continue;
       String[] tmp = rel.split("/");
+      String readRule = null;
       if ("1".equals(tmp[1])) {
-        sb.append(tmp[0] + "(X) :- allFacts(X,\"rdf:type\", \"").append(tmp[0]).append("\").\n");
+        readRule = tmp[0] + "(X) :- allFacts(X,\"rdf:type\", \"" + tmp[0] + "\").\n";
       } else if ("2".equals(tmp[1])) {
-        sb.append(tmp[0] + "(X, Y) :- allFacts(X,\"").append(tmp[0]).append("\", Y).\n");
+        readRule = tmp[0] + "(X, Y) :- allFacts(X,\"" + tmp[0] + "\", Y).\n";
+      }
+      if (readRule != null) {
+        result.addRule(Rule.read(new ParserReader(readRule), BashlogCompiler.BASHLOG_PARSER_FEATURES));
       }
     }
 
-    return sb.toString();
+    return result;
   }
 
   /** LUBM queries for 2-column TSV */
@@ -87,13 +94,24 @@ public class BashlogLUBM {
   /** LUBM queries for 3-column TSV */
   public static Program lubmProgram3(String lubmDir, String queryDir) throws IOException {
     Program lubmProgram = Program.merge(Program.loadFile(queryDir + "/tbox.txt"), Program.loadFile(queryDir + "/queries.txt"));
-    String script = lubmScript3(lubmDir, lubmProgram);
-    lubmProgram.addRules(Program.read(new ParserReader(script)));
+    lubmProgram.addRules(lubmInputRules3(lubmDir, lubmProgram));
     return lubmProgram;
   }
 
+
   /** LUBM queries for 3-column TSV */
-  public static Program lubmProgramOWL3(String lubmDir, String queryDir) throws IOException {
+  public static Program lubmProgramOWLSparql3(String lubmDir, String queryDir) throws IOException {
+    RDFTupleSerializer tupleSerializer = new RDFSpecificTuplesSerializer(
+        Collections.singletonMap("http://swat.cse.lehigh.edu/onto/univ-bench.owl#", ""));
+    return lubmProgramOWL3(lubmDir, lubmSPARQLProgram(queryDir, tupleSerializer));
+  }
+
+  public static Program lubmProgramOWLDatalog3(String lubmDir, String queryDir) throws IOException {
+    return lubmProgramOWL3(lubmDir, Program.loadFile(queryDir + "/queries.txt"));
+  }
+
+  /** LUBM queries for 3-column TSV */
+  private static Program lubmProgramOWL3(String lubmDir, Program query) throws IOException {
     RDFTupleSerializer tupleSerializer = new RDFSpecificTuplesSerializer(Collections.singletonMap(
             "http://swat.cse.lehigh.edu/onto/univ-bench.owl#", ""
     ));
@@ -105,9 +123,8 @@ public class BashlogLUBM {
       OntologyConverter converter = new OntologyConverter(tupleSerializer);
       Program ontologyProgram = converter.convert(ontology);
 
-      Program lubmProgram = Program.merge(ontologyProgram, Program.loadFile(queryDir + "/queries.txt") /*lubmSPARQLProgram(queryDir, tupleSerializer)*/);
-      String script = lubmScript3(lubmDir, lubmProgram);
-      lubmProgram.addRules(Program.read(new ParserReader(script)));
+      Program lubmProgram = Program.merge(ontologyProgram, query);
+      lubmProgram.addRules(lubmInputRules3(lubmDir, ontologyProgram));
       return lubmProgram;
     } catch (OWLOntologyCreationException e) {
       throw new IOException(e);
@@ -125,8 +142,7 @@ public class BashlogLUBM {
       Program ontologyProgram = converter.convert(ontology);
 
       Program lubmProgram = Program.merge(ontologyProgram, lubmSPARQLProgram(queryDir, tupleSerializer));
-      String script = lubmScript3(lubmDir, lubmProgram);
-      lubmProgram.addRules(Program.read(new ParserReader(script)));
+      lubmProgram.addRules(lubmInputRules3(lubmDir, ontologyProgram));
       return lubmProgram;
     } catch (OWLOntologyCreationException e) {
       throw new IOException(e);
@@ -138,7 +154,9 @@ public class BashlogLUBM {
     Program program = new Program();
     int i = 1;
     for(String query : new String(Files.readAllBytes(Paths.get(queryDir + "/queries.sparql"))).split("\n\n")) {
-      program.addRules(sparqlConverter.convert(query, "query" + (i++)));
+      Program p = sparqlConverter.convert(query, "query" + (i++));
+      System.out.println(p);
+      program.addRules(p);
     }
     return program;
   }

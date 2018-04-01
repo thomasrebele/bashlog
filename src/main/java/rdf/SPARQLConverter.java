@@ -15,7 +15,7 @@ import java.util.stream.Stream;
 public class SPARQLConverter {
 
   private static final UUID SALT = UUID.randomUUID();
-  private static final Constant<Comparable> NULL = new Constant<>(null);
+  private static final Constant<Comparable<?>> NULL = new Constant<>(null);
 
   private final RDFTupleSerializer tupleSerializer;
   private final Map<Var,Term> varConversionCache = new HashMap<>();
