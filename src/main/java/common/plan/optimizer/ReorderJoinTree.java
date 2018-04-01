@@ -44,7 +44,7 @@ public class ReorderJoinTree extends ReorderJoinLinear {
       edgesToConditions.computeIfAbsent(new AbstractMap.SimpleEntry<Integer, Integer>(cond[0], cond[2]), k -> new ArrayList<>()).add(cond);
     });
     List<Map.Entry<Integer, Integer>> sortedEdges = edgesToConditions.entrySet().stream()
-        .sorted((e1, e2) -> -Integer.compare(e1.getValue().size(), e2.getValue().size())).map(e -> e.getKey()).collect(Collectors.toList());
+        .sorted((e1, e2) -> Integer.compare(e1.getValue().size(), e2.getValue().size())).map(e -> e.getKey()).collect(Collectors.toList());
     
     // Kruskal's minimum spanning tree algorithm
     // adapted from https://github.com/SleekPanther/kruskals-algorithm-minimum-spanning-tree-mst/blob/master/Kruskal.java
