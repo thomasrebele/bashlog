@@ -38,7 +38,7 @@ public class BashlogCompiler {
   private String debug;
 
   private List<List<Optimizer>> stages = Arrays.asList(//
-      Arrays.asList(new CombineFacts(), new SimplifyRecursion(), new PushDownJoin(), new ReorderJoinTree(), new PushDownFilterAndProject(),
+      Arrays.asList(new CombineFacts(), new SimplifyRecursion(), new PushDownJoin(), new ReorderJoinLinear(), new PushDownFilterAndProject(),
           new SimplifyRecursion(),
           new PushDownFilterAndProject()),
       Arrays.asList(new BashlogPlan(), new BashlogOptimizer(), new MultiOutput(), new CombineFilter(false), new Materialize(),
@@ -124,7 +124,11 @@ public class BashlogCompiler {
     // tweak sort
     header.append("sort=\"sort \"\n");
     header.append("check() { grep -- $1 <(sort --help) > /dev/null; }\n");
-    header.append("check \"--buffer-size\" && sort=\"$sort --buffer-size=25% \"\n");
+
+    // count sort usage
+    int sortBuffer = (int) Math.ceil(100. / Math.max(1, countConcurrentSorts(root)));
+
+    header.append("check \"--buffer-size\" && sort=\"$sort --buffer-size=" + sortBuffer + "% \"\n");
     header.append("check \"--parallel\"    && sort=\"$sort --parallel=2 \"\n\n");
 
     CompilerInternals bc = new CompilerInternals(translators, root);
@@ -132,6 +136,13 @@ public class BashlogCompiler {
     String result = header.toString() + e.generate() + "\n\n rm -f tmp/*\n";
 
     return result;
+  }
+
+  private int countConcurrentSorts(PlanNode p) {
+    if (p instanceof SortNode) {
+      return Math.max(1, countConcurrentSorts(((SortNode) p).getTable()));
+    }
+    return p.children().stream().mapToInt(c -> countConcurrentSorts(c)).sum();
   }
 
   public String debugInfo() {

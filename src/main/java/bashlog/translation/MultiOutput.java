@@ -5,6 +5,7 @@ import java.util.List;
 
 import bashlog.CompilerInternals;
 import bashlog.command.Bash;
+import bashlog.plan.SortNode;
 import common.plan.node.MultiOutputNode;
 import common.plan.node.PlaceholderNode;
 import common.plan.node.PlanNode;
@@ -37,6 +38,7 @@ public class MultiOutput implements BashTranslator {
     }
     cmd.arg(arg.toString()).arg("'");
     cmd.file(bc.compile(mo.getLeaf()));
+    cmd.arg("\n");
     result.add(bc.compile(mo.getMainPlan()));
     return result;
 
