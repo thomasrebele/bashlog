@@ -85,7 +85,7 @@ public class CompilerInternals extends common.compiler.CompilerInternals<BashTra
         PlanNode parent = getParent((PlaceholderNode) child);
         if (parent instanceof MaterializationNode) {
           String matFile = placeholderToFilename.get(child);
-          if (parallelMaterialization) {
+          if (parallelMaterialization && matFile.startsWith("tmp/")) {
             result = new Bash.Command("cat").arg(matFile.replace("tmp/", "tmp/lock_")).arg("1>&2").arg("2>/dev/null").arg("; ").other(result);
           }
         }
