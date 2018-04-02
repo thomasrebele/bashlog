@@ -7,7 +7,6 @@ import java.util.stream.IntStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-
 import common.Tools;
 import common.plan.node.*;
 
@@ -39,7 +38,7 @@ public class SimplifyRecursion implements Optimizer {
     PlanNode recursivePlan = node.getRecursivePlan();
 
     recursivePlan = removeUnnecessaryPlaceholders(recursivePlan, node);
-    
+
     {
       PlanNode newRecursivePlan = PlanNode.empty(node.getArity());
       // we see if the recursion is a union with some not recursive parts and move them to exitPlan
@@ -54,7 +53,6 @@ public class SimplifyRecursion implements Optimizer {
     }
     recursivePlan = introduceDeltaRecursion(recursivePlan, node.getDelta(), node.getFull());
 
-
     // we make sure that exit and recursive plans are simplified
     exitPlan = apply(exitPlan);
     PlanNode newRecursivePlan = apply(recursivePlan);
@@ -68,14 +66,16 @@ public class SimplifyRecursion implements Optimizer {
     }
 
     // optimization for transitive closure
-    PlanNode transClosure1 = (node.getDelta().join(node.getFull(), new int[] { 1 }, new int[] { 0 }))
-        .union(node.getFull().join(node.getDelta(), new int[] { 1 }, new int[] { 0 })).project(new int[] { 0, 3 });
+    if (recursivePlan.getArity() == 2) {
+      PlanNode transClosure1 = (node.getDelta().join(node.getFull(), new int[] { 1 }, new int[] { 0 }))
+          .union(node.getFull().join(node.getDelta(), new int[] { 1 }, new int[] { 0 })).project(new int[] { 0, 3 });
 
-    PlanNode transClosure2 = (node.getDelta().join(node.getFull(), new int[] { 0 }, new int[] { 1 }))
-        .union(node.getFull().join(node.getDelta(), new int[] { 0 }, new int[] { 1 })).project(new int[] { 1, 2 });
+      PlanNode transClosure2 = (node.getDelta().join(node.getFull(), new int[] { 0 }, new int[] { 1 }))
+          .union(node.getFull().join(node.getDelta(), new int[] { 0 }, new int[] { 1 })).project(new int[] { 1, 2 });
 
-    if (recursivePlan.equals(transClosure1) || recursivePlan.equals(transClosure2)) {
-      recursivePlan = node.getDelta().join(node.getFull(), new int[] { 1 }, new int[] { 0 }).project(new int[] { 0, 3 });
+      if (recursivePlan.equals(transClosure1) || recursivePlan.equals(transClosure2)) {
+        recursivePlan = node.getDelta().join(node.getFull(), new int[] { 1 }, new int[] { 0 }).project(new int[] { 0, 3 });
+      }
     }
 
     // something changed, create new recursion node
