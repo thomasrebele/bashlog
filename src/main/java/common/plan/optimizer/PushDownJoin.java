@@ -19,31 +19,42 @@ public class PushDownJoin implements Optimizer {
   private PlanNode optimize(PlanNode n) {
     if (n instanceof JoinNode) {
       return pushDown((JoinNode) n);
-      } else {
-        return n;
+    } else {
+      return n;
     }
   }
 
   private PlanNode pushDown(JoinNode joinNode) {
     PlanNode leftChild = joinNode.getLeft();
-    if (leftChild instanceof ProjectNode) {
-      return swap(joinNode, (ProjectNode) leftChild, LEFT);
-    } else if (leftChild instanceof ConstantEqualityFilterNode) {
-      return swap(joinNode, (ConstantEqualityFilterNode) leftChild, LEFT);
-    } else if (leftChild instanceof VariableEqualityFilterNode) {
-      return swap(joinNode, (VariableEqualityFilterNode) leftChild, LEFT);
+    if (needsPush(leftChild)) {
+      if (leftChild instanceof ProjectNode) {
+        return swap(joinNode, (ProjectNode) leftChild, LEFT);
+      } else if (leftChild instanceof ConstantEqualityFilterNode) {
+        return swap(joinNode, (ConstantEqualityFilterNode) leftChild, LEFT);
+      } else if (leftChild instanceof VariableEqualityFilterNode) {
+        return swap(joinNode, (VariableEqualityFilterNode) leftChild, LEFT);
+      }
     }
 
     PlanNode rightChild = joinNode.getRight();
-    if (rightChild instanceof ProjectNode) {
-      return swap(joinNode, (ProjectNode) rightChild, RIGHT);
-    } else if (rightChild instanceof ConstantEqualityFilterNode) {
-      return swap(joinNode, (ConstantEqualityFilterNode) rightChild, RIGHT);
-    } else if (rightChild instanceof VariableEqualityFilterNode) {
-      return swap(joinNode, (VariableEqualityFilterNode) rightChild, RIGHT);
+    if(needsPush(rightChild)) {
+      if (rightChild instanceof ProjectNode) {
+        return swap(joinNode, (ProjectNode) rightChild, RIGHT);
+      } else if (rightChild instanceof ConstantEqualityFilterNode) {
+        return swap(joinNode, (ConstantEqualityFilterNode) rightChild, RIGHT);
+      } else if (rightChild instanceof VariableEqualityFilterNode) {
+        return swap(joinNode, (VariableEqualityFilterNode) rightChild, RIGHT);
+      }
     }
 
     return joinNode;
+  }
+
+  private boolean needsPush(PlanNode child) {
+    if (child instanceof JoinNode) return true;
+    if (child instanceof EqualityFilterNode) return needsPush(((EqualityFilterNode) child).getTable());
+    if (child instanceof ProjectNode) return needsPush(((ProjectNode) child).getTable());
+    return false;
   }
 
   private PlanNode swap(JoinNode joinNode, VariableEqualityFilterNode filter, boolean direction) {
@@ -57,11 +68,10 @@ public class PushDownJoin implements Optimizer {
   }
 
   private PlanNode swap(JoinNode joinNode, ConstantEqualityFilterNode filter, boolean direction) {
-    if(direction == LEFT) {
+    if (direction == LEFT) {
       return optimize(filter.getTable().join(joinNode.getRight(), joinNode.getLeftProjection(), joinNode.getRightProjection()))
           .equalityFilter(filter.getField(), filter.getValue());
-    }
-    else {
+    } else {
       return optimize(joinNode.getLeft().join(filter.getTable(), joinNode.getLeftProjection(), joinNode.getRightProjection()))
           .equalityFilter(joinNode.getLeft().getArity() + filter.getField(), filter.getValue());
     }
@@ -108,6 +118,5 @@ public class PushDownJoin implements Optimizer {
     }
     return result;
   }
-
 
 }

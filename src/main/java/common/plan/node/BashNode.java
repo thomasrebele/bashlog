@@ -41,6 +41,11 @@ public class BashNode implements PlanNode {
   }
 
   @Override
+  public String toString() {
+    return operatorString();
+  }
+  
+  @Override
   public List<PlanNode> children() {
     return children;
   }
