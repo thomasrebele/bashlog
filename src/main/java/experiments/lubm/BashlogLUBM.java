@@ -184,19 +184,19 @@ public class BashlogLUBM {
             sqlProg.addRule(r);
           }
         });
+        Files.write(Paths.get(scriptDir + "query" + (i + 1) + ".sh"), script.getBytes());
 
         /*String sql = new SqllogCompiler().compile(sqlProg, new HashSet<>(Collections.singletonList("allFacts/3")), relation);
         String noDBSql = new SqllogCompiler(true, true).compile(sqlProg, new HashSet<>(Arrays.asList("allFacts/3")), relation);
-        Files.write(Paths.get(scriptDir + "query" + (i + 1) + ".sh"), script.getBytes());
         Files.write(Paths.get(sqlDir + "query" + (i + 1) + ".sql"), sql.getBytes());
         Files.write(Paths.get(nodbSqlDir + "query" + (i + 1) + ".sql"), noDBSql.getBytes());*/
 
-        try {
+        /*try {
         String sparqlog = new SparqlogCompiler().compile(p, relation);
           Files.write(Paths.get(sparqlogDir + "query" + (i + 1) + ".sparql"), sparqlog.getBytes());
         } catch (UnsupportedOperationException e) {
           Files.write(Paths.get(sparqlogDir + "unsupported-query" + (i + 1) + ".sparql"), "".getBytes());
-        }
+        }*/
       } catch (Exception e) {
         throw new RuntimeException("in query " + (i + 1), e);
       }
