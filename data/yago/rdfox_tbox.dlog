@@ -1,3 +1,13 @@
+PREFIX yago: <http://yago-knowledge.org/resource/>
+PREFIX owl: <http://www.w3.org/2002/07/owl#>
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX ruleml: <http://www.w3.org/2003/11/ruleml#>
+PREFIX swrl: <http://www.w3.org/2003/11/swrl#>
+PREFIX swrlb: <http://www.w3.org/2003/11/swrlb#>
+PREFIX swrlx: <http://www.w3.org/2003/11/swrlx#>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+
 <hasParent>(?X,?Y) :- <hasChild>(?Y,?X) .
 <hasAncestor>(?X,?Y) :- <hasParent>(?X,?Y) .
 <hasAncestor>(?X,?Z) :- <hasAncestor>(?X,?Y), <hasParent>(?Y,?Z) .
@@ -5,6 +15,7 @@
 <containsLocation>(?X,?Y) :- <isLocatedIn>(?Y,?X) .
 <isLocatedIn>(?X,?Y) :- <isLocatedIn>(?X,?Y), <isLocatedIn>(?Y,?Z) .
 
-<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>(?X,?Z) :- <http://www.w3.org/1999/02/22-rdf-syntax-ns#type>(?X,?Y), <http://www.w3.org/2000/01/rdf-schema#subClassOf>(?Y,?Z) .
+# <http://www.w3.org/1999/02/22-rdf-syntax-ns#type>(?X,?Z) :- <http://www.w3.org/1999/02/22-rdf-syntax-ns#type>(?X,?Y), <http://www.w3.org/2000/01/rdf-schema#subClassOf>(?Y,?Z) .
+
 <allSubClasses>(?X,?Z) :- <http://www.w3.org/2000/01/rdf-schema#subClassOf>(?X,?Z) .
 <allSubClasses>(?X,?Z) :- <allSubClasses>(?X,?Y), <http://www.w3.org/2000/01/rdf-schema#subClassOf>(?Y,?Z) .
