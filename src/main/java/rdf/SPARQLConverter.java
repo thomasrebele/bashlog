@@ -21,7 +21,6 @@ import java.util.stream.Stream;
 public class SPARQLConverter {
 
   private static final UUID SALT = UUID.randomUUID();
-  private static final Constant<Comparable<?>> NULL = new Constant<>(null);
   private static final List<QueryOptimizer> OPTIMIZERS = Arrays.asList(
           new BindingAssigner(),
           new CompareOptimizer(),
@@ -33,8 +32,11 @@ public class SPARQLConverter {
           new FilterOptimizer(),
           new OrderLimitOptimizer()
   );
-  private static final Var ALL_VALUES_VAR = new Var("any");
+  private static final Constant<Comparable<?>> NULL = new Constant<>("NULL");
+  private static final Var NULL_VAR = new Var(SPARQLConverter.class.getCanonicalName() + "#null");
+  private static final Var ALL_VALUES_VAR = new Var(SPARQLConverter.class.getCanonicalName() + "#any");
   private static final ResultTuple ALL_VALUES_RESULT = new ResultTuple("all", Collections.singletonList(ALL_VALUES_VAR));
+  private static final ConversionResult EMPTY_SET = new ConversionResult();
 
   private final RDFTupleSerializer tupleSerializer;
   private final Map<Var, Term> varConversionCache = new HashMap<>();
@@ -73,7 +75,9 @@ public class SPARQLConverter {
     } else if (expr instanceof Distinct) {
       return convert((Distinct) expr);
     } else if (expr instanceof EmptySet) {
-      return convert((EmptySet) expr);
+      return EMPTY_SET;
+    } else if (expr instanceof Extension) {
+      return convert((Extension) expr);
     } else if (expr instanceof Filter) {
       return convert((Filter) expr);
     } else if (expr instanceof Join) {
@@ -84,6 +88,8 @@ public class SPARQLConverter {
       return convert((MultiProjection) expr);
     } else if (expr instanceof Projection) {
       return convert((Projection) expr);
+    } else if (expr instanceof SingletonSet) {
+      return singletonSet();
     } else if (expr instanceof StatementPattern) {
       return convert((StatementPattern) expr);
     } else if (expr instanceof Union) {
@@ -103,7 +109,7 @@ public class SPARQLConverter {
     List<Var> resultVars = new ArrayList<>();
     String closureName = newTupleName();
     List<Var> closureVars = new ArrayList<>();
-    if (arbitraryLengthPath.getSubjectVar().isConstant()) {
+    if (arbitraryLengthPath.getSubjectVar().hasValue()) {
       Var newVar = new Var(arbitraryLengthPath.getSubjectVar().getName());
       closureVars.add(newVar);
       pathExpression.replaceChildNode(arbitraryLengthPath.getSubjectVar(), newVar);
@@ -111,7 +117,7 @@ public class SPARQLConverter {
       closureVars.add(arbitraryLengthPath.getSubjectVar());
       resultVars.add(arbitraryLengthPath.getSubjectVar());
     }
-    if (arbitraryLengthPath.getObjectVar().isConstant()) {
+    if (arbitraryLengthPath.getObjectVar().hasValue()) {
       Var newVar = new Var(arbitraryLengthPath.getObjectVar().getName());
       closureVars.add(newVar);
       pathExpression.replaceChildNode(arbitraryLengthPath.getObjectVar(), newVar);
@@ -149,19 +155,8 @@ public class SPARQLConverter {
     return new ConversionResult(new ResultTuple(tupleName, resultVars), rules);
   }
 
-  /*
-  ?s p* ?o -> r(s,s) <- I(s,s). r(s,o) <- r(s,t), p(t,o).
-  ?s p* o -> r(o) <- (). r(s) <- p(s,t),r(t).
-  s p* ?o -> r(s) <- (). r(o) <- p(t,o),r(t).
-  s p* s -> r() <- ().
-  ?s p+ ?o -> r(s,o) <- p(s,o). r(s,o) <- r(s,t), p(t,o).
-  ?s p+ o -> r(s) <- p(s,o). r(s) <- p(s,t),r(t).
-  s p+ ?o -> r(o) <- p(s,o). r(o) <- p(t,o),r(t).
-  s p+ s -> r() <- p(s,s).
-   */
-
   private ConversionResult convert(BindingSetAssignment bindingSetAssignment) {
-    throw new UnsupportedOperationException("BindingSetAssignment is not supported yet");
+    throw new UnsupportedOperationException("BindingSetAssignment is not supported yet: " + bindingSetAssignment);
   }
 
   private ConversionResult convert(Difference difference) {
@@ -182,12 +177,32 @@ public class SPARQLConverter {
     return convert(distinct.getArg());
   }
 
-  private ConversionResult convert(EmptySet emptySet) {
-    return new ConversionResult();
+  private ConversionResult convert(Extension extension) {
+    ConversionResult arg = convert(extension.getArg());
+    Set<Rule> rules = new HashSet<>(arg.rules);
+    return new ConversionResult(extension.getElements().stream().flatMap(element -> {
+      String bindTupleName = newTupleName();
+      List<Var> bindVars = Collections.singletonList(new Var(element.getName()));
+      ValueExpr val = element.getExpr();
+      if (bindVars.equals(Collections.singletonList(val))) {
+        //No op
+        return arg.results.stream();
+      } else if (val instanceof ValueConstant) {
+        rules.add(new Rule(newTuple(bindTupleName, Collections.singletonList(new Var(bindTupleName, ((ValueConstant) val).getValue())))));
+      } else {
+        throw new UnsupportedOperationException("Not supported Extension: " + val);
+      }
+      return arg.results.stream().map(result -> {
+        String outTupleName = newTupleName();
+        List<Var> outVars = mergeWithDeduplication(result.vars, bindVars);
+        rules.add(new Rule(newTuple(outTupleName, outVars), newTuple(result), newTuple(bindTupleName, bindVars)));
+        return new ResultTuple(outTupleName, outVars);
+      });
+    }).collect(Collectors.toSet()), rules);
   }
 
   private ConversionResult convert(Filter filter) {
-    throw new UnsupportedOperationException("Filter is not supported yet");
+    throw new UnsupportedOperationException("Filter is not supported yet: " + filter);
   }
 
   private ConversionResult convert(Join join) {
@@ -220,7 +235,7 @@ public class SPARQLConverter {
   }
 
   private ConversionResult convert(MultiProjection multiProjection) {
-    throw new UnsupportedOperationException("MultiProjection is not supported yet");
+    throw new UnsupportedOperationException("MultiProjection is not supported yet: " + multiProjection);
   }
 
   private ConversionResult convert(Projection projection) {
@@ -230,20 +245,22 @@ public class SPARQLConverter {
             .map(projectionElem -> new Var(projectionElem.getTargetName()))
             .collect(Collectors.toList());
     return new ConversionResult(new ResultTuple(tupleName, resultVars), merge(arg.rules,
-            arg.results.stream().map(result -> new Rule(newTuple(tupleName, resultVars), newTuple(result))
+            arg.results.stream().map(result -> new Rule(newTuple(tupleName, resultVars.stream().map(var ->
+                            result.vars.contains(var) ? var : NULL_VAR
+                    ).collect(Collectors.toList())), newTuple(result))
             )));
   }
 
   private ConversionResult convert(StatementPattern pattern) {
     String tupleName = newTupleName();
     List<Var> resultVars = new ArrayList<>();
-    if (!pattern.getSubjectVar().isConstant()) {
+    if (!pattern.getSubjectVar().hasValue()) {
       resultVars.add(pattern.getSubjectVar());
     }
-    if (!pattern.getPredicateVar().isConstant()) {
+    if (!pattern.getPredicateVar().hasValue()) {
       resultVars.add(pattern.getPredicateVar());
     }
-    if (!pattern.getObjectVar().isConstant()) {
+    if (!pattern.getObjectVar().hasValue()) {
       resultVars.add(pattern.getObjectVar());
     }
     //TODO: context
@@ -255,6 +272,11 @@ public class SPARQLConverter {
     )));
   }
 
+  private ConversionResult singletonSet() {
+    String tupleName = newTupleName();
+    return new ConversionResult(new ResultTuple(tupleName, Collections.emptyList()), new Rule(newTuple(tupleName, Collections.emptyList())));
+  }
+
   private ConversionResult convert(Union union) {
     ConversionResult left = convert(union.getLeftArg());
     ConversionResult right = convert(union.getRightArg());
@@ -263,9 +285,9 @@ public class SPARQLConverter {
 
   private ConversionResult convert(ZeroLengthPath zeroLengthPath) {
     String tupleName = newTupleName();
-    if(zeroLengthPath.getSubjectVar().isConstant()) {
-      if(zeroLengthPath.getObjectVar().isConstant()) {
-        if(zeroLengthPath.getSubjectVar().getValue().equals(zeroLengthPath.getObjectVar().getValue())) {
+    if (zeroLengthPath.getSubjectVar().hasValue()) {
+      if (zeroLengthPath.getObjectVar().hasValue()) {
+        if (zeroLengthPath.getSubjectVar().getValue().equals(zeroLengthPath.getObjectVar().getValue())) {
           return new ConversionResult(new ResultTuple(tupleName, Collections.emptyList()), new Rule(newTuple(tupleName, Collections.emptyList())));
         } else {
           return new ConversionResult();
@@ -274,7 +296,7 @@ public class SPARQLConverter {
         return new ConversionResult(new ResultTuple(tupleName, Collections.singletonList(zeroLengthPath.getObjectVar())), new Rule(newTuple(tupleName, Collections.singletonList(zeroLengthPath.getSubjectVar()))));
       }
     } else {
-      if(zeroLengthPath.getObjectVar().isConstant()) {
+      if (zeroLengthPath.getObjectVar().hasValue()) {
         return new ConversionResult(new ResultTuple(tupleName, Collections.singletonList(zeroLengthPath.getSubjectVar())), new Rule(newTuple(tupleName, Collections.singletonList(zeroLengthPath.getObjectVar()))));
       } else {
         return new ConversionResult(new ResultTuple(tupleName, Arrays.asList(zeroLengthPath.getSubjectVar(), zeroLengthPath.getObjectVar())), merge(allValuesRules(), new Rule(newTuple(tupleName, Arrays.asList(ALL_VALUES_VAR, ALL_VALUES_VAR)), newTuple(ALL_VALUES_RESULT))));
@@ -284,7 +306,9 @@ public class SPARQLConverter {
 
   private Term convert(Var var) {
     return varConversionCache.computeIfAbsent(var, (variable) -> {
-      if (var.isConstant()) {
+      if (var == NULL_VAR) {
+        return NULL;
+      } else if (var.hasValue()) {
         return convert(var.getValue());
       } else {
         return new Variable(var.getName());
@@ -317,7 +341,7 @@ public class SPARQLConverter {
   }
 
   private CompoundTerm newNegatedTuple(String name, List<Var> varList) {
-    return new CompoundTerm(name, false, varList.stream().map(this::convert).toArray(Term[]::new));
+    return new CompoundTerm(name, true, varList.stream().map(this::convert).toArray(Term[]::new));
   }
 
   private String newTupleName() {
