@@ -49,8 +49,8 @@ public class SPARQLConverter {
       return convert((Difference) expr);
     } else if(expr instanceof EmptySet) {
       return convert((EmptySet) expr);
-    } else if(expr instanceof Intersection) {
-      return convert((Intersection) expr);
+    } else if(expr instanceof Filter) {
+      return convert((Filter) expr);
     } else if(expr instanceof Join) {
       return convert((Join) expr);
     } else if(expr instanceof LeftJoin) {
@@ -77,15 +77,25 @@ public class SPARQLConverter {
   }
 
   private ConversionResult convert(Difference difference) {
-    throw new UnsupportedOperationException("Difference is not supported yet");
+    ConversionResult left = convert(difference.getLeftArg());
+    ConversionResult right = convert(difference.getRightArg());
+    Set<Rule> rules = merge(left.rules, right.rules);
+    return new ConversionResult(left.results.stream().flatMap(resultLeft -> right.results.stream().map(resultRight -> {
+      String filterTupleName = newTupleName();
+      String rightFilterTupleName = newTupleName();
+      List<Var> rightFilterVars = intersected(resultLeft.vars, resultRight.vars);
+      rules.add(new Rule(newTuple(filterTupleName, resultLeft.vars), newTuple(resultLeft), newNegatedTuple(rightFilterTupleName, rightFilterVars)));
+      rules.add(new Rule(newTuple(rightFilterTupleName, rightFilterVars), newTuple(resultRight)));
+      return new ResultTuple(filterTupleName, resultLeft.vars);
+    })).collect(Collectors.toSet()), rules);
   }
 
   private ConversionResult convert(EmptySet emptySet) {
     return new ConversionResult(Collections.emptySet(), Collections.emptySet());
   }
 
-  private ConversionResult convert(Intersection intersection) {
-    throw new UnsupportedOperationException("Intersection is not supported yet");
+  private ConversionResult convert(Filter filter) {
+    throw new UnsupportedOperationException("Filter is not supported yet");
   }
 
   private ConversionResult convert(Join join) {
@@ -109,7 +119,7 @@ public class SPARQLConverter {
       String leftTupleName = newTupleName();
       String rightFilterTupleName = newTupleName();
       List<Var> allResultVars = mergeWithDeduplication(resultLeft.vars, resultRight.vars);
-      List<Var> rightFilterVars = intersected(resultLeft.vars, resultLeft.vars);
+      List<Var> rightFilterVars = intersected(resultLeft.vars, resultRight.vars);
       rules.add(new Rule(newTuple(joinedTupleName, allResultVars), newTuple(resultLeft), newTuple(resultRight)));
       rules.add(new Rule(newTuple(leftTupleName, resultLeft.vars), newTuple(resultLeft), newNegatedTuple(rightFilterTupleName, rightFilterVars)));
       rules.add(new Rule(newTuple(rightFilterTupleName, rightFilterVars), newTuple(resultRight)));
