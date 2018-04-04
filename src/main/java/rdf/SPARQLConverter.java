@@ -1,5 +1,6 @@
 package rdf;
 
+import com.google.common.collect.Sets;
 import common.parser.*;
 import org.apache.commons.rdf.rdf4j.RDF4J;
 import org.eclipse.rdf4j.model.Value;
@@ -87,6 +88,8 @@ public class SPARQLConverter {
       return convert((StatementPattern) expr);
     } else if (expr instanceof Union) {
       return convert((Union) expr);
+    } else if (expr instanceof ZeroLengthPath) {
+      return convert((ZeroLengthPath) expr);
     } else {
       throw new UnsupportedOperationException("Not supported TupleExpr: " + expr);
     }
@@ -120,9 +123,7 @@ public class SPARQLConverter {
     ConversionResult innerPath = convert(arbitraryLengthPath.getPathExpression());
     Set<Rule> rules = new HashSet<>(innerPath.rules);
     String projectTuple = newTupleName();
-    innerPath.results.forEach(result -> {
-      rules.add(new Rule(newTuple(projectTuple, closureVars), newTuple(result)));
-    });
+    innerPath.results.forEach(result -> rules.add(new Rule(newTuple(projectTuple, closureVars), newTuple(result))));
 
     //Initialization
     if (arbitraryLengthPath.getMinLength() == 0) {
@@ -182,7 +183,7 @@ public class SPARQLConverter {
   }
 
   private ConversionResult convert(EmptySet emptySet) {
-    return new ConversionResult(Collections.emptySet(), Collections.emptySet());
+    return new ConversionResult();
   }
 
   private ConversionResult convert(Filter filter) {
@@ -260,6 +261,27 @@ public class SPARQLConverter {
     return new ConversionResult(merge(left.results, right.results), merge(left.rules, right.rules));
   }
 
+  private ConversionResult convert(ZeroLengthPath zeroLengthPath) {
+    String tupleName = newTupleName();
+    if(zeroLengthPath.getSubjectVar().isConstant()) {
+      if(zeroLengthPath.getObjectVar().isConstant()) {
+        if(zeroLengthPath.getSubjectVar().getValue().equals(zeroLengthPath.getObjectVar().getValue())) {
+          return new ConversionResult(new ResultTuple(tupleName, Collections.emptyList()), new Rule(newTuple(tupleName, Collections.emptyList())));
+        } else {
+          return new ConversionResult();
+        }
+      } else {
+        return new ConversionResult(new ResultTuple(tupleName, Collections.singletonList(zeroLengthPath.getObjectVar())), new Rule(newTuple(tupleName, Collections.singletonList(zeroLengthPath.getSubjectVar()))));
+      }
+    } else {
+      if(zeroLengthPath.getObjectVar().isConstant()) {
+        return new ConversionResult(new ResultTuple(tupleName, Collections.singletonList(zeroLengthPath.getSubjectVar())), new Rule(newTuple(tupleName, Collections.singletonList(zeroLengthPath.getObjectVar()))));
+      } else {
+        return new ConversionResult(new ResultTuple(tupleName, Arrays.asList(zeroLengthPath.getSubjectVar(), zeroLengthPath.getObjectVar())), merge(allValuesRules(), new Rule(newTuple(tupleName, Arrays.asList(ALL_VALUES_VAR, ALL_VALUES_VAR)), newTuple(ALL_VALUES_RESULT))));
+      }
+    }
+  }
+
   private Term convert(Var var) {
     return varConversionCache.computeIfAbsent(var, (variable) -> {
       if (var.isConstant()) {
@@ -274,12 +296,12 @@ public class SPARQLConverter {
     return tupleSerializer.convertTerm(RDF4J.asRDFTerm(value, SALT));
   }
 
-  private List<Rule> allValuesRules() {
+  private Set<Rule> allValuesRules() {
     Variable allValues = new Variable(ALL_VALUES_VAR.getName());
     Variable anySubject = new Variable("anySubj");
     Variable anyPred = new Variable("anyPred");
     Variable anyObj = new Variable("anyObj");
-    return Arrays.asList(
+    return Sets.newHashSet(
             new Rule(newTuple(ALL_VALUES_RESULT), tupleSerializer.convertTriple(allValues, anyPred, anyObj)),
             new Rule(newTuple(ALL_VALUES_RESULT), tupleSerializer.convertTriple(anySubject, allValues, anyObj)),
             new Rule(newTuple(ALL_VALUES_RESULT), tupleSerializer.convertTriple(anySubject, anyPred, allValues))
@@ -334,6 +356,12 @@ public class SPARQLConverter {
     return result;
   }
 
+  private <T> Set<T> merge(Set<T> a, T b) {
+    Set<T> result = new HashSet<>(a);
+    result.add(b);
+    return result;
+  }
+
   public static class ConversionResult {
     private Set<ResultTuple> results;
     private Set<Rule> rules;
@@ -349,6 +377,10 @@ public class SPARQLConverter {
 
     ConversionResult(ResultTuple result, Rule rule) {
       this(Collections.singleton(result), Collections.singleton(rule));
+    }
+
+    ConversionResult() {
+      this(Collections.emptySet(), Collections.emptySet());
     }
 
     public Program getProgram() {
