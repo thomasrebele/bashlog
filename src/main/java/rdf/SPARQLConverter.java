@@ -3,7 +3,12 @@ package rdf;
 import common.parser.*;
 import org.apache.commons.rdf.rdf4j.RDF4J;
 import org.eclipse.rdf4j.model.Value;
+import org.eclipse.rdf4j.query.BindingSet;
+import org.eclipse.rdf4j.query.Dataset;
 import org.eclipse.rdf4j.query.algebra.*;
+import org.eclipse.rdf4j.query.algebra.evaluation.QueryOptimizer;
+import org.eclipse.rdf4j.query.algebra.evaluation.impl.*;
+import org.eclipse.rdf4j.query.impl.EmptyBindingSet;
 import org.eclipse.rdf4j.query.parser.ParsedQuery;
 import org.eclipse.rdf4j.query.parser.QueryParser;
 import org.eclipse.rdf4j.query.parser.sparql.SPARQLParser;
@@ -16,6 +21,17 @@ public class SPARQLConverter {
 
   private static final UUID SALT = UUID.randomUUID();
   private static final Constant<Comparable<?>> NULL = new Constant<>(null);
+  private static final List<QueryOptimizer> OPTIMIZERS = Arrays.asList(
+          new BindingAssigner(),
+          new CompareOptimizer(),
+          new ConjunctiveConstraintSplitter(),
+          new DisjunctiveConstraintOptimizer(),
+          new SameTermFilterOptimizer(),
+          new QueryModelNormalizer(),
+          new IterativeEvaluationOptimizer(),
+          new FilterOptimizer(),
+          new OrderLimitOptimizer()
+  );
 
   private final RDFTupleSerializer tupleSerializer;
   private final Map<Var,Term> varConversionCache = new HashMap<>();
@@ -37,6 +53,10 @@ public class SPARQLConverter {
   private ConversionResult convert(String query) {
     QueryParser queryParser = new SPARQLParser();
     ParsedQuery parsedQuery = queryParser.parseQuery(query, null);
+    TupleExpr tupleExpr = parsedQuery.getTupleExpr();
+    Dataset dataset = parsedQuery.getDataset();
+    BindingSet bindingSet = new EmptyBindingSet();
+    OPTIMIZERS.forEach(optimizer -> optimizer.optimize(tupleExpr, dataset, bindingSet));
     return convert(parsedQuery.getTupleExpr());
   }
 
