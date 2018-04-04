@@ -69,6 +69,8 @@ public class SPARQLConverter {
       return convert((BindingSetAssignment) expr);
     } else if (expr instanceof Difference) {
       return convert((Difference) expr);
+    } else if (expr instanceof Distinct) {
+      return convert((Distinct) expr);
     } else if (expr instanceof EmptySet) {
       return convert((EmptySet) expr);
     } else if (expr instanceof Filter) {
@@ -173,6 +175,10 @@ public class SPARQLConverter {
       rules.add(new Rule(newTuple(rightFilterTupleName, rightFilterVars), newTuple(resultRight)));
       return new ResultTuple(filterTupleName, resultLeft.vars);
     })).collect(Collectors.toSet()), rules);
+  }
+
+  private ConversionResult convert(Distinct distinct) {
+    return convert(distinct.getArg());
   }
 
   private ConversionResult convert(EmptySet emptySet) {
