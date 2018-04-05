@@ -3,6 +3,7 @@ package common.plan.node;
 import common.Tools;
 
 import java.util.*;
+import java.util.function.IntFunction;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -31,7 +32,7 @@ public class ProjectNode implements PlanNode {
     this.table = table;
     this.projection = projection;
     this.constants = IntStream.range(0, projection.length).mapToObj(i -> i < constants.length ? constants[i] : null)
-        .toArray(i -> new Comparable<?>[i]);
+        .toArray((IntFunction<Comparable<?>[]>) Comparable[]::new);
   }
 
   /** Table the projection applies to */
@@ -119,6 +120,6 @@ public class ProjectNode implements PlanNode {
 
   /** Whether this projection uses any constants */
   public boolean hasConstants() {
-    return constants.length != 0 && Arrays.stream(constants).anyMatch(c -> c != null);
+    return constants.length != 0 && Arrays.stream(constants).anyMatch(Objects::nonNull);
   }
 }
