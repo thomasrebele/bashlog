@@ -9,7 +9,7 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-@WebServlet("/index.jsp")
+@WebServlet({"/index.jsp", "/datalog", "/rdf"})
 public class Main extends HttpServlet {
 
   private static final long serialVersionUID = -4646304382919974568L;
@@ -41,6 +41,6 @@ public class Main extends HttpServlet {
           "main(X) :- facts(X, _, \"person\").";
     }
     req.setAttribute("datalog", datalog);
-    req.getRequestDispatcher("convert.jsp").forward(req, resp);
+    req.getRequestDispatcher("convert_datalog.jsp").forward(req, resp);
   }
 }
