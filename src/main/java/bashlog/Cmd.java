@@ -52,7 +52,7 @@ public class Cmd {
 
     BashlogCompiler bc = BashlogCompiler.prepareQuery(p, args.queryPredicate);
     try {
-      String bash = bc.compile("", false);
+      String bash = bc.compile("", "", false);
       if (args.debug) {
         System.out.println(bc.debugInfo());
       }

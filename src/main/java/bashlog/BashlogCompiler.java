@@ -99,12 +99,12 @@ public class BashlogCompiler {
 
   public String compile() {
     if (bash == null) {
-      bash = compile("", true);
+      bash = compile("", "", true);
     }
     return bash;
   }
 
-  public String compile(String indent, boolean comments) {
+  public String compile(String indent, String postCmd, boolean comments) {
     init();
     StringBuilder header = new StringBuilder();
     // we generate a bash script (shebang)
@@ -137,7 +137,7 @@ public class BashlogCompiler {
 
     CompilerInternals bc = new CompilerInternals(translators, root);
     Bash e = bc.compile(root);
-    String result = header.toString() + e.generate() + "\n\n rm -f tmp/*\n";
+    String result = header.toString() + e.generate() + postCmd + "\n\n rm -f tmp/*\n";
 
     return result;
   }
@@ -157,7 +157,7 @@ public class BashlogCompiler {
   public static String compileQuery(Program p, String query) throws IOException {
     BashlogCompiler bc = prepareQuery(p, query);
     try {
-      String bash = bc.compile("", false);
+      String bash = bc.compile("", "", false);
       return bash + "\n\n"; //+ bc.debugInfo();
     } catch (Exception e) {
       LOG.error(bc.debugInfo());

@@ -158,8 +158,8 @@ public class API extends HttpServlet {
       String inputRule = factPred + "(X,Y,Z) :~ read_ntriples " + filename;
       result.addRule(BashRule.read(new ParserReader(inputRule), BashlogCompiler.BASHLOG_PARSER_FEATURES));
 
-      bashlog = BashlogCompiler.compileQuery(result, queryPred);
-      bashlog = result.toString() + bashlog + " input rules " + input;
+      BashlogCompiler bc = BashlogCompiler.prepareQuery(result, queryPred);
+      bashlog = bc.compile("", " | conv_ntriples", false);
     }
     catch(Exception e) {
       bashlog = e.getMessage();
