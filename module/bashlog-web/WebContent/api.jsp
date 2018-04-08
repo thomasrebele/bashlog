@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=2.0">
 <title>Bashlog API</title>
 <!-- <link rel="stylesheet" type="text/css" href="reset.css"> -->
-<link rel="stylesheet" type="text/css" href="style.css">
+<link rel="stylesheet" type="text/css" href="${pageContext.request.contextPath}//style.css">
 
 </head>
 <body style="zoom: 120%;">
@@ -23,6 +23,21 @@ Answering Datalog Queries with Unix Shell Commands
 
 <div class="grail-content">
 
+<h1>Sparql/OWL</h1>
+
+A simple API for transforming SPARQL queries and an OWL ontology to bash scripts. <br>
+
+Please call it as follows:
+
+<code>curl --data-binary @example.dlog ${url}/sparql\?query=<i style="color:red;">predicate</i></code>
+
+
+</div>
+
+<div class="grail-content">
+
+<h1>Datalog</h1>
+
 A simple API for transforming datalog to bash scripts. 
 For the syntax of the datalog dialect, see the <a href="./">main page</a> <br><br>
 
@@ -30,7 +45,7 @@ Please call it as follows:
 
 <br>
 
-<code>curl --data-binary @example.dlog ${url}\?query=<i style="color:red;">predicate</i></code>
+<code>curl --data-binary @example.dlog ${url}/datalog\?query=<i style="color:red;">predicate</i></code>
 
 where <code class="inline">example.dlog</code> contains your datalog program, here an example:
 
@@ -42,7 +57,7 @@ main(X) :- facts(X, _, "person").
 
 You can save it into a file with this command:
 
-<code>curl --data-binary @example.dlog ${url}\?query=<i style="color:red;">predicate</i> &gt; query.sh</code>
+<code>curl --data-binary @example.dlog ${url}/datalog\?query=<i style="color:red;">predicate</i> &gt; query.sh</code>
 
 Execute it with the command <code class="inline">bash query.sh</code>.
 

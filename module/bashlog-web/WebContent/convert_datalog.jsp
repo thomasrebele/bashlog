@@ -135,7 +135,7 @@ people(X) :- type(X, "person").
 
 		<h2>Hints:</h2>
 		<ul>
-			<li>the head of the last rule specifies the output</li>
+			<li>the head of the last rule specifies the query</li>
 			<li>variables must start with an upper case letter</li>
 			<li>every head variable has to appear in the body</li>
 			<li>predicates are lower case</li>

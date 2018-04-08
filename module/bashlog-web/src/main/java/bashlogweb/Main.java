@@ -25,7 +25,7 @@ public class Main extends HttpServlet {
     String datalog = req.getParameter("datalog");
 
     if (datalog != null) {
-      String bashlog = API.processQuery(datalog, req, resp);
+      String bashlog = API.processDatalogQuery(datalog, req, resp);
       
       if(req.getParameter("download") != null) {
         req.getParameterMap().forEach((k,v) -> System.out.println(k + "  " + Arrays.toString(v)));

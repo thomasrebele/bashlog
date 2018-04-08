@@ -1,6 +1,7 @@
 package experiments.lubm;
 
 import bashlog.BashlogCompiler;
+import common.DatalogTools;
 import common.parser.BashRule;
 import common.parser.ParserReader;
 import common.parser.Program;
@@ -65,21 +66,7 @@ public class BashlogLUBM {
   public static Program lubmInputRules3(String lubmDir, Program p) {
     Program result = new Program();
     result.addRule(Rule.read(new ParserReader("allFacts(X,Y,Z) :~ cat " + lubmDir + "/all\n"), BashlogCompiler.BASHLOG_PARSER_FEATURES));
-
-    for (String rel : p.allRelations()) {
-      if (rel.startsWith("query")) continue;
-      String[] tmp = rel.split("/");
-      String readRule = null;
-      if ("1".equals(tmp[1])) {
-        readRule = tmp[0] + "(X) :- allFacts(X,\"rdf:type\", \"" + tmp[0] + "\").\n";
-      } else if ("2".equals(tmp[1])) {
-        readRule = tmp[0] + "(X, Y) :- allFacts(X,\"" + tmp[0] + "\", Y).\n";
-      }
-      if (readRule != null) {
-        result.addRule(Rule.read(new ParserReader(readRule), BashlogCompiler.BASHLOG_PARSER_FEATURES));
-      }
-    }
-
+    result.addRules(DatalogTools.inputRules3("allFacts", p, "rdf:type", false));
     return result;
   }
 
