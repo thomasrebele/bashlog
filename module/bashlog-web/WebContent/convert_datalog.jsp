@@ -149,7 +149,7 @@ people(X) :- type(X, "person").
 		<ul>
 			<li>bash (<b>no</b> support for other shells, e.g., sh, tcsh, ksh, zsh)</li>
 			<li>POSIX commands cat, join, sort, comm, ... (e.g. from the GNU coreutils package)</li>
-			<li>MAWK or GNU awk (choose MAWK for better performance)</li>
+			<li>MAWK or GNU awk (install MAWK for better performance)</li>
 		</ul>
 		
 		<!-- <h1>Examples:</h1> -->
