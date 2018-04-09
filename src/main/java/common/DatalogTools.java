@@ -1,5 +1,7 @@
 package common;
 
+import java.util.Collection;
+
 import common.parser.CompoundTerm;
 import common.parser.Constant;
 import common.parser.Program;
@@ -13,13 +15,20 @@ public class DatalogTools {
    * @param modeURI wrap in &lt; ... &gt; if true
    * */
   public static Program inputRules3(String factPred, Program p, String rdfType, boolean modeURI) {
+    return inputRules3(factPred, p.allRelations(), rdfType, modeURI);
+  }
+  
+  /** Add input rules for classes and binary relations for predicates specified by 'relations'
+  * @param modeURI wrap in &lt; ... &gt; if true
+  * */
+  public static Program inputRules3(String factPred, Collection<String> relations, String rdfType, boolean modeURI) {
     Program result = new Program();
     
     Variable X = new Variable("X");
     Variable Y = new Variable("Y");
     
     Term rdfTypeConst = Constant.of(rdfType);
-    for (String rel : p.allRelations()) {
+    for (String rel : relations) {
       int pos = rel.lastIndexOf("/");
       if(pos < 0) continue;
       String arity = rel.substring(pos+1);

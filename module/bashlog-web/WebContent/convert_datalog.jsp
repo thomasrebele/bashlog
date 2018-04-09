@@ -19,13 +19,14 @@ Answering Datalog Queries with Unix Shell Commands
 </header>
 
 
-<main class="grail">
+<main>
+	<%@include file="links.jsp" %>
+<div class="grail">
 	<div class="grail-body">
 
 <div class="grail-content">
-This project translates datalog programs to Unix shell scripts. It can be used to preprocess large tabular datasets.
-	<form action="${pageContext.request.contextPath}/index.jsp" accept-charset="utf-8" method="POST">
-
+	
+	<form action="${pageContext.request.contextPath}/datalog" accept-charset="utf-8" method="POST">
 	<h1>Datalog program</h1>
 	<textarea name="datalog">${ datalog }</textarea>
 
@@ -34,7 +35,7 @@ This project translates datalog programs to Unix shell scripts. It can be used t
 	<br>-->
 
 	<center style="width: 95%;">
-	<button name="convert">Convert datalog to bash script</button>
+	<button name="convert">Convert to bash script</button>
 	<button name="download">Download script</button>
 	</center>
 
@@ -53,18 +54,19 @@ This project translates datalog programs to Unix shell scripts. It can be used t
 			in the form <i>predicateName/arity</i>, or just <i>predicateName</i>, if there's only one arity.)</span>
 		</li>-->
 		<li>
-			Click on the <code class="inline">Convert datalog to bash script</code> button
+			Click on the <code class="inline">Convert to bash script</code> button
 		</li>
 		<li>
 			Copy the content of the "Bash script" textbox into a file named <code class="inline">query.sh</code> in the folder with the .tsv files
+			(or click on <code class="inline">Download script</code>)
 		</li>
 		<li>
 			Run it with <code class="inline">bash query.sh</code>
 		</li>
 		</ol>
-		Warning: the script uses a folder <code class="inline">tmp</code> for temporary files and removes its contents afterwards
+		<b>Note</b>: the script uses a folder <code class="inline">tmp</code> for temporary files and removes its contents afterwards
 	<h1>API</h1>
-	You can also use bashlog from the command line, without a browser. For details, see <a href="api">API</a>.
+	You can also use bashlog from the command line, without a browser. For details, see <a href="${pageContext.request.contextPath}/api">API</a>.
 </div>
 
 
@@ -129,7 +131,7 @@ people(X) :- type(X, "person").
 		<code><i>head</i>(<i>VarConst1</i>, <i>Var2</i>) <b>:-</b> <i>rel1</i>(<i>VarConst1</i>, <i>Var2</i>), <b>not</b> <i>rel2</i>(<i>Var2</i>).</code>
 		<br>
 
-		Rule taking input from bash command:
+		Bash rule, taking input from bash command:
 		<code>head(Var1, Var2) <b>:~</b> bash_command --options arg1 arg2 <span style="color:gray;">&lt;newline&gt;</span></code>
 		<br>
 
@@ -156,6 +158,7 @@ people(X) :- type(X, "person").
 </div>
 </div>
 
+</div>
 </div>
 </main>
 </body>

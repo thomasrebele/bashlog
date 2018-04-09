@@ -3,7 +3,6 @@ package bashlogweb;
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.StringBufferInputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.URL;
 import java.net.URLDecoder;
@@ -24,7 +23,6 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.semanticweb.owlapi.apibinding.OWLManager;
-import org.semanticweb.owlapi.model.IRI;
 import org.semanticweb.owlapi.model.OWLOntology;
 import org.semanticweb.owlapi.model.OWLOntologyCreationException;
 import org.semanticweb.owlapi.model.OWLOntologyManager;
@@ -35,7 +33,6 @@ import common.parser.BashRule;
 import common.parser.ParseException;
 import common.parser.ParserReader;
 import common.parser.Program;
-import common.parser.Rule;
 import rdf.OntologyConverter;
 import rdf.RDFSpecificTuplesSerializer;
 import rdf.RDFTupleSerializer;
@@ -116,8 +113,9 @@ public class API extends HttpServlet {
   protected static String processSparqlQuery(Map<String, List<String>> params, HttpServletRequest req, HttpServletResponse resp)
       throws ServletException, IOException {
 
-    String queryPred = "sparqlQuery_bashlog";
-    String factPred = "allFacts_bashlog";
+    String helperPred = "api_tmp_";
+    String queryPred = helperPred + "query";
+    String factPred = helperPred + "facts";
     String rdfTypeConst = "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>";
 
     RDFTupleSerializer tupleSerializer = new RDFSpecificTuplesSerializer(Collections.emptyMap());
@@ -126,7 +124,7 @@ public class API extends HttpServlet {
     String bashlog = null, sparql = null;
     try {
       // convert sparql
-      SPARQLConverter sparqlConverter = new SPARQLConverter(tupleSerializer);
+      SPARQLConverter sparqlConverter = new SPARQLConverter(tupleSerializer, helperPred);
       sparql = params.get("sparql").stream().findFirst().orElse("ERROR: no sparql query specified!");
       query = sparqlConverter.convert(sparql, queryPred);
 
@@ -150,14 +148,17 @@ public class API extends HttpServlet {
 
       // combine
       Program result = Program.merge(ontologyProgram, query);
-      Program input = DatalogTools.inputRules3(factPred, ontologyProgram, rdfTypeConst, true);
+      List<String> inputRelations = result.allRelations().stream()//
+          .filter(s -> !s.startsWith(helperPred)).collect(Collectors.toList());
+      Program input = DatalogTools.inputRules3(factPred, inputRelations, rdfTypeConst, true);
       result.addRules(input);
 
       // ntriple filename
-      String filename = params.getOrDefault("n-triples", Collections.emptyList()).stream().findFirst().orElse("\"$@\"");
+      String filename = params.getOrDefault("nTriples", Collections.emptyList()).stream().findFirst().orElse("\"$@\"");
       String inputRule = factPred + "(X,Y,Z) :~ read_ntriples " + filename;
       result.addRule(BashRule.read(new ParserReader(inputRule), BashlogCompiler.BASHLOG_PARSER_FEATURES));
 
+      System.out.println(result);
       BashlogCompiler bc = BashlogCompiler.prepareQuery(result, queryPred);
       bashlog = bc.compile("", " | conv_ntriples", false);
     }
