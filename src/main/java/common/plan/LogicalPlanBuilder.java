@@ -149,7 +149,11 @@ public class LogicalPlanBuilder {
     List<PlanNode> children = new ArrayList<>();
 
     for (String rel : bashRule.relations) {
-      children.add(getPlanForRelation(rel, cache));
+      String fullRel = program.searchRelation(rel);
+      if(fullRel == null) {
+        throw new UnsupportedOperationException("relation '" + rel + "' not found");
+      }
+      children.add(getPlanForRelation(fullRel, cache));
     }
 
     int arity = (int) bashRule.head.getVariables().count();

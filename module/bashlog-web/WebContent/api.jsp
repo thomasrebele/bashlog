@@ -32,7 +32,7 @@ An API for transforming SPARQL queries and an OWL ontology to bash scripts. <br>
 
 Please call it as follows:
 
-<code>curl --data-urlencode owl@<i style="color:red;">ontology.owl</i> --data-urlencode sparql@<i style="color:red;">query.sparql</i> ${url}/sparql\?query=<i style="color:red;">predicate</i></code>
+<code>curl --data-urlencode owl@<i style="color:red;">ontology.owl</i> --data-urlencode sparql@<i style="color:red;">query.sparql</i> --data-urlencode nTriples=<i style="color:red;">/path/to/kb.ntriples</i> ${url}/sparql</code>
 
 where <code class="inline">ontology.owl</code> is a file containing the OWL ontology
 and <code class="inline">sparql.query</code> is a file containing the SPARQL query

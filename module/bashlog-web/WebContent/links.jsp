@@ -6,5 +6,5 @@ This project translates datalog programs to Unix shell scripts. It can be used t
 It has a <a href="${pageContext.request.contextPath}/datalog">datalog</a> mode, 
 a <a href="${pageContext.request.contextPath}/sparql">SPARQL/OWL</a> mode, 
 and an <a href="${pageContext.request.contextPath}/api">API</a>.
-We describe how it work in the <a href="https://www.thomasrebele.org/publications/2018_report_bashlog.pdf">technical report</a>.
+We describe how it works in the <a href="https://www.thomasrebele.org/publications/2018_report_bashlog.pdf">technical report</a>.
 </div>
