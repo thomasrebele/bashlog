@@ -160,7 +160,8 @@ public class API extends HttpServlet {
 
       System.out.println(result);
       BashlogCompiler bc = BashlogCompiler.prepareQuery(result, queryPred);
-      bashlog = bc.compile("", " | conv_ntriples", false);
+      //bashlog = bc.compile("", " | conv_ntriples", false);
+      bashlog = bc.compile("", "", false);
     }
     catch(Exception e) {
       bashlog = e.getMessage();
