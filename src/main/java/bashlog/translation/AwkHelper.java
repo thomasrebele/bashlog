@@ -45,8 +45,9 @@ public class AwkHelper {
     }
   }
 
+
   private static <T> String joinColStr(Stream<T> cols, String delimiter) {
-    return cols.map(t -> t.toString().replaceAll("-", "_")).collect(Collectors.joining(delimiter));
+    return cols.map(t -> t.toString()).collect(Collectors.joining(delimiter));
   }
 
   private static <T> String joinColStr(Collection<T> outCols, String delimiter) {
@@ -119,8 +120,8 @@ public class AwkHelper {
             if (output != null) {
               awkProg.append(output.replace("tmp/", "")).append("_");
             }
-            awkProg.append("out").append(joinColStr(outCols, "c"));
-            awkProg.append("_cond").append(joinColStr(filterCols, "c"));
+            awkProg.append("out").append(joinColStr(outCols, "c").replace("-", "_"));
+            awkProg.append("_cond").append(joinColStr(filterCols, "c").replace("-", "_"));
             awkProg.append("[\"").append(joinColStr(vals, "\" FS \"")).append("\"] = \"1\"; \n ");
           });
         });
@@ -135,7 +136,7 @@ public class AwkHelper {
           if (output != null) {
             condition += output.replace("tmp/", "") + "_";
           }
-          condition += "out" + joinColStr(outCols, "c") + "_cond" + joinColStr(filterCols, "c");
+          condition += ("out" + joinColStr(outCols, "c") + "_cond" + joinColStr(filterCols, "c")).replace("-", "_");
   
           return condition;
         }).collect(Collectors.joining(" || ")).trim();
