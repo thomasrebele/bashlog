@@ -18,6 +18,14 @@ main {
 	padding: 70px 0px 0px;
 }
 
+@media ( min-width : 700px) {
+	.nograil {
+		margin-left: 40px;
+		margin-right: 40px;
+	}
+}
+
+
 /* HolyGrail: https://philipwalton.github.io/solved-by-flexbox/demos/holy-grail/ */
 .grail, .grail-body { display: flex; flex-direction: column; }
 .grail-content { flex: 1; }

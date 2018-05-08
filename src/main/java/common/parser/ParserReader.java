@@ -1,5 +1,6 @@
 package common.parser;
 
+import java.util.Collections;
 import java.util.function.BiFunction;
 
 import org.slf4j.Logger;
@@ -233,10 +234,8 @@ public class ParserReader {
     if (until < 0) until = input.length();
 
     StringBuilder context = new StringBuilder().append(input.substring(act, until)).append("\n");
-    for (int i = 0; i < (pos - act); i++) {
-      context.append("_");
-    }
-    context.append("^").append("\nL here\n");
+    context.append(String.join("", Collections.nCopies((pos - act), " "))).append("*\n");
+    context.append(String.join("", Collections.nCopies((pos - act), " "))).append("L---- here\n");
 
     String error = "error: " + msg + ", at line " + line + ":\n\n";
     error += context;

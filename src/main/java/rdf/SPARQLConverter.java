@@ -40,10 +40,16 @@ public class SPARQLConverter {
 
   private final RDFTupleSerializer tupleSerializer;
   private final Map<Var, Term> varConversionCache = new HashMap<>();
+  private final String helperPredicatePrefix;
   private int count = 0;
 
   public SPARQLConverter(RDFTupleSerializer tupleSerializer) {
+    this(tupleSerializer, "tmp_predicate_");
+  }
+
+  public SPARQLConverter(RDFTupleSerializer tupleSerializer, String helperPredicatePrefix) {
     this.tupleSerializer = tupleSerializer;
+    this.helperPredicatePrefix = helperPredicatePrefix;
   }
 
   public Program convert(String query, String resultRelation) {
@@ -345,7 +351,7 @@ public class SPARQLConverter {
   }
 
   private String newTupleName() {
-    return "tuple" + (count++);
+    return helperPredicatePrefix + (count++);
   }
 
   private <T> List<T> mergeWithDeduplication(List<T> a, List<T> b) {

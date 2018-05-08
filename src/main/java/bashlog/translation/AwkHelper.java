@@ -45,12 +45,13 @@ public class AwkHelper {
     }
   }
 
-  public static <T> String joinStr(Stream<T> outCols, String delimiter) {
-    return outCols.map(t -> t.toString()).collect(Collectors.joining(delimiter));
+
+  private static <T> String joinColStr(Stream<T> cols, String delimiter) {
+    return cols.map(t -> t.toString()).collect(Collectors.joining(delimiter));
   }
 
-  public static <T> String joinStr(Collection<T> outCols, String delimiter) {
-    return joinStr(outCols.stream(), delimiter);
+  private static <T> String joinColStr(Collection<T> outCols, String delimiter) {
+    return joinColStr(outCols.stream(), delimiter);
   }
 
   /**
@@ -119,9 +120,9 @@ public class AwkHelper {
             if (output != null) {
               awkProg.append(output.replace("tmp/", "")).append("_");
             }
-            awkProg.append("out").append(joinStr(outCols, "c"));
-            awkProg.append("_cond").append(joinStr(filterCols, "c"));
-            awkProg.append("[\"").append(joinStr(vals, "\" FS \"")).append("\"] = \"1\"; \n ");
+            awkProg.append("out").append(joinColStr(outCols, "c").replace("-", "_"));
+            awkProg.append("_cond").append(joinColStr(filterCols, "c").replace("-", "_"));
+            awkProg.append("[\"").append(joinColStr(vals, "\" FS \"")).append("\"] = \"1\"; \n ");
           });
         });
       });
@@ -130,12 +131,12 @@ public class AwkHelper {
       // filter lines using arrays
       outputColToFilteredColToValues.forEach((outCols, map) -> {
         String conditions = map.keySet().stream().map(filterCols -> {
-          String condition = (String) "(" + joinStr(filterCols.stream().map(i -> "$" + (i + 1)), " FS ") + ")" + //
+          String condition = (String) "(" + joinColStr(filterCols.stream().map(i -> "$" + (i + 1)), " FS ") + ")" + //
           " in ";
           if (output != null) {
             condition += output.replace("tmp/", "") + "_";
           }
-          condition += "out" + joinStr(outCols, "c") + "_cond" + joinStr(filterCols, "c");
+          condition += ("out" + joinColStr(outCols, "c") + "_cond" + joinColStr(filterCols, "c")).replace("-", "_");
   
           return condition;
         }).collect(Collectors.joining(" || ")).trim();
@@ -143,7 +144,7 @@ public class AwkHelper {
         if (conditions.length() > 0) {
           awkProg.append("(").append(conditions).append(")");
         }
-        awkProg.append("{ print ").append(joinStr(outCols.stream().map(i -> "$" + (i + 1)), " FS "));
+        awkProg.append("{ print ").append(joinColStr(outCols.stream().map(i -> "$" + (i + 1)), " FS "));
         if (output != null) {
           awkProg.append(" >> \"").append(output).append("\"");
         }

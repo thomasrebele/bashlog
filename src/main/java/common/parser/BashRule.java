@@ -43,6 +43,10 @@ public class BashRule extends Rule {
 
       ParserReader prName = new ParserReader(command, start + 2);
       CharSequence name = prName.readName();
+      
+      if(name == null) {
+        prName.error("name expected", "");
+      }
 
       if (prName.consume("/") != null) {
         name = name + "/" + prName.readInteger();

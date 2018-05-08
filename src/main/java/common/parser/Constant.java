@@ -35,4 +35,8 @@ public class Constant<T extends Comparable> extends Term implements Parseable {
   public T getValue() {
     return value;
   }
+
+  public static Term of(String str) {
+    return new Constant<>(str);
+  }
 }
