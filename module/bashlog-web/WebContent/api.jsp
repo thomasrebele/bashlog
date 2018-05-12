@@ -1,25 +1,9 @@
-<%@ page language="java" contentType="text/html; charset=UTF-8"
-    pageEncoding="UTF-8"%>
-<!doctype html>
-<html>
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=2.0">
-<title>Bashlog API</title>
-<!-- <link rel="stylesheet" type="text/css" href="reset.css"> -->
-<link rel="stylesheet" type="text/css" href="${pageContext.request.contextPath}//style.css">
+<%@page contentType="text/html" pageEncoding="UTF-8"%>
+<%@taglib prefix="t" tagdir="/WEB-INF/tags" %>
 
-</head>
-<body style="zoom: 120%;">
+<t:page>
+    <jsp:body>
 
-<header>
-<span style="font-weight: bold; font-size: 20px;">Bash Datalog</span><br/>
-Answering Datalog Queries with Unix Shell Commands
-</header>
-
-<main>
-
-<%@include file="links.jsp" %>
 
 <div class="grail">
 	<div class="grail-body">
@@ -78,6 +62,5 @@ Execute it with the command <code class="inline">bash query.sh</code>.
 
 </div>
 </div>
-</main>
-</body>
-</html>
+    </jsp:body>
+</t:page>

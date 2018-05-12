@@ -64,5 +64,11 @@
 			<artifactId>commons-rdf-rdf4j</artifactId>
 			<version>0.5.0</version>
 		</dependency>
+		
+		<dependency>
+			<groupId>jstl</groupId>
+			<artifactId>jstl</artifactId>
+			<version>1.2</version>
+		</dependency>
 	</dependencies>
 </project>
