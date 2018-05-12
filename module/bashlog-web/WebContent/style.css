@@ -15,25 +15,100 @@ header .headline {
 	border-color: #aaaaee;
 	border-width: 0px 0px 2px 0px;
 	border-style: solid;
-	border-radius: 0px 0px 9px 9px;
 }
 
 .menu {
 	margin: 8px;
+	background-color: #eeeeff;
+	margin:0;
+	height: 30px;
+	display: flex;
+	justify-content: center;
+	flex-direction: column;
+	border-radius: 0px 0px 12px 12px;
+}
+
+a {
+  text-decoration: none;
 }
 
 .menu a {
-	background-color: #cc00ff;
+  padding: 10px 20px;
+  position: relative;
+  display: inline-block;
+}
+.menu a span::before {
+  width: 5px;
+  height: 5px;
+  background: transparent;
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  border-top: 2px solid ;
+  border-left: 2px solid ;
+  opacity: 0;
+}
+.menu a span::after {
+  width: 5px;
+  height: 5px;
+  background: transparent;
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  border-right: 2px solid ;
+  border-bottom: 2px solid ;
+  opacity: 0;
+}
+.menu a::before {
+  width: 5px;
+  height: 5px;
+  background: transparent;
+  content: "";
+  position: absolute;
+  right: 0;
+  top: 0;
+  border-right: 2px solid ;
+  border-top: 2px solid ;
+  opacity: 0;
+}
+.menu a::after {
+  width: 5px;
+  height: 5px;
+  background: transparent;
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  border-left: 2px solid;
+  border-bottom: 2px solid;
+  opacity: 0;
+}
+.menu a:hover {
+  /*color: #000;*/
+}
+.menu a:hover::before {
+  opacity: 1;
+  right: 5px;
+  top: 5px;
+}
+.menu a:hover::after {
+  opacity: 1;
+  left: 5px;
+  bottom: 5px;
+}
+.menu a:hover span::before {
+  opacity: 1;
+  left: 5px;
+  top: 5px;
+}
+.menu a:hover span::after {
+  opacity: 1;
+  right: 5px;
+  bottom: 5px;
 }
 
-.menu a {
-	background-color: #ccccff;
-	border-color: #aaaaee;
-	padding: 4px;
-	border-radius: 4px;
-	border-style: solid;
-	border-width: 2px;
-}
 
 main {
 	padding: 80px 0px 0px;

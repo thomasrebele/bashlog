@@ -1,5 +1,6 @@
 <%@ tag description="Overall Page template" pageEncoding="UTF-8"%>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%-- <%@ attribute name="page" required="false" type="java.lang.String" %> --%>
 
 <!doctype html>
 <html>
@@ -19,16 +20,16 @@
 Answering Datalog Queries with Unix Shell Commands
 </div>
 <div class="menu">
-<a href="${pageContext.request.contextPath}/about.jsp">About</a>
-<a href="${pageContext.request.contextPath}/datalog">Datalog mode</a>
-<a href="${pageContext.request.contextPath}/sparql">SPARQL/OWL mode</a>
-<a href="${pageContext.request.contextPath}/api">API</a>
+<div>
+<a href="${pageContext.request.contextPath}/about.jsp"><span>About</span></a>
+<a href="${pageContext.request.contextPath}/datalog"><span>Datalog mode</span></a>
+<a href="${pageContext.request.contextPath}/sparql"><span>SPARQL/OWL mode</span></a>
+<a href="${pageContext.request.contextPath}/api"><span>API</span></a>
+</div>
 </div>
 </header>
 
 <main>
-
-
 
 <jsp:doBody/>
 </main>

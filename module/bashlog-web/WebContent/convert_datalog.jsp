@@ -128,12 +128,7 @@ people(X) :- type(X, "person").
 			Specify them when calling the script: <code class="inline">bash query.sh <i>file1</i> <i>file2</i></code></li>
 		</ul>
 
-		<h2>Prerequisites:</h2>
-		<ul>
-			<li>bash (<b>no</b> support for other shells, e.g., sh, tcsh, ksh, zsh)</li>
-			<li>POSIX commands cat, join, sort, comm, ... (e.g. from the GNU coreutils package)</li>
-			<li>AWK (e.g., MAWK or GNU awk; install MAWK for better performance)</li>
-		</ul>
+		
 		
 		<!-- <h1>Examples:</h1> -->
 		
