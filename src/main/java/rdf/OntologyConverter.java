@@ -42,6 +42,10 @@ public class OntologyConverter {
     );
   }
 
+  private Term term(OWLIndividual individual) {
+    return new Constant<String>(individual.toString());
+  }
+
   private CompoundTerm term(Term subject, OWLRDFVocabulary property, Term object) {
     return tupleSerializer.convertTriple(subject, property.getIRI(), object);
   }
@@ -303,6 +307,28 @@ public class OntologyConverter {
 
     //  Table 8. The Semantics of Datatypes
     // TODO
+
+    //--------------------------------------------------------------------------------
+    // ABOX 
+    //--------------------------------------------------------------------------------
+    // other types of abox axioms: SAME_INDIVIDUAL, DIFFERENT_INDIVIDUALS, OBJECT_PROPERTY_ASSERTION, NEGATIVE_OBJECT_PROPERTY_ASSERTION, DATA_PROPERTY_ASSERTION, NEGATIVE_DATA_PROPERTY_ASSERTION
+
+    ontology.axioms(AxiomType.CLASS_ASSERTION).forEach(ax -> {
+      headRules(ax.getClassExpression(), term(ax.getIndividual())).forEach(r -> program.addRule(r));
+    });
+
+    ontology.axioms(AxiomType.ANNOTATION_ASSERTION).forEach(ax -> {
+      IRI subject = ax.getSubject().asIRI().orElseThrow(() -> new UnsupportedOperationException("Subject is not an IRI"));
+      Optional<IRI> obj = ax.getValue().asIRI();
+      if(obj.isPresent()) {
+        IRI object = obj.get();
+        program.addRule(new Rule(tupleSerializer.convertTriple(subject, ax.getProperty().getIRI(), object)));
+      }
+      else {
+        OWLLiteral lit = ax.getValue().asLiteral().get();
+        program.addRule(new Rule(tupleSerializer.convertTriple(subject, ax.getProperty().getIRI(), Constant.of(lit.toString()))));
+      }
+    });
 
     return normalize(program);
   }
