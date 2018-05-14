@@ -33,8 +33,10 @@ import common.parser.BashRule;
 import common.parser.ParseException;
 import common.parser.ParserReader;
 import common.parser.Program;
+import rdf.OWL2RLOntologyConverter;
 import rdf.OntologyConverter;
 import rdf.RDFSpecificTuplesSerializer;
+import rdf.RDFTripleTupleSerializer;
 import rdf.RDFTupleSerializer;
 import rdf.SPARQLConverter;
 
@@ -119,6 +121,7 @@ public class API extends HttpServlet {
     String rdfTypeConst = "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>";
 
     RDFTupleSerializer tupleSerializer = new RDFSpecificTuplesSerializer(Collections.emptyMap());
+    tupleSerializer = new RDFTripleTupleSerializer("rdffact",Collections.emptyMap());
 
     Program query;
     String bashlog = null, sparql = null;
@@ -135,21 +138,19 @@ public class API extends HttpServlet {
     try {
       // convert OWL
       OWLOntologyManager ontologyManager = OWLManager.createOWLOntologyManager();
-      List<String> owl = params.get("owl");
-      if (owl != null) {
-        String ontologyCode = params.get("owl").stream().findFirst().orElse("ERROR: no owl ontology specified");
+      List<String> owlParam = params.get("owl");
+      String ontologyCode = owlParam == null ? "" : params.get("owl").stream().findFirst().orElse("ERROR: no owl ontology specified");
 
-        OWLOntology ontology;
-        try {
-          ontology = ontologyManager.loadOntologyFromOntologyDocument(new ByteArrayInputStream(ontologyCode.getBytes(StandardCharsets.UTF_8)));
-        } catch (OWLOntologyCreationException e) {
-          return e.toString();
-        }
-        OntologyConverter converter = new OntologyConverter(tupleSerializer);
-        Program ontologyProgram = converter.convert(ontology);
-        // add owl rules to query
-        query = Program.merge(ontologyProgram, query);
+      OWLOntology ontology;
+      try {
+         ontology = ontologyManager.loadOntologyFromOntologyDocument(new ByteArrayInputStream(ontologyCode.getBytes(StandardCharsets.UTF_8)));
+      } catch (OWLOntologyCreationException e) {
+        return e.toString();
       }
+      OWL2RLOntologyConverter converter = new OWL2RLOntologyConverter(tupleSerializer);
+      Program ontologyProgram = converter.convert(ontology);
+      // add owl rules to query
+      query = Program.merge(ontologyProgram, query);
 
       // add input rules to query
       List<String> inputRelations = query.allRelations().stream()//

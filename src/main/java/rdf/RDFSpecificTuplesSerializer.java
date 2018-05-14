@@ -41,7 +41,7 @@ public class RDFSpecificTuplesSerializer implements RDFTupleSerializer {
         return new CompoundTerm((String) predicateValue, subject, object);
       }
     }
-    throw new UnsupportedOperationException("The predicate of the triple should be a string constant");
+    throw new UnsupportedOperationException("The predicate of the triple should be a string constant: " + subject + " " + predicate + " " + object);
   }
 
   public Term convertTerm(RDFTerm term) {

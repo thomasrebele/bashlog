@@ -116,6 +116,10 @@ public class OntologyConverter {
     Variable o = new Variable("O");
     Variable o1 = new Variable("O1");
     Variable o2 = new Variable("O2");
+    Variable c = new Variable("C");
+    Variable c1 = new Variable("C1");
+    Variable c2 = new Variable("C2");
+    Variable c3 = new Variable("C3");
     Variable x = new Variable("X");
     Variable y = new Variable("Y");
     Variable z = new Variable("Z");
@@ -307,7 +311,22 @@ public class OntologyConverter {
 
     //  Table 8. The Semantics of Datatypes
     // TODO
-
+    
+    //  Table 9. The Semantics of Datatypes
+    // TODO
+    
+    // TODO: scm-cls
+    
+    // scm-sco
+    Rule rScm = new Rule(term(c1, RDFS_SUBCLASS_OF, c3), term(c1, RDFS_SUBCLASS_OF, c2), term(c2, RDFS_SUBCLASS_OF, c3));
+    program.addRule(rScm);
+    System.out.println("HERE added rule " + rScm);
+    
+    ontology.axioms(AxiomType.TRANSITIVE_OBJECT_PROPERTY).forEach(ax ->
+            program.addRule(new Rule(term(x, ax.getProperty(), z), term(x, ax.getProperty(), y), term(y, ax.getProperty(), z)))
+    );
+    
+    
     //--------------------------------------------------------------------------------
     // ABOX 
     //--------------------------------------------------------------------------------
@@ -330,6 +349,7 @@ public class OntologyConverter {
       }
     });
 
+    System.out.println("WTF?");
     return normalize(program);
   }
 
