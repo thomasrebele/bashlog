@@ -68,8 +68,20 @@
 		You can also use bashlog from the command line, without a browser. For details, see <a href="api">API</a>.
 	
 		
-		<!-- <h1>Examples:</h1> -->
+		<h1>Examples:</h1>
+		You can try the examples on this <a href="http://resources.mpi-inf.mpg.de/yago-naga/yago3.1/sample-ntriples.zip">dataset </a> (<a href="https://w3id.org/yago/downloads">source</a>).
 		
+		<ul>
+		<li> Find people that died in the city where they were born
+			<code>BASE &lt;http://yago-knowledge.org/resource/&gt;
+SELECT ?X WHERE { 
+	?X &lt;wasBornIn&gt; ?Y. 
+	?X &lt;diedIn&gt; ?Y. 
+}</code>
+		
+		
+		</li>
+		</ul>
 	</div>
 </div>
 </div>

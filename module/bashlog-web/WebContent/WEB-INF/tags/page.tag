@@ -1,7 +1,6 @@
 <%@ tag description="Overall Page template" pageEncoding="UTF-8"%>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%-- <%@ attribute name="page" required="false" type="java.lang.String" %> --%>
-
 <!doctype html>
 <html>
 <head>
@@ -12,8 +11,8 @@
 <link rel="stylesheet" type="text/css" href="${pageContext.request.contextPath}//style.css">
 
 </head>
-<body style="zoom: 120%;">
 
+<body style="zoom: 120%;">
 <header>
 <div class="headline">
 <span style="font-weight: bold; font-size: 20px;">Bash Datalog</span><br/>
@@ -30,7 +29,6 @@ Answering Datalog Queries with Unix Shell Commands
 </header>
 
 <main>
-
 <jsp:doBody/>
 </main>
 </body>

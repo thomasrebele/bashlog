@@ -129,41 +129,44 @@ public class API extends HttpServlet {
       query = sparqlConverter.convert(sparql, queryPred);
 
     } catch (Exception e) {
-      return "Error parsing sparql query \n" + sparql + "\n" +  e.getMessage();
+      return "Error parsing sparql query \n" + sparql + "\n" + e.getMessage();
     }
-    
+
     try {
       // convert OWL
       OWLOntologyManager ontologyManager = OWLManager.createOWLOntologyManager();
-      String ontologyCode = params.get("owl").stream().findFirst().orElse("ERROR: no owl ontology specified");
+      List<String> owl = params.get("owl");
+      if (owl != null) {
+        String ontologyCode = params.get("owl").stream().findFirst().orElse("ERROR: no owl ontology specified");
 
-      OWLOntology ontology;
-      try {
-        ontology = ontologyManager.loadOntologyFromOntologyDocument(new ByteArrayInputStream(ontologyCode.getBytes(StandardCharsets.UTF_8)));
-      } catch (OWLOntologyCreationException e) {
-        return e.toString();
+        OWLOntology ontology;
+        try {
+          ontology = ontologyManager.loadOntologyFromOntologyDocument(new ByteArrayInputStream(ontologyCode.getBytes(StandardCharsets.UTF_8)));
+        } catch (OWLOntologyCreationException e) {
+          return e.toString();
+        }
+        OntologyConverter converter = new OntologyConverter(tupleSerializer);
+        Program ontologyProgram = converter.convert(ontology);
+        // add owl rules to query
+        query = Program.merge(ontologyProgram, query);
       }
-      OntologyConverter converter = new OntologyConverter(tupleSerializer);
-      Program ontologyProgram = converter.convert(ontology);
 
-      // combine
-      Program result = Program.merge(ontologyProgram, query);
-      List<String> inputRelations = result.allRelations().stream()//
+      // add input rules to query
+      List<String> inputRelations = query.allRelations().stream()//
           .filter(s -> !s.startsWith(helperPred)).collect(Collectors.toList());
       Program input = DatalogTools.inputRules3(factPred, inputRelations, rdfTypeConst, true);
-      result.addRules(input);
+      query.addRules(input);
 
       // ntriple filename
       String filename = params.getOrDefault("nTriples", Collections.emptyList()).stream().findFirst().orElse("\"$@\"");
       String inputRule = factPred + "(X,Y,Z) :~ read_ntriples " + filename;
-      result.addRule(BashRule.read(new ParserReader(inputRule), BashlogCompiler.BASHLOG_PARSER_FEATURES));
+      query.addRule(BashRule.read(new ParserReader(inputRule), BashlogCompiler.BASHLOG_PARSER_FEATURES));
 
-      System.out.println(result);
-      BashlogCompiler bc = BashlogCompiler.prepareQuery(result, queryPred);
+      System.out.println(query);
+      BashlogCompiler bc = BashlogCompiler.prepareQuery(query, queryPred);
       //bashlog = bc.compile("", " | conv_ntriples", false);
       bashlog = bc.compile("", "", false);
-    }
-    catch(Exception e) {
+    } catch (Exception e) {
       bashlog = e.getMessage();
     }
     return bashlog;

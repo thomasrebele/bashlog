@@ -28,7 +28,7 @@ public class Main extends HttpServlet {
     URL uurl = new URL(req.getRequestURL().toString());
 
     String bashlog = "";
-    String page = "convert_datalog.jsp";
+    String page = "about.jsp";
     if (uurl.getPath().contains("datalog")) {
       String datalog = req.getParameter("datalog");
 
