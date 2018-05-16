@@ -16,7 +16,7 @@ public class MultiFilterNode implements PlanNode {
 
   protected final String operatorString;
 
-  private final PlanNode placeholder;
+  private final PlaceholderNode placeholder;
 
   public MultiFilterNode(Set<PlanNode> children, PlanNode table, int arity) {
     this.arity = arity;
@@ -31,7 +31,7 @@ public class MultiFilterNode implements PlanNode {
     });
   }
 
-  public MultiFilterNode(Set<PlanNode> children, PlanNode table, PlanNode placeholder, int arity) {
+  public MultiFilterNode(Set<PlanNode> children, PlanNode table, PlaceholderNode placeholder, int arity) {
     this.children = children;
     this.table = table;
     this.placeholder = placeholder;
@@ -49,7 +49,7 @@ public class MultiFilterNode implements PlanNode {
 
   // TODO: toString / operatorString
   public String operatorString() {
-    return "multi_filter (" + operatorString + ")";
+    return "multi_filter_" + hash();
   }
 
   @Override
@@ -65,6 +65,11 @@ public class MultiFilterNode implements PlanNode {
   @Override
   public List<PlanNode> childrenForPrettyString() {
     return Stream.concat(children.stream(), Stream.of(table)).collect(Collectors.toList());
+  }
+
+  @Override
+  public List<PlaceholderNode> placeholders() {
+    return Arrays.asList(placeholder);
   }
 
   @Override
