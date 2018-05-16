@@ -50,6 +50,6 @@ public class RDFTripleTupleSerializer implements RDFTupleSerializer {
         return prefix.getValue() + IRI.substring(prefix.getKey().length());
       }
     }
-    return IRI;
+    return "<" + IRI + ">";
   }
 }

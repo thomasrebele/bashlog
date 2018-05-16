@@ -318,13 +318,12 @@ public class OntologyConverter {
     // TODO: scm-cls
     
     // scm-sco
-    Rule rScm = new Rule(term(c1, RDFS_SUBCLASS_OF, c3), term(c1, RDFS_SUBCLASS_OF, c2), term(c2, RDFS_SUBCLASS_OF, c3));
+    /*Rule rScm = new Rule(term(c1, RDFS_SUBCLASS_OF, c3), term(c1, RDFS_SUBCLASS_OF, c2), term(c2, RDFS_SUBCLASS_OF, c3));
     program.addRule(rScm);
-    System.out.println("HERE added rule " + rScm);
     
     ontology.axioms(AxiomType.TRANSITIVE_OBJECT_PROPERTY).forEach(ax ->
             program.addRule(new Rule(term(x, ax.getProperty(), z), term(x, ax.getProperty(), y), term(y, ax.getProperty(), z)))
-    );
+    );*/
     
     
     //--------------------------------------------------------------------------------
@@ -349,7 +348,6 @@ public class OntologyConverter {
       }
     });
 
-    System.out.println("WTF?");
     return normalize(program);
   }
 

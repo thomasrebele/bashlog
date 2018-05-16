@@ -33,7 +33,6 @@ import common.parser.BashRule;
 import common.parser.ParseException;
 import common.parser.ParserReader;
 import common.parser.Program;
-import rdf.OWL2RLOntologyConverter;
 import rdf.OntologyConverter;
 import rdf.RDFSpecificTuplesSerializer;
 import rdf.RDFTripleTupleSerializer;
@@ -121,7 +120,7 @@ public class API extends HttpServlet {
     String rdfTypeConst = "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>";
 
     RDFTupleSerializer tupleSerializer = new RDFSpecificTuplesSerializer(Collections.emptyMap());
-    tupleSerializer = new RDFTripleTupleSerializer("rdffact",Collections.emptyMap());
+    tupleSerializer = new RDFTripleTupleSerializer(helperPred + "facts",Collections.emptyMap());
 
     Program query;
     String bashlog = null, sparql = null;
@@ -147,7 +146,7 @@ public class API extends HttpServlet {
       } catch (OWLOntologyCreationException e) {
         return e.toString();
       }
-      OWL2RLOntologyConverter converter = new OWL2RLOntologyConverter(tupleSerializer);
+      OntologyConverter converter = new OntologyConverter(tupleSerializer);
       Program ontologyProgram = converter.convert(ontology);
       // add owl rules to query
       query = Program.merge(ontologyProgram, query);
