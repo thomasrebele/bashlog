@@ -137,7 +137,7 @@ public class RecursionNode implements PlanNode {
 
   @Override
   public String toString() {
-    return "rec(" + exitPlan.toString() + ", " + recursivePlan.toString() + ")";
+    return toPrettyString();
   }
 
   @Override
