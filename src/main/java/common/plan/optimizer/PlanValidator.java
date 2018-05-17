@@ -30,7 +30,8 @@ public class PlanValidator implements Optimizer {
 
   @Override
   public PlanNode apply(PlanNode node) {
-    Map<PlanNode, Set<PlanNode>> parentToPlaceholders = new HashMap<>();
+    Set<PlaceholderNode> allPlaceholders = new HashSet<>();
+    Set<PlaceholderNode> knownPlaceholders = new HashSet<>();
     Set<PlanNode> allNodes = new HashSet<>();
 
     node.transform((orig, n, origParent) -> {
@@ -50,18 +51,17 @@ public class PlanValidator implements Optimizer {
       }
 
       allNodes.add(n);
-      if (n.placeholders().size() > 0) {
-        parentToPlaceholders.put(n, new HashSet<>(n.placeholders()));
-      }
+      knownPlaceholders.addAll(n.placeholders());
+      if (n instanceof PlaceholderNode) allPlaceholders.add((PlaceholderNode) n);
       return n;
     });
 
-    parentToPlaceholders.keySet().removeAll(allNodes);
-    if (parentToPlaceholders.size() > 0) {
+    allPlaceholders.removeAll(knownPlaceholders);
+    if (allPlaceholders.size() > 0) {
       if (debug != null) {
         LOG.error("{}", debug);
       }
-      parentToPlaceholders.values().stream().flatMap(s -> s.stream())
+      allPlaceholders.stream() //
           .forEach(n -> LOG.error("parent of placeholder {} not found", n.operatorString()));
       throw new IllegalStateException("some orphaned placeholders, check log messages. " + (debug != null ? "debug length: " + debug.length() : ""));
     }
