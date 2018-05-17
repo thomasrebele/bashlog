@@ -7,6 +7,9 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  * A plan node (like a union or a join) following relational algebra.
  * Create a new implementation of this interface to create a new kind of node.
@@ -195,7 +198,9 @@ public interface PlanNode {
   default PlanNode transform(TransformFn fn, List<PlanNode> originalPath) {
     try {
       Tools.addLast(originalPath, this);
-      return fn.apply(this, this, originalPath);
+      PlanNode result = fn.apply(this, this, originalPath);
+      assertSameArity(result, this);
+      return result;
     } finally {
       Tools.removeLast(originalPath);
     }
@@ -318,5 +323,17 @@ public interface PlanNode {
     return children().isEmpty() ? 0 : children().stream().mapToInt(PlanNode::height).max().getAsInt() + 1;
   }
 
+  /** Check whether two plans have the same arity, otherwise throw an exception */
+  public static void assertSameArity(PlanNode plan1, PlanNode plan2) {
+    if (plan1.getArity() != plan2.getArity()) {
+      LogHolder.LOG.error("plan1: \n" + plan1.toPrettyString());
+      LogHolder.LOG.error("plan2: \n" + plan2.toPrettyString());
+      throw new IllegalStateException("plans must have the same arity");
+    }
+  }
+}
 
+final class LogHolder {
+
+  static final Logger LOG = LoggerFactory.getLogger(PlanNode.class);
 }

@@ -83,7 +83,7 @@ public class RecursionNode implements PlanNode {
   public RecursionNode(PlanNode exitPlan, PlanNode recursivePlan, PlaceholderNode delta, PlaceholderNode full) {
     if (exitPlan.getArity() != recursivePlan.getArity()) {
       throw new IllegalArgumentException(
-          "Exit and recursive plans should have the same arity." + "Here: " + exitPlan.getArity() + " vs " + recursivePlan.getArity());
+          "Exit and recursive plans should have the same arity. " + "Here: " + exitPlan.getArity() + " vs " + recursivePlan.getArity());
     }
 
     this.deltaNode = new PlaceholderNode("delta", exitPlan.getArity());
@@ -159,8 +159,14 @@ public class RecursionNode implements PlanNode {
   public PlanNode transform(TransformFn fn, List<PlanNode> originalPath) {
     try {
       Tools.addLast(originalPath, this);
+      PlanNode.assertSameArity(exitPlan, recursivePlan);
+
       PlanNode newExit = exitPlan.transform(fn, originalPath);
+      PlanNode.assertSameArity(newExit, exitPlan);
+
       PlanNode newRecursion = recursivePlan.transform(fn, originalPath);
+      PlanNode.assertSameArity(newRecursion, recursivePlan);
+
       PlanNode newNode = newExit.equals(exitPlan) && newRecursion.equals(recursivePlan) ? this : transform(newExit, newRecursion);
       return fn.apply(this, newNode, originalPath);
     } finally {

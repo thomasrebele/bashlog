@@ -79,7 +79,7 @@ public class UnionNode implements PlanNode {
       return false;
     }
     UnionNode node = (UnionNode) obj;
-    return children.size() == node.children.size()
+    return this.arity == node.getArity() && children.size() == node.children.size()
         && children.stream().allMatch(child -> node.children.stream().anyMatch(other -> child.equals(other, assumedEqualities)));
   }
 
