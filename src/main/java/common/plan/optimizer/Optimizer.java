@@ -27,16 +27,21 @@ public interface Optimizer extends Function<PlanNode, PlanNode> {
     for (List<Optimizer> stage : stages) {
       debugBuilder.append("\n\n").append(it.hasNext() ? it.next() : "").append("\n");
       for (Optimizer o : stage) {
-        root = o.apply(root);
-
-        debugBuilder.append("applied ").append(o.getClass()).append(" \n");
-        debugBuilder.append(root.toPrettyString()).append("\n");
-
+        PlanNode prevPlan = root;
         try {
+          root = o.apply(root);
+
+          debugBuilder.append("applied ").append(o.getClass()).append(" \n");
+          debugBuilder.append(root.toPrettyString()).append("\n");
+
           check.apply(root);
         } catch (Exception e) {
+          System.err.println("some problems while applying " + o + " to plan");
+          System.err.println(prevPlan.toPrettyString());
+
           LogHolder.LOG.error(e.getMessage());
           debugBuilder.append("WARNING: ").append(e.getMessage());
+          //throw e;
         }
       }
     }
