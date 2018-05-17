@@ -95,7 +95,7 @@ public class UnionNode implements PlanNode {
           .map(child -> child.transform(fn, originalPath))//
           .flatMap(child -> (Stream<PlanNode>) ((child instanceof UnionNode) ? ((UnionNode) child).children().stream() : Stream.of(child)))//
           .collect(Collectors.toSet());
-      PlanNode newNode = newChildren.equals(children) ? this : new UnionNode(newChildren, this.arity);
+      PlanNode newNode = newChildren.equals(children) ? this : PlanNode.empty(this.getArity()).union(newChildren);
       return fn.apply(this, newNode, originalPath);
     } finally {
       Tools.removeLast(originalPath);
