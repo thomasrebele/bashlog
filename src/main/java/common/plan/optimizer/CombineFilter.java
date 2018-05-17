@@ -45,7 +45,7 @@ public class CombineFilter implements Optimizer {
   /** Descend into project and filter */
   public static PlanNode getInnerTable(PlanNode p) {
     if (p instanceof ProjectNode || p instanceof VariableEqualityFilterNode || p instanceof ConstantEqualityFilterNode) {
-      return getInnerTable(p.children().get(0));
+      return getInnerTable(p.children().iterator().next());
     }
     return p;
   }
@@ -53,7 +53,7 @@ public class CombineFilter implements Optimizer {
   /** Descend into project and filter */
   public static int getFilterDepth(PlanNode parent) {
     if (parent instanceof ProjectNode || parent instanceof VariableEqualityFilterNode || parent instanceof ConstantEqualityFilterNode) {
-      return 1 + getFilterDepth(parent.children().get(0));
+      return 1 + getFilterDepth(parent.children().iterator().next());
     }
     return 0;
   }

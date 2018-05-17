@@ -29,7 +29,7 @@ public interface PlanNode {
   /**
    * Children of this plan node (without replacement tokens like DeltaNode, ReuseNode)
    */
-  List<PlanNode> children();
+  Collection<PlanNode> children();
 
   /** List of placeholder nodes that are associated with this node */
   default List<PlaceholderNode> placeholders() {
@@ -39,7 +39,7 @@ public interface PlanNode {
   /**
    * Children which should be printed by toPrettyString()
    */
-  default List<PlanNode> childrenForPrettyString() {
+  default Collection<PlanNode> childrenForPrettyString() {
     return children();
   }
 
@@ -281,10 +281,11 @@ public interface PlanNode {
       operator += parent == null ? " (PARENT UNKNOWN)" : " for " + parent.operatorString();
     }
     stringBuilder.append(hash()).append(fn.apply(this, " " + prefixHead + operator + " arity " + getArity())).append("\n");
-    List<PlanNode> args = childrenForPrettyString();
-    for (int i = 0; i < args.size(); i++) {
-      PlanNode arg = args.get(i);
-      boolean last = i == args.size() - 1;
+    Collection<PlanNode> args = childrenForPrettyString();
+    Iterator<PlanNode> it = args.iterator();
+    while(it.hasNext()) {
+      PlanNode arg = it.next();
+      boolean last = !it.hasNext();
       arg.toPrettyString(stringBuilder, prefixOther + "+-", prefixOther + (last ? "  " : "| "), fn, placeholderToParent);
     }
   }

@@ -63,8 +63,8 @@ public class UnionNode implements PlanNode {
   }
 
   @Override
-  public List<PlanNode> children() {
-    return new ArrayList<>(children);
+  public Set<PlanNode> children() {
+    return Collections.unmodifiableSet(children);
   }
 
   @Override

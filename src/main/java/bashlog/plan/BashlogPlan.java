@@ -1,5 +1,6 @@
 package bashlog.plan;
 
+import java.util.Collection;
 import java.util.List;
 
 import common.Tools;
@@ -90,9 +91,9 @@ public class BashlogPlan implements Optimizer {
 
     } else if (p instanceof UnionNode) {
       UnionNode u = (UnionNode) p;
-      List<PlanNode> children = u.children();
+      Collection<PlanNode> children = u.children();
       if (children.size() == 0) return u;
-      if (children.size() == 1) return children.get(0);
+      if (children.size() == 1) return children.iterator().next();
       return u;
 
     }

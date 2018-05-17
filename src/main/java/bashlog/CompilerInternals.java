@@ -54,7 +54,7 @@ public class CompilerInternals extends common.compiler.CompilerInternals<BashTra
    * @param children
    * @param accumulator
    */
-  private void directPlaceholderDescendants(List<PlanNode> children, Set<PlanNode> accumulator) {
+  private void directPlaceholderDescendants(Collection<PlanNode> children, Set<PlanNode> accumulator) {
     for (PlanNode c : children) {
       if (c instanceof PlaceholderNode) {
         accumulator.add(c);
@@ -71,7 +71,7 @@ public class CompilerInternals extends common.compiler.CompilerInternals<BashTra
    * @param children
    * @return
    */
-  Bash waitFor(Bash snippet, List<PlanNode> children) {
+  Bash waitFor(Bash snippet, Collection<PlanNode> children) {
     Bash result = snippet;
     if (parallelMaterialization) {
       // We need to wait if the command in snippet uses a materialized node directly
