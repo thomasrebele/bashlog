@@ -227,22 +227,22 @@ public class Materialize implements Optimizer {
     }
 
     void calculateReuseAt() {
-      int[] calledDepth = new int[] { -1 }, outerDepth = new int[] { -1 };
+      int[] matAtDepth = new int[] { -1 }, calledRecDepth = new int[] { -1 }, outerRecDepth = new int[] { -1 };
       Set<PlanNode> outer = PlaceholderNode.outerParents(plan, placeholderToParent).stream().map(pn -> {
         if (pn instanceof MultiOutputNode) {
           return ((MultiOutputNode) pn).getMainPlan();
         }
         return pn;
       }).collect(Collectors.toSet());
-      materializeAt = maxDepth(outer, new int[] { -1 });
+      materializeAt = maxDepth(outer, matAtDepth);
       // calculate outer and called depth
-      maxDepth(outerRecursions, outerDepth);
-      maxDepth(calledRecursions, calledDepth);
+      maxDepth(outerRecursions, outerRecDepth);
+      maxDepth(calledRecursions, calledRecDepth);
       // check whether this plan is contained within a recursion node, but doesn't contain its delta/full nodes
       // in that case we should materialize it at node 'materializeAt'
-      isRepeated = outerDepth[0] > calledDepth[0];
+      isRepeated = outerRecDepth[0] > calledRecDepth[0];
       // do not materialize outside of an outer parent
-      if (outerDepth[0] == calledDepth[0] && materializeAt != null) {
+      if (matAtDepth[0] == calledRecDepth[0] && materializeAt != null) {
         // Q&D
         for (PlanNode child : materializeAt.children()) {
           if (child.contains(plan)) {
