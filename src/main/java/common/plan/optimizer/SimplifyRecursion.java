@@ -1,5 +1,6 @@
 package common.plan.optimizer;
 
+import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -36,26 +37,32 @@ public class SimplifyRecursion implements Optimizer {
   private PlanNode simplify(RecursionNode node) {
     PlanNode exitPlan = node.getExitPlan();
     PlanNode recursivePlan = node.getRecursivePlan();
+    PlanNode empty = PlanNode.empty(node.getArity());
 
     recursivePlan = removeUnnecessaryPlaceholders(recursivePlan, node);
 
-    {
-      PlanNode newRecursivePlan = PlanNode.empty(node.getArity());
-      // we see if the recursion is a union with some not recursive parts and move them to exitPlan
-      for (PlanNode child : (recursivePlan instanceof UnionNode) ? recursivePlan.children() : Collections.singleton(recursivePlan)) {
-        if (child.contains(node.getFull()) || child.contains(node.getDelta())) {
-          newRecursivePlan = newRecursivePlan.union(child);
-        } else {
-          exitPlan = exitPlan.union(child);
-        }
-      }
-      recursivePlan = newRecursivePlan;
-    }
+    // move non-recursive parts to the exit plan
+    exitPlan = recursivePlan // get the exit plan by
+        .replace(node.getFull(), empty).replace(node.getDelta(), empty) // replacing the paceholders 
+        .union(node.getExitPlan()); // and adding the already existing exit plan
+
+    // remove recursion if the exit plan is empty
+    if (exitPlan.isEmpty()) return exitPlan;
+
+    // remove the exit plan from the recursive plan
+    // this is a very basic algorithm, maybe the recursive plan can be reduced further
+    Set<PlanNode> exitPlans = PlanNode.unionSet(exitPlan);
+    Set<PlanNode> recursivePlans = new HashSet<>(PlanNode.unionSet(recursivePlan));
+    recursivePlans.removeAll(exitPlans);
+    PlanNode newRecursivePlan = empty.union(recursivePlans);
+    recursivePlan = newRecursivePlan;
+
+    // we add delta nodes
     recursivePlan = introduceDeltaRecursion(recursivePlan, node.getDelta(), node.getFull());
 
     // we make sure that exit and recursive plans are simplified
     exitPlan = apply(exitPlan);
-    PlanNode newRecursivePlan = apply(recursivePlan);
+    newRecursivePlan = apply(recursivePlan);
 
     // if a recursion was optimized away, we might be able to remove more delta/full nodes
     recursivePlan = newRecursivePlan == recursivePlan ? recursivePlan : removeUnnecessaryPlaceholders(newRecursivePlan, node);

@@ -172,6 +172,10 @@ public interface PlanNode {
     }
   }
 
+  public static Set<PlanNode> unionSet(PlanNode p) {
+    return (p instanceof UnionNode) ? ((UnionNode)p).children() : Collections.singleton(p);
+  }
+  
   /**
    * Lambda class for applying transformation on plan node
    */
