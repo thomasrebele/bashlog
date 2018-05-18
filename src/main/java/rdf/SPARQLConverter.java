@@ -35,12 +35,12 @@ public class SPARQLConverter {
   private static final Constant<Comparable<?>> NULL = new Constant<>("NULL");
   private static final Var NULL_VAR = new Var(SPARQLConverter.class.getCanonicalName() + "#null");
   private static final Var ALL_VALUES_VAR = new Var(SPARQLConverter.class.getCanonicalName() + "#any");
-  private static final ResultTuple ALL_VALUES_RESULT = new ResultTuple("all", Collections.singletonList(ALL_VALUES_VAR));
   private static final ConversionResult EMPTY_SET = new ConversionResult();
 
   private final RDFTupleSerializer tupleSerializer;
   private final Map<Var, Term> varConversionCache = new HashMap<>();
   private final String helperPredicatePrefix;
+  private final ResultTuple allValuesResult;
   private int count = 0;
 
   public SPARQLConverter(RDFTupleSerializer tupleSerializer) {
@@ -50,6 +50,7 @@ public class SPARQLConverter {
   public SPARQLConverter(RDFTupleSerializer tupleSerializer, String helperPredicatePrefix) {
     this.tupleSerializer = tupleSerializer;
     this.helperPredicatePrefix = helperPredicatePrefix;
+    allValuesResult = new ResultTuple(helperPredicatePrefix + "all", Collections.singletonList(ALL_VALUES_VAR));
   }
 
   public Program convert(String query, String resultRelation) {
@@ -140,7 +141,7 @@ public class SPARQLConverter {
     //Initialization
     if (arbitraryLengthPath.getMinLength() == 0) {
       rules.addAll(allValuesRules());
-      rules.add(new Rule(newTuple(closureName, Arrays.asList(ALL_VALUES_VAR, ALL_VALUES_VAR)), newTuple(ALL_VALUES_RESULT)));
+      rules.add(new Rule(newTuple(closureName, Arrays.asList(ALL_VALUES_VAR, ALL_VALUES_VAR)), newTuple(allValuesResult)));
     } else {
       List<CompoundTerm> body = new ArrayList<>();
       for (long i = 0; i < arbitraryLengthPath.getMinLength(); i++) {
@@ -305,7 +306,7 @@ public class SPARQLConverter {
       if (zeroLengthPath.getObjectVar().hasValue()) {
         return new ConversionResult(new ResultTuple(tupleName, Collections.singletonList(zeroLengthPath.getSubjectVar())), new Rule(newTuple(tupleName, Collections.singletonList(zeroLengthPath.getObjectVar()))));
       } else {
-        return new ConversionResult(new ResultTuple(tupleName, Arrays.asList(zeroLengthPath.getSubjectVar(), zeroLengthPath.getObjectVar())), merge(allValuesRules(), new Rule(newTuple(tupleName, Arrays.asList(ALL_VALUES_VAR, ALL_VALUES_VAR)), newTuple(ALL_VALUES_RESULT))));
+        return new ConversionResult(new ResultTuple(tupleName, Arrays.asList(zeroLengthPath.getSubjectVar(), zeroLengthPath.getObjectVar())), merge(allValuesRules(), new Rule(newTuple(tupleName, Arrays.asList(ALL_VALUES_VAR, ALL_VALUES_VAR)), newTuple(allValuesResult))));
       }
     }
   }
@@ -328,13 +329,13 @@ public class SPARQLConverter {
 
   private Set<Rule> allValuesRules() {
     Variable allValues = new Variable(ALL_VALUES_VAR.getName());
-    Variable anySubject = new Variable("anySubj");
-    Variable anyPred = new Variable("anyPred");
-    Variable anyObj = new Variable("anyObj");
+    Variable anySubject = new Variable("AnySubj");
+    Variable anyPred = new Variable("AnyPred");
+    Variable anyObj = new Variable("AnyObj");
     return Sets.newHashSet(
-            new Rule(newTuple(ALL_VALUES_RESULT), tupleSerializer.convertTriple(allValues, anyPred, anyObj)),
-            new Rule(newTuple(ALL_VALUES_RESULT), tupleSerializer.convertTriple(anySubject, allValues, anyObj)),
-            new Rule(newTuple(ALL_VALUES_RESULT), tupleSerializer.convertTriple(anySubject, anyPred, allValues))
+            new Rule(newTuple(allValuesResult), tupleSerializer.convertTriple(allValues, anyPred, anyObj)),
+            new Rule(newTuple(allValuesResult), tupleSerializer.convertTriple(anySubject, allValues, anyObj)),
+            new Rule(newTuple(allValuesResult), tupleSerializer.convertTriple(anySubject, anyPred, allValues))
     );
   }
 
