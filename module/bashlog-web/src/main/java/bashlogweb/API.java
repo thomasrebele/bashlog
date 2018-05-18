@@ -94,8 +94,10 @@ public class API extends HttpServlet {
     }
     String s = preparedQuery.compile();
     if(req.getParameter("debug_datalog") != null) {
-      s += "\n\n# query predicate: " + queryPred;
-      s += "\n\n# " + query.toString().replace("\n", "\n# ");
+      s += "\n\n# request predicate: " + queryPred;
+      queryPred = query.searchRelation(queryPred);
+      s += "\n# query predicate: " + queryPred;
+      s += "\n\n# " + query.toStringOrdered(queryPred).replace("\n", "\n# ");
     }
     if(req.getParameter("debug_algebra") != null) {
       s += "\n\n" + preparedQuery.debugInfo();

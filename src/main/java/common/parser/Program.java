@@ -87,6 +87,33 @@ public class Program implements Parseable {
     return sb.toString();
   }
 
+  /** Print rules in a human-readable order. Start with pred, and then print the rules that it uses, and so on */
+  public String toStringOrdered(String pred) {
+    Set<String> donePred = new HashSet<>();
+    Set<Rule> doneRules = new HashSet<>();
+    StringBuilder sb = new StringBuilder();
+    toStringOrdered(sb, pred, donePred, doneRules);
+
+    sb.append("\n\n%other rules\n");
+    rules.stream().filter(r -> !doneRules.contains(r)).forEach(r -> {
+      sb.append(r.toString());
+      sb.append("\n");
+    });
+    return sb.toString();
+  }
+
+  /** Helper method for {@link #toStringOrdered(String)} */
+  public void toStringOrdered(StringBuilder sb, String pred, Set<String> donePred, Set<Rule> doneRules) {
+    if(donePred.contains(pred)) return;
+    relationToRules.getOrDefault(pred, Collections.emptyList()).forEach(r -> {
+      if(doneRules.add(r)) {
+        sb.append(r.toString());
+        sb.append("\n");
+        r.getDependencies().forEach(dep -> toStringOrdered(sb, dep, donePred, doneRules));
+      }
+    });
+  }
+
   public List<Rule> rules() {
     return rules;
   }
