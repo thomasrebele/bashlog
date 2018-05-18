@@ -185,10 +185,13 @@ public class AwkHelper {
       simpleAwkLine(p, output, arg, project, condition);
       projectToConditions.computeIfAbsent(project.toString(), k -> new HashSet<>()).add(condition.toString());
     }*/
-    complexAwkLine(u.children(), idx, output, arg);
+    List<PlanNode> remaining = complexAwkLine(u.children(), idx, output, arg);
+    
     arg.append(projectToConditions.entrySet().stream().map(e -> {
       return e.getValue().stream().collect(Collectors.joining(" || ")) + e.getKey();
     }).collect(Collectors.joining(" \n ")));
+    
+    remaining.forEach(p -> simpleAwkLine(p, output, arg));
   }
 
   /**
