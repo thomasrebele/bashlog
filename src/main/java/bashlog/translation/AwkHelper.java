@@ -59,13 +59,14 @@ public class AwkHelper {
   * @param node
   * @param projCols accumulator
   * @param filterCols accumulator
+  * @param outputConstToInteger map a constant of a projection to a integer &lt; 0
   * @return inner plan node
   */
-  private static PlanNode getCols(PlanNode node, List<Integer> projCols, Map<Integer, Comparable<?>> filterCols) {
+  private static PlanNode getCols(PlanNode node, List<Integer> projCols, Map<Integer, Comparable<?>> filterCols, Map<Comparable<?>, Integer> outputConstToInteger) {
     if (node instanceof ConstantEqualityFilterNode) {
       ConstantEqualityFilterNode eq = (ConstantEqualityFilterNode) node;
       filterCols.put(eq.getField(), eq.getValue());
-      return getCols(eq.getTable(), projCols, filterCols);
+      return getCols(eq.getTable(), projCols, filterCols, outputConstToInteger);
     }
     if (node instanceof VariableEqualityFilterNode) {
       // make getCols return null (checked below)
@@ -75,8 +76,18 @@ public class AwkHelper {
       // may only have one projection!
       if (!projCols.isEmpty()) throw new UnsupportedOperationException(((ProjectNode) node).getTable().toString());
       ProjectNode p = (ProjectNode) node;
-      Arrays.stream(p.getProjection()).forEach(i -> projCols.add(i));
-      return getCols(p.getTable(), projCols, filterCols);
+      int[] proj = p.getProjection();
+      Comparable<?>[] cnst = p.getConstants();
+      
+      for(int col=0; col<p.getArity(); col++) {
+        int id = proj[col];
+        if(id < 0) {
+          id = outputConstToInteger.computeIfAbsent(cnst[col], k -> -outputConstToInteger.size() -2);
+        }
+        projCols.add(id);
+      }
+      
+      return getCols(p.getTable(), projCols, filterCols, outputConstToInteger);
     }
     return null;
   }
@@ -92,11 +103,13 @@ public class AwkHelper {
     // replace value-filters by associative array lookup
     // first, collect all filters that can be combined
     Map<List<Integer>, Map<List<Integer>, List<List<Comparable<?>>>>> outputColToFilteredColToValues = new HashMap<>();
+    Map<Comparable<?>, Integer> outputConstToInteger = new HashMap<>();
+
     List<PlanNode> remaining = plans.stream().filter(pn -> {
       //return true;
       Map<Integer, Comparable<?>> filterCols = new TreeMap<>();
       List<Integer> outputCols = new ArrayList<>();
-      getCols(pn, outputCols, filterCols);
+      getCols(pn, outputCols, filterCols, outputConstToInteger);
       if (outputCols == null || filterCols.size() == 0) return true;
   
       outputColToFilteredColToValues.computeIfAbsent( //
@@ -107,11 +120,11 @@ public class AwkHelper {
   
       return false;
     }).collect(Collectors.toList());
-  
+
     if (outputColToFilteredColToValues.size() > 0) {
       // create arrays outCOLS_condCOLS[VAL] = "1";
       // where COLS looks like 0c1c2
-  
+
       awkProg.append("\n  BEGIN { \n ");
       outputColToFilteredColToValues.forEach((outCols, map) -> {
         map.forEach((filterCols, values) -> {
@@ -127,7 +140,11 @@ public class AwkHelper {
         });
       });
       awkProg.append(" }\n\n ");
-  
+
+      
+    Map<Integer, Comparable<?>> integerToOutputConst = new HashMap<>();
+    outputConstToInteger.forEach((k,v) -> integerToOutputConst.put(v, k));
+    
       // filter lines using arrays
       outputColToFilteredColToValues.forEach((outCols, map) -> {
         String conditions = map.keySet().stream().map(filterCols -> {
@@ -144,7 +161,8 @@ public class AwkHelper {
         if (conditions.length() > 0) {
           awkProg.append("(").append(conditions).append(")");
         }
-        awkProg.append("{ print ").append(joinColStr(outCols.stream().map(i -> "$" + (i + 1)), " FS "));
+        Stream<String> awkOutCols = outCols.stream().map(i -> i<0 ? "\"" + integerToOutputConst.get(i) + "\"" :  "$" + (i + 1));
+        awkProg.append("{ print ").append(joinColStr(awkOutCols, " FS "));
         if (output != null) {
           awkProg.append(" >> \"").append(output).append("\"");
         }
