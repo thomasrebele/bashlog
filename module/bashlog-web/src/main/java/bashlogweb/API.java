@@ -71,9 +71,11 @@ public class API extends HttpServlet {
       req.setAttribute("sparql", params.get("sparql"));
       req.setAttribute("nTriples", params.get("nTriples"));
     }
+    
 
     if (bashlog != null) {
       resp.setContentType("text/plain");
+      resp.setCharacterEncoding("UTF-8");
       resp.getWriter().write(bashlog);
       resp.getWriter().close();
       return;
@@ -83,6 +85,23 @@ public class API extends HttpServlet {
     url = pApi.matcher(url.toString()).replaceFirst("api");
     req.setAttribute("url", url.replace(".jsp", ""));
     req.getRequestDispatcher("/api.jsp").forward(req, resp);
+  }
+
+  private static String postprocessQuery( Program query, String queryPred, HttpServletRequest req, HttpServletResponse resp) {
+    BashlogCompiler preparedQuery = BashlogCompiler.prepareQuery(query, queryPred);
+    if(req.getParameter("debug_algebra") != null) {
+      preparedQuery.enableDebug();
+    }
+    String s = preparedQuery.compile();
+    if(req.getParameter("debug_datalog") != null) {
+      s += "\n\n# query predicate: " + queryPred;
+      s += "\n\n# " + query.toString().replace("\n", "\n# ");
+    }
+    if(req.getParameter("debug_algebra") != null) {
+      s += "\n\n" + preparedQuery.debugInfo();
+    }
+    
+    return s;
   }
 
   protected static String processDatalogQuery(String datalog, HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
@@ -99,7 +118,7 @@ public class API extends HttpServlet {
           if (query == null || query.trim().isEmpty()) {
             query = p.rules().get(p.rules().size() - 1).head.getRelation();
           }
-          bashlog = BashlogCompiler.compileQuery(p, query);
+          bashlog = postprocessQuery(p, query, req, resp);
         }
       } catch (ParseException | IllegalArgumentException e) {
         bashlog = e.getMessage();
@@ -160,10 +179,7 @@ public class API extends HttpServlet {
       String inputRule = factPred + "(X,Y,Z) :~ read_ntriples " + filename;
       query.addRule(BashRule.read(new ParserReader(inputRule), BashlogCompiler.BASHLOG_PARSER_FEATURES));
 
-      System.out.println(query);
-      BashlogCompiler bc = BashlogCompiler.prepareQuery(query, queryPred);
-      //bashlog = bc.compile("", " | conv_ntriples", false);
-      bashlog = bc.compile("", "", false);
+      bashlog = postprocessQuery(query, queryPred, req, resp);
     } catch (Exception e) {
       bashlog = e.getMessage();
     }
