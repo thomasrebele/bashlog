@@ -34,7 +34,6 @@ import common.parser.ParseException;
 import common.parser.ParserReader;
 import common.parser.Program;
 import rdf.OntologyConverter;
-import rdf.RDFSpecificTuplesSerializer;
 import rdf.RDFTripleTupleSerializer;
 import rdf.RDFTupleSerializer;
 import rdf.SPARQLConverter;
@@ -119,8 +118,7 @@ public class API extends HttpServlet {
     String factPred = helperPred + "facts";
     String rdfTypeConst = "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>";
 
-    RDFTupleSerializer tupleSerializer = new RDFSpecificTuplesSerializer(Collections.emptyMap());
-    tupleSerializer = new RDFTripleTupleSerializer(helperPred + "facts",Collections.emptyMap());
+    RDFTupleSerializer tupleSerializer = new RDFTripleTupleSerializer(helperPred + "facts",Collections.emptyMap());
 
     Program query;
     String bashlog = null, sparql = null;
