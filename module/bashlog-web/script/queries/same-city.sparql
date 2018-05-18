@@ -1,0 +1,7 @@
+BASE <http://yago-knowledge.org/resource/>
+SELECT ?X WHERE { 
+	?X <wasBornIn> ?Y. 
+	?X <diedIn> ?Y. 
+}
+
+

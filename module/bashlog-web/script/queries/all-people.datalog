@@ -1,0 +1,8 @@
+facts(_, S, P, O) :~ cat *.tsv
+
+type(X, Y) :- facts(_, X, "rdf:type", Y).
+subclass(X, Y) :- facts(_, X, "rdfs:subClassOf", Y).
+type(X, Z) :- type(X, Y), subclass(Y, Z).
+
+main(X) :- type(X, "<wordnet_person_100007846>").
+

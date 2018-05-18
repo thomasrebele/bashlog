@@ -1,0 +1,7 @@
+facts(_, S, P, O) :~ cat *.tsv
+born(X) :- facts(_, X, "<wasBornIn>", Y).
+born(X) :- facts(_, X, "<wasBornOnDate>", Y).
+dead(X) :- facts(_, X, "<diedIn>", Y).
+dead(X) :- facts(_, X, "<diedOnDate>", Y).
+
+main(X) :- born(X), not dead(X).

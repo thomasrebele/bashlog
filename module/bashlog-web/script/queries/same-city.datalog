@@ -1,0 +1,4 @@
+facts(_, S, P, O) :~ cat *.tsv
+main(X) :- 
+   facts(_, X, "<wasBornIn>", Y),
+   facts(_, X, "<diedIn>", Y).
