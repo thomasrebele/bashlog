@@ -110,56 +110,111 @@ public class SPARQLConverter {
 
   private ConversionResult convert(ArbitraryLengthPath arbitraryLengthPath) {
     TupleExpr pathExpression = arbitraryLengthPath.getPathExpression();
+    Var subjectVar = arbitraryLengthPath.getSubjectVar();
+    Var objectVar = arbitraryLengthPath.getObjectVar();
 
-    //Build final and intermediate variables
-    String tupleName = newTupleName();
-    List<Var> resultVars = new ArrayList<>();
-    String closureName = newTupleName();
-    List<Var> closureVars = new ArrayList<>();
-    if (arbitraryLengthPath.getSubjectVar().hasValue()) {
-      Var newVar = new Var(arbitraryLengthPath.getSubjectVar().getName());
-      closureVars.add(newVar);
-      pathExpression.replaceChildNode(arbitraryLengthPath.getSubjectVar(), newVar);
-    } else {
-      closureVars.add(arbitraryLengthPath.getSubjectVar());
-      resultVars.add(arbitraryLengthPath.getSubjectVar());
+    // Replace constant with variables in the pathExpression
+    if (subjectVar.hasValue()) {
+      Var newVar = new Var(subjectVar.getName());
+      pathExpression.replaceChildNode(subjectVar, newVar);
     }
-    if (arbitraryLengthPath.getObjectVar().hasValue()) {
-      Var newVar = new Var(arbitraryLengthPath.getObjectVar().getName());
-      closureVars.add(newVar);
-      pathExpression.replaceChildNode(arbitraryLengthPath.getObjectVar(), newVar);
-    } else {
-      closureVars.add(arbitraryLengthPath.getObjectVar());
-      resultVars.add(arbitraryLengthPath.getObjectVar());
+    if (objectVar.hasValue()) {
+      Var newVar = new Var(objectVar.getName());
+      pathExpression.replaceChildNode(objectVar, newVar);
     }
 
-    ConversionResult innerPath = convert(arbitraryLengthPath.getPathExpression());
+    // Converts the inner expression
+    ConversionResult innerPath = convert(pathExpression);
     Set<Rule> rules = new HashSet<>(innerPath.rules);
-    String projectTuple = newTupleName();
-    innerPath.results.forEach(result -> rules.add(new Rule(newTuple(projectTuple, closureVars), newTuple(result))));
+    String innerRelation = newTupleName();
+    innerPath.results.forEach(result -> rules.add(new Rule(newTuple(innerRelation, result.vars), newTuple(result))));
 
-    //Initialization
-    if (arbitraryLengthPath.getMinLength() == 0) {
-      rules.addAll(allValuesRules());
-      rules.add(new Rule(newTuple(closureName, Arrays.asList(ALL_VALUES_VAR, ALL_VALUES_VAR)), newTuple(allValuesResult)));
-    } else {
-      List<CompoundTerm> body = new ArrayList<>();
-      for (long i = 0; i < arbitraryLengthPath.getMinLength(); i++) {
-        body.add(newTuple(projectTuple, Arrays.asList(new Var("c" + i), new Var("c" + (i + 1)))));
+    //Build the closure
+    if (subjectVar.hasValue()) {
+      String tupleName = newTupleName();
+
+      //Init
+      if (arbitraryLengthPath.getMinLength() == 0) {
+        rules.add(new Rule(newTuple(tupleName, Collections.singletonList(subjectVar))));
+      } else {
+        List<CompoundTerm> body = new ArrayList<>();
+        for (long i = 0; i < arbitraryLengthPath.getMinLength(); i++) {
+          body.add(newTuple(innerRelation, Arrays.asList(i == 0 ? subjectVar : new Var("c" + i), new Var("c" + (i + 1)))));
+        }
+        rules.add(new Rule(newTuple(tupleName, Collections.singletonList(new Var("c" + arbitraryLengthPath.getMinLength()))), body));
       }
-      rules.add(new Rule(newTuple(closureName, Arrays.asList(new Var("c0"), new Var("c" + arbitraryLengthPath.getMinLength()))), body));
+
+      // Recursion
+      Var left = new Var("left");
+      Var right = new Var("right");
+      rules.add(new Rule(
+              newTuple(tupleName, Collections.singletonList(right)),
+              newTuple(tupleName, Collections.singletonList(left)),
+              newTuple(innerRelation, Arrays.asList(left, right))
+      ));
+
+      //Build final
+      if (objectVar.hasValue()) {
+        String finalTupleName = newTupleName();
+        rules.add(new Rule(newTuple(finalTupleName, Collections.emptyList()), newTuple(tupleName, Collections.singletonList(objectVar))));
+        return new ConversionResult(new ResultTuple(finalTupleName, Collections.emptyList()), rules);
+      } else {
+        return new ConversionResult(new ResultTuple(tupleName, Collections.singletonList(objectVar)), rules);
+
+      }
+    } else if (objectVar.hasValue()) {
+      String tupleName = newTupleName();
+
+      //Init
+      if (arbitraryLengthPath.getMinLength() == 0) {
+        rules.add(new Rule(newTuple(tupleName, Collections.singletonList(objectVar))));
+      } else {
+        List<CompoundTerm> body = new ArrayList<>();
+        for (long i = 0; i < arbitraryLengthPath.getMinLength(); i++) {
+          body.add(newTuple(innerRelation, Arrays.asList(new Var("c" + (i + 1)), i == 0 ? subjectVar : new Var("c" + i))));
+        }
+        rules.add(new Rule(newTuple(tupleName, Collections.singletonList(new Var("c" + arbitraryLengthPath.getMinLength()))), body));
+      }
+
+      // Recursion
+      Var left = new Var("left");
+      Var right = new Var("right");
+      rules.add(new Rule(
+              newTuple(tupleName, Collections.singletonList(left)),
+              newTuple(innerRelation, Arrays.asList(left, right)),
+              newTuple(tupleName, Collections.singletonList(right))
+      ));
+
+      //Build final
+      return new ConversionResult(new ResultTuple(tupleName, Collections.singletonList(subjectVar)), rules);
+    } else {
+      String tupleName = newTupleName();
+
+      //Init
+      if (arbitraryLengthPath.getMinLength() == 0) {
+        rules.addAll(allValuesRules());
+        rules.add(new Rule(newTuple(tupleName, Arrays.asList(ALL_VALUES_VAR, ALL_VALUES_VAR)), newTuple(allValuesResult)));
+      } else {
+        List<CompoundTerm> body = new ArrayList<>();
+        for (long i = 0; i < arbitraryLengthPath.getMinLength(); i++) {
+          body.add(newTuple(innerRelation, Arrays.asList(new Var("c" + i), new Var("c" + (i + 1)))));
+        }
+        rules.add(new Rule(newTuple(tupleName, Arrays.asList(new Var("c0"), new Var("c" + arbitraryLengthPath.getMinLength()))), body));
+      }
+
+      // Recursion
+      Var left = new Var("left");
+      Var middle = new Var("middle");
+      Var right = new Var("right");
+      rules.add(new Rule(
+              newTuple(tupleName, Arrays.asList(left, right)),
+              newTuple(innerRelation, Arrays.asList(left, middle)),
+              newTuple(tupleName, Arrays.asList(middle, right))
+      ));
+
+      //Build final
+      return new ConversionResult(new ResultTuple(tupleName, Arrays.asList(subjectVar, objectVar)), rules);
     }
-
-    //Closure rule
-    Var temp = new Var("temp");
-    rules.add(new Rule(newTuple(closureName, closureVars), newTuple(closureName, Arrays.asList(closureVars.get(0), temp)), newTuple(projectTuple, Arrays.asList(temp, closureVars.get(1)))));
-
-    //Final filter rules
-    rules.add(new Rule(newTuple(tupleName, resultVars), newTuple(closureName, Arrays.asList(
-            arbitraryLengthPath.getSubjectVar(),
-            arbitraryLengthPath.getObjectVar()
-    ))));
-    return new ConversionResult(new ResultTuple(tupleName, resultVars), rules);
   }
 
   private ConversionResult convert(BindingSetAssignment bindingSetAssignment) {
