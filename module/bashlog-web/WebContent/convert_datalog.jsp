@@ -59,14 +59,13 @@
 		You can try the examples on this <a href="http://resources.mpi-inf.mpg.de/yago-naga/yago3.1/sample.zip">dataset </a> (<a href="https://w3id.org/yago/downloads">source</a>).
 		Unpack the dataset archive in a new folder (if unzip is installed: <code class="inline">unzip sample.zip</code>).
 		
-		<ul>
+		<ul class="examples">
 		<li> Find people that died in the city where they were born
 
 		<code>facts(_, S, P, O) :~ cat *.tsv
 main(X) :- 
    facts(_, X, "&lt;wasBornIn&gt;", Y),
    facts(_, X, "&lt;diedIn&gt;", Y).</code>
-		<br/>
 		</li>
 		
 		<li> Living people 
@@ -79,9 +78,8 @@ dead(X) :- facts(_, X, "&lt;diedOnDate&gt;", Y).
 
 main(X) :- born(X), not dead(X).</code>
 			(you can find deceased people by removing <code class="inline">not</code>)
-			<br/><br/>
 		</li>
-		
+
 		<li> All people
 		<code>facts(_, S, P, O) :~ cat *.tsv
 
@@ -90,16 +88,15 @@ subclass(X, Y) :- facts(_, X, "rdfs:subclassOf", Y).
 type(X, Z) :- type(X, Y), subclass(Y, Z).
 
 main(X) :- type(X, "&lt;wordnet_person_100007846&gt;").</code>
-		<br/>
 		</li>
+
 		<li>Facts in a datalog program
 			<code>type("albert", "person").
 type("marie", "person").
 people(X) :- type(X, "person").
 </code>
-		<br/>
 		</li>
-		
+
 		</ul>
 		<h1>Syntax:</h1>
 

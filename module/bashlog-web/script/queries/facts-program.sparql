@@ -1,8 +1,6 @@
 BASE <http://yago-knowledge.org/resource/>
-PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
-PREFIX kb: <http://yago-knowledge.org/resource/>
 SELECT ?X WHERE { 
-	?X kb:type kb:person.
+	?X <type> <person>.
 }
 
 

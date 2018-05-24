@@ -183,5 +183,9 @@ button {
 }
 
 ul li {
-	margin: 0 10px 10px 0;
+	margin: 5px 0 5px 0;
+}
+
+ul.examples li {
+	margin: 20px 0 20px 0;
 }

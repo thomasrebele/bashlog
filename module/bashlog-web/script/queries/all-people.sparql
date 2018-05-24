@@ -1,8 +1,7 @@
 BASE <http://yago-knowledge.org/resource/>
 PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
-PREFIX kb: <http://yago-knowledge.org/resource/>
 SELECT ?X WHERE { 
-	?X rdf:type/rdfs:subClassOf* kb:wordnet_person_100007846.
+	?X rdf:type/rdfs:subClassOf* <wordnet_person_100007846>.
 }
 
 

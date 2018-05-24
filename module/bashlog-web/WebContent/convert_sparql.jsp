@@ -50,7 +50,7 @@
 				Optional: Enter an OWL ontology in the second textbox
 			</li>
 			<li>
-				Enter the path to a N-Triples file into the third textbox.
+				Enter the path to an N-Triples file into the third textbox.
 			</li>
 			<li>
 				Click on the <code class="inline">Convert to bash script</code> button
@@ -71,15 +71,51 @@
 		<h1>Examples:</h1>
 		You can try the examples on this <a href="http://resources.mpi-inf.mpg.de/yago-naga/yago3.1/sample-ntriples.zip">dataset </a> (<a href="https://w3id.org/yago/downloads">source</a>).
 		
-		<ul>
+		<ul class="examples">
 		<li> Find people that died in the city where they were born
 			<code>BASE &lt;http://yago-knowledge.org/resource/&gt;
 SELECT ?X WHERE { 
 	?X &lt;wasBornIn&gt; ?Y. 
 	?X &lt;diedIn&gt; ?Y. 
 }</code>
-		
-		
+		</li>
+
+		<li> Living people 
+			<code>BASE &lt;http://yago-knowledge.org/resource/&gt;
+SELECT ?X WHERE { 
+	{ ?X &lt;wasBornIn&gt; []. } 
+	UNION 
+	{ ?X &lt;wasBornOnDate&gt; []. }
+
+	MINUS
+	{ ?X &lt;diedIn&gt; []. } 
+	MINUS
+	{ ?X &lt;diedOnDate&gt; []. }
+}</code>
+		</li>
+
+		<li> All people
+			<code>BASE &lt;http://yago-knowledge.org/resource/&gt;
+PREFIX rdf: &lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#&gt;
+SELECT ?X WHERE { 
+	?X rdf:type/rdfs:subClassOf* &lt;wordnet_person_100007846&gt;.
+}</code>
+		</li>
+
+		<li>Facts in the query
+			<p>SPARQL
+			<code>BASE &lt;http://yago-knowledge.org/resource/&gt;
+SELECT ?X WHERE { 
+	?X &lt;type&gt; <person>.
+}</code>
+			</p>
+
+			<p>OWL
+			<code>@prefix kb: &lt;http://yago-knowledge.org/resource/&gt; .
+
+kb:albert kb:type kb:person.
+kb:marie kb:type kb:person.</code>
+			</p>
 		</li>
 		</ul>
 	</div>
