@@ -9,7 +9,6 @@ import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import yago4.Tools;
 
 import java.io.File;
 import java.io.IOException;
@@ -44,8 +43,8 @@ public abstract class LUBMTest {
   public void setup() throws IOException {
     String dir = lubm + "/answers/";
     if (!new File(dir + "/answers_query1.txt").exists()) {
-      Tools.download(answers, dir);
-      Tools.unzip(dir + "/answers.zip", dir);
+      DownloadTools.download(answers, dir);
+      DownloadTools.unzip(dir + "/answers.zip", dir);
       // TODO: fix answers for query 8 (replace ".ed" and ".e" at end of line with ".edu"
     }
     dir = lubm + "/1/";
