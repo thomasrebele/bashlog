@@ -3,7 +3,6 @@ package common;
 import common.parser.Program;
 import experiments.lubm.BashlogLUBM;
 import experiments.lubm.generator.Tsv3Writer;
-import javatools.filehandlers.TSVFile;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.Test;
@@ -81,9 +80,10 @@ public abstract class LUBMTest {
     return fs;
   }
 
+  
   private void query(int i) throws Exception {
     try (Check check = new Check()) {
-      try (TSVFile expected = new TSVFile(new File(lubm + "/answers/answers_query" + i + ".txt"))) {
+      try (TSVReader expected = new TSVReader(new File(lubm + "/answers/answers_query" + i + ".txt"))) {
         expected.next();
         for (List<String> line : expected) {
           check.onceList(line);

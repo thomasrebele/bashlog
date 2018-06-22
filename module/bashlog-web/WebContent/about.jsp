@@ -34,7 +34,7 @@ This project translates datalog programs to Unix shell scripts. It can be used t
 <h1>Technical information</h1>
 
 <ul>
-<li>You can obtain the source code <a href="https://www.thomasrebele.org/publications/2018_bashlog.zip">here</a>.</li>
+<li>You can obtain the source code from <a href="https://github.com/thomasrebele/bashlog">GitHub</a>.</li>
 <li>We describe how it works in the <a href="https://www.thomasrebele.org/publications/2018_report_bashlog.pdf">technical report</a></li>
 </ul>
 

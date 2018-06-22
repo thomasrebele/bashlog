@@ -1,9 +1,7 @@
 package bashlog;
 
 import java.io.IOException;
-import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
@@ -16,24 +14,20 @@ public class Cmd {
   /** Command line arguments */
   public static class Args {
 
-    @Parameter(names = { "--help", "-h" }, description = "help")
+    @Parameter(names = { "--help", "-h" }, description = "help", help=true, hidden=true)
     public boolean help;
 
     @Parameter(names = { "--plan" }, description = "print plan")
     public boolean debug;
 
-    @Parameter(names = "--query-file", description = "Bashdatalog query file (containing datalog rules)")
+    @Parameter(names = "--query-file", description = "a Bash Datalog query file, which contains datalog rules")
     private String queryFile;
 
-    @Parameter(names = "--query-pred", description = "query predicate (which predicate to evaluate)")
+    @Parameter(names = "--query-pred", description = "the predicate that should be evaluated")
     private String queryPredicate;
   }
 
   public static void main(String[] argv) throws IOException {
-    if (argv.length == 0) {
-      argv = new String[] { "--query-file", "data/lubm/bashlog-all.txt", "--query-pred", "query1/" };
-    }
-
     // parse arguments
     Args args = new Args();
     JCommander cmd = JCommander.newBuilder().addObject(args).build();
@@ -41,7 +35,7 @@ public class Cmd {
     for (String str : cmd.getUnknownOptions()) {
       System.out.println("warning: unknown option " + str + "");
     }
-    if (argv.length == 0 && args.help) {
+    if (argv.length == 0 || args.help) {
       cmd.usage();
       return;
     }
