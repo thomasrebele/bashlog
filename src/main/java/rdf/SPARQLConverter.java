@@ -139,14 +139,14 @@ public class SPARQLConverter {
       } else {
         List<CompoundTerm> body = new ArrayList<>();
         for (long i = 0; i < arbitraryLengthPath.getMinLength(); i++) {
-          body.add(newTuple(innerRelation, Arrays.asList(i == 0 ? subjectVar : new Var("c" + i), new Var("c" + (i + 1)))));
+          body.add(newTuple(innerRelation, Arrays.asList(i == 0 ? subjectVar : new Var("C" + i), new Var("C" + (i + 1)))));
         }
-        rules.add(new Rule(newTuple(tupleName, Collections.singletonList(new Var("c" + arbitraryLengthPath.getMinLength()))), body));
+        rules.add(new Rule(newTuple(tupleName, Collections.singletonList(new Var("C" + arbitraryLengthPath.getMinLength()))), body));
       }
 
       // Recursion
-      Var left = new Var("left");
-      Var right = new Var("right");
+      Var left = new Var("Left");
+      Var right = new Var("Right");
       rules.add(new Rule(
               newTuple(tupleName, Collections.singletonList(right)),
               newTuple(tupleName, Collections.singletonList(left)),
@@ -171,14 +171,14 @@ public class SPARQLConverter {
       } else {
         List<CompoundTerm> body = new ArrayList<>();
         for (long i = 0; i < arbitraryLengthPath.getMinLength(); i++) {
-          body.add(newTuple(innerRelation, Arrays.asList(new Var("c" + (i + 1)), i == 0 ? subjectVar : new Var("c" + i))));
+          body.add(newTuple(innerRelation, Arrays.asList(new Var("C" + (i + 1)), i == 0 ? subjectVar : new Var("C" + i))));
         }
-        rules.add(new Rule(newTuple(tupleName, Collections.singletonList(new Var("c" + arbitraryLengthPath.getMinLength()))), body));
+        rules.add(new Rule(newTuple(tupleName, Collections.singletonList(new Var("C" + arbitraryLengthPath.getMinLength()))), body));
       }
 
       // Recursion
-      Var left = new Var("left");
-      Var right = new Var("right");
+      Var left = new Var("Left");
+      Var right = new Var("Right");
       rules.add(new Rule(
               newTuple(tupleName, Collections.singletonList(left)),
               newTuple(innerRelation, Arrays.asList(left, right)),
@@ -197,15 +197,15 @@ public class SPARQLConverter {
       } else {
         List<CompoundTerm> body = new ArrayList<>();
         for (long i = 0; i < arbitraryLengthPath.getMinLength(); i++) {
-          body.add(newTuple(innerRelation, Arrays.asList(new Var("c" + i), new Var("c" + (i + 1)))));
+          body.add(newTuple(innerRelation, Arrays.asList(new Var("C" + i), new Var("C" + (i + 1)))));
         }
-        rules.add(new Rule(newTuple(tupleName, Arrays.asList(new Var("c0"), new Var("c" + arbitraryLengthPath.getMinLength()))), body));
+        rules.add(new Rule(newTuple(tupleName, Arrays.asList(new Var("C0"), new Var("C" + arbitraryLengthPath.getMinLength()))), body));
       }
 
       // Recursion
-      Var left = new Var("left");
-      Var middle = new Var("middle");
-      Var right = new Var("right");
+      Var left = new Var("Left");
+      Var middle = new Var("Middle");
+      Var right = new Var("Right");
       rules.add(new Rule(
               newTuple(tupleName, Arrays.asList(left, right)),
               newTuple(innerRelation, Arrays.asList(left, middle)),
