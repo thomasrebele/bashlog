@@ -43,14 +43,23 @@ public class Cmd {
     // translate/compile
     Set<String> features = BashlogCompiler.BASHLOG_PARSER_FEATURES;
     Program p = Program.loadFile(args.queryFile, features);
+    
+    String queryPred = args.queryPredicate;
+    queryPred = p.searchRelation(queryPred);
+    if (queryPred == null || queryPred.trim().isEmpty()) {
+      queryPred = p.rules().get(p.rules().size() - 1).head.getRelation();
+    }
 
-    BashlogCompiler bc = BashlogCompiler.prepareQuery(p, args.queryPredicate);
+    BashlogCompiler bc = BashlogCompiler.prepareQuery(p, queryPred);
     try {
+      if(args.debug) {
+        bc.enableDebug();
+      }
       String bash = bc.compile("", "", false);
+      System.out.println(bash);
       if (args.debug) {
         System.out.println(bc.debugInfo());
       }
-      System.out.println(bash);
     } catch (Exception e) {
       System.out.println(bc.debugInfo());
       throw (e);
