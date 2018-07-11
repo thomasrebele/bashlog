@@ -64,7 +64,7 @@ public class BashRule extends Rule {
 
   @Override
   public String toString() {
-    return String.valueOf(head) + " :- " + command;
+    return String.valueOf(head) + " :~ " + command;
   }
 
   public static void main(String[] args) {
