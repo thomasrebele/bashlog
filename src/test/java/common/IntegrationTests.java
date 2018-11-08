@@ -5,7 +5,7 @@ import common.parser.Program;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class IntegrationTests {
+public abstract class IntegrationTests {
 
   private Evaluator eval;
 

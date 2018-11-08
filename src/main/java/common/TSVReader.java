@@ -11,14 +11,22 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.StringTokenizer;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public class TSVReader implements Iterable<List<String>>, Iterator<List<String>>, Closeable {
 
+  private static final Logger LOG = LoggerFactory.getLogger(TSVReader.class);
+  
+  File path;
+  
   BufferedReader reader;
 
   List<String> next = null;
 
   public TSVReader(File path) throws IOException {
     reader = new BufferedReader(new FileReader(path));
+    this.path = path;
   }
 
   @Override
@@ -40,8 +48,13 @@ public class TSVReader implements Iterable<List<String>>, Iterator<List<String>>
       String line;
       try {
         line = reader.readLine();
+        if(line == null) {
+          return null;
+        }
+        
         next = Arrays.asList(line.split("\t"));
       } catch (IOException e) {
+        LOG.error("An error occured while processing {}", path.getAbsolutePath());
         e.printStackTrace();
         reader = null;
       }
