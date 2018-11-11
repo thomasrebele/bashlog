@@ -1,0 +1,4 @@
+arcs(X,Y) :~ cat data/bashlog/recursion/arcs
+
+tc(X,Y) :- arcs(X,Y).
+tc(X,Z) :- tc(X,Y), arcs(Y,Z).
