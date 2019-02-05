@@ -24,21 +24,27 @@ public class BashlogEvaluator implements Evaluator {
 
   private static final Logger LOG = LoggerFactory.getLogger(BashlogEvaluator.class);
 
-  String workingDir;
+  /** Directory for storing the facts that are given via the FactsSet parameter during evaluation */
+  private final String dataDir;
+  
+  /** Working directory for bash script */
+  private final String workingDir;
 
   private boolean debug = false;
 
   private long timeCompile = 0, timeBash = 0; // in nano seconds
 
-  public BashlogEvaluator(String workingDir) {
+  public BashlogEvaluator(String workingDir, String dataDir) {
     new File(workingDir).mkdirs();
     this.workingDir = workingDir;
+    this.dataDir = dataDir;
   }
 
-  public BashlogEvaluator(String workingDir, boolean debug) {
+  public BashlogEvaluator(String workingDir, String dataDir, boolean debug) {
     new File(workingDir).mkdirs();
     this.workingDir = workingDir;
     this.debug = debug;
+    this.dataDir = dataDir;
   }
 
   @Override
@@ -54,7 +60,7 @@ public class BashlogEvaluator implements Evaluator {
     timeBash = 0;
     program = program.copy();
     for (String relation : facts.getRelations()) {
-      String path = workingDir + "/" + relation.replace("/", "_");
+      String path = dataDir + "/" + relation.replace("/", "_");
       TSVWriter writer = new TSVWriter(path);
       facts.getByRelation(relation).forEach(row -> {
         List<String> vals = new ArrayList<>();
@@ -101,7 +107,7 @@ public class BashlogEvaluator implements Evaluator {
       Path progFile = Files.createTempFile("bashlog-eval-", "");
       Files.write(progFile, query.getBytes());
       LOG.info("saving program to {}", progFile);
-      Process proc = run.exec(new String[] { "/bin/bash", progFile.toAbsolutePath().toString() });
+      Process proc = run.exec(new String[] { "/bin/bash", progFile.toAbsolutePath().toString() }, null, Paths.get(workingDir).toFile());
       BufferedReader br = new BufferedReader(new InputStreamReader(proc.getInputStream()));
       String line;
       while ((line = br.readLine()) != null) {
@@ -124,7 +130,7 @@ public class BashlogEvaluator implements Evaluator {
     facts.add("rel1/1", "a");
     facts.add("rel2/1", "b");
     facts.add("rel3/2", "a", "b");
-    new BashlogEvaluator("/tmp/bashlog-test/").evaluate(p, facts, new HashSet<>(Arrays.asList("rule/1")));
+    new BashlogEvaluator("/tmp/bashlog-test/", "/tmp/bashlog-test/").evaluate(p, facts, new HashSet<>(Arrays.asList("rule/1")));
   }
 
 }

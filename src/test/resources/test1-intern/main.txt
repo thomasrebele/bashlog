@@ -1,0 +1,10 @@
+input("A", "B").
+input("B", "C").
+
+p1(X,Y) :- input(X,Y).
+p2(X,Y) :- input(X,Y).
+
+p2(X,Y) :- p2(X,Z), p2(Z,Y).
+
+result(X,Y) :- p1(X,Y).
+result(X,Y) :- p2(X,Y).

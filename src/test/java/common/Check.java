@@ -62,16 +62,22 @@ public class Check implements AutoCloseable {
     boolean fail[] = { false };
     int[] correct = { 0 };
 
+    List<String> reasons = new ArrayList<>();
+    
     try {
       int count[] = { 0 };
       BiConsumer<List<Object>, Integer> f = (l, c) -> {
         if (c > 0) {
-          log.error("missing (" + c + "x): " + l);
+          String reason = "missing (" + c + "x): " + l;
+          reasons.add(reason);
+          log.error(reason);
           fail[0] = true;
           if (count[0]++ > 10) return;
         }
         if (c < 0 && !ignoreTooOften) {
-          log.error("too often (" + c + "x): " + l);
+          String reason = "too often (" + c + "x): " + l;
+          reasons.add(reason);
+          log.error(reason);
           fail[0] = true;
           if (count[0]++ > 10) return;
         }
@@ -84,7 +90,9 @@ public class Check implements AutoCloseable {
       expectedParts.forEach(f);
       if (!ignoreUnexpected) {
         unexpected.forEach((l, c) -> {
-          log.error("unexpected (" + c + "x): " + l);
+          String reason = "unexpected (" + c + "x): " + l;
+          reasons.add(reason);
+          log.error(reason);
           fail[0] = true;
           if (count[0]++ > 10) return;
         });
@@ -92,7 +100,11 @@ public class Check implements AutoCloseable {
     } finally {
       if (fail[0]) {
         log.info("found at least " + correct[0] + " correct entries");
-        Assert.fail("unexpected output, check console output");
+        List<String> firstReasons = reasons.subList(0, Math.min(3, reasons.size()));
+        String message = "unexpected output, example problems:\n";
+        message += firstReasons.stream().collect(Collectors.joining("\n"));
+        message += "\ncheck console output for complete list";
+        Assert.fail(message);
       }
     }
   }
