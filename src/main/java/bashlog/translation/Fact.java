@@ -9,7 +9,7 @@ import bashlog.command.Bash;
 import common.plan.node.FactNode;
 import common.plan.node.PlanNode;
 
-/** Translate a join to a join command. It supports a projection after the sort. Also treats antijoin. */
+/** Translate a fact node that represents a list of facts directly stored in the datalog program. */
 public class Fact implements BashTranslator {
 
   @Override
@@ -24,7 +24,11 @@ public class Fact implements BashTranslator {
       content.append("\n");
     }
     c.heredoc(new Bash.Heredoc("EOF", content.toString()));
-    result.add(c);
+    
+    // wrap in a function
+    Bash function = c.wrap("relation() {\n", "}");
+    result.add(function);
+    result.add(new Bash.Command("relation"));
     return result;
   }
 
