@@ -5,7 +5,7 @@ You can also try it [online](https://www.thomasrebele.org/projects/bashlog/).
 
 ## How to run it locally
 
-1. Download [bashlog-datalog.jar](https://github.com/thomasrebele/bashlog/releases/download/v1.0/bashlog-datalog.jar) from the [releases](https://github.com/thomasrebele/bashlog/releases)
+1. Download [bashlog-datalog.jar](https://github.com/thomasrebele/bashlog/releases/download/v1.0.1/bashlog-datalog.jar) from the [releases](https://github.com/thomasrebele/bashlog/releases)
 2. Write a datalog program ([examples](https://www.thomasrebele.org/projects/bashlog/datalog)).
 3. Generate the script with `java -jar bashlog-datalog.jar --query-file <datalog-program> --query-pred <predicate>   > query.sh`
 4. Execute it with `bash query.sh > result.txt`
