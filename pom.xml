@@ -5,6 +5,13 @@
     <artifactId>bashlog</artifactId>
     <version>0.0.1-SNAPSHOT</version>
 
+<!-- 
+    To create bashlog-datalog.jar:
+    - comment slf4j-simple, owlapi-*, commons-rdf*, junit
+    - decomment slf4j-nop
+    - run mvn -Dmaven.test.skip=true assembly:single
+-->
+
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <java.version>1.8</java.version>
@@ -37,6 +44,19 @@
                     <mainClass>bashlog.MainThomasWikidata</mainClass>
                 </configuration>
             </plugin>
+            <plugin>
+              <artifactId>maven-assembly-plugin</artifactId>
+              <configuration>
+                <archive>
+                  <manifest>
+                    <mainClass>bashlog.Cmd</mainClass>
+                  </manifest>
+                </archive>
+                <descriptorRefs>
+                  <descriptorRef>jar-with-dependencies</descriptorRef>
+                </descriptorRefs>
+              </configuration>
+            </plugin>
         </plugins>
     </build>
 
@@ -54,7 +74,14 @@
 			<version>1.7.25</version>
 		</dependency>
 
-        <dependency>
+		
+		<!--<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-nop</artifactId>
+			<version>1.7.25</version>
+		</dependency>-->
+
+		<dependency>
             <groupId>net.sourceforge.owlapi</groupId>
             <artifactId>owlapi-distribution</artifactId>
             <version>5.1.4</version>
@@ -63,7 +90,7 @@
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-rdf-rdf4j</artifactId>
             <version>0.5.0</version>
-        </dependency>
+		</dependency>
 
         <dependency>
             <groupId>com.beust</groupId>
@@ -71,12 +98,12 @@
             <version>1.72</version>
         </dependency>
 
-        <dependency>
+		<dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
             <version>4.12</version>
             <scope>test</scope>
-        </dependency>
+		</dependency>
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-compress</artifactId>
