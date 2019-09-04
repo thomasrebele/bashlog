@@ -105,6 +105,10 @@ public class BashlogCompiler {
     header.append("export LC_ALL=C\n");
     // for temporary files
     header.append("mkdir -p tmp\n");
+    header.append("if [ ! -z \"$(ls -A tmp)\" ]; then");
+    header.append("    echo \"Directory $(pwd)/tmp/ is not empty. Please remove and re-execute the script. Aborting.\" >&2;");
+    header.append("    exit 1;");
+    header.append("fi\n");
     header.append("rm -f tmp/*\n");
     // use mawk if possible for better performance
     header.append("if type mawk > /dev/null; then awk=\"mawk\"; else awk=\"awk\"; fi\n");
