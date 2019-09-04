@@ -29,21 +29,9 @@ public class Materialization implements BashTranslator {
     } else {
       if (bc.parallelMaterialization()) {
         String lockFile = matFile.replaceAll("tmp/", "tmp/lock_");
-        String doneFile = matFile.replaceAll("tmp/", "tmp/done_");
-        Bash.CommandSequence cs = new Bash.CommandSequence();
-        /*cs.other("mkfifo " + lockFile + "; ( ");
-        cs.add(reused);
-        cs.other(" > " + matFile + //
-          "; mv " + lockFile + " " + doneFile + //
-          "; cat " + doneFile + " > /dev/null & " + //
-          "exec 3> " + doneFile + "; exec 3>&-;" + //
-          " ) & ");
-        reused = cs;*/
-        reused = reused.wrap("mkfifo " + lockFile + "; ( ", //
+        reused = reused.wrap("rm -f " + lockFile + "; mkfifo " + lockFile + "; ( ", //
             " > " + matFile + //
-                "; mv " + lockFile + " " + doneFile + //
-                "; cat " + doneFile + " > /dev/null & " + //
-                "exec 3> " + doneFile + "; exec 3>&-;" + //
+                "; unlock " + lockFile + //
                 " ) & ");
       } else {
         reused = reused.wrap("", " > " + matFile);

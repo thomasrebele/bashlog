@@ -134,6 +134,12 @@ public class BashlogCompiler {
     // n-triple support
     header.append("read_ntriples() { $awk -F\" \" '{ sub(\" \", \"\\t\"); sub(\" \", \"\\t\"); sub(/ \\.$/, \"\"); print $0 }' \"$@\"; }\n");
     header.append("conv_ntriples() { $awk -F$'\\t' '{ print $1 \" \" $2 \" \" $3 \" .\" }'; }\n\n\n");
+    
+    header.append("unlock() {\n\t");
+    header.append("mv \"$1\" \"$2_done\";\n\t");
+    header.append("(cat \"$2_done\" > /dev/null; rm \"$2_done\") &\n\t");
+    header.append("while [ -p \"$2_done\" ]; do exec 3> \"$2_done\"; exec 3>&-; done\n\t");
+    header.append("}\n");
 
     CompilerInternals bc = new CompilerInternals(translators, root);
     Bash e = bc.compile(root);
