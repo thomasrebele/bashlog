@@ -4,6 +4,7 @@ import java.io.*;
 import java.nio.file.*;
 import java.util.*;
 
+import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -27,16 +28,14 @@ public class BashlogEvaluator implements Evaluator {
 
   public BashlogEvaluator(String workingDir, String dataDir) {
     new File(workingDir).mkdirs();
+    new File(dataDir).mkdirs();
     this.workingDir = workingDir;
     this.dataDir = dataDir;
   }
 
   public BashlogEvaluator(String workingDir, String dataDir, boolean debug) {
-    new File(workingDir).mkdirs();
-    new File(dataDir).mkdirs();
-    this.workingDir = workingDir;
+    this(workingDir, dataDir);
     this.debug = debug;
-    this.dataDir = dataDir;
   }
 
   @Override
@@ -48,6 +47,9 @@ public class BashlogEvaluator implements Evaluator {
   }
 
   public FactsSet evaluate(Program program, FactsSet facts, Set<String> relationsToOutput) throws IOException {
+    // clean tmp dir
+    FileUtils.cleanDirectory(new File(workingDir + "/tmp"));
+    
     timeCompile = 0;
     timeBash = 0;
     program = program.copy();
