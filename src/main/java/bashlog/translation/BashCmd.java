@@ -5,12 +5,9 @@ import java.util.List;
 
 import bashlog.CompilerInternals;
 import bashlog.command.Bash;
-import common.parser.CompoundTerm;
-import common.parser.Constant;
 import common.parser.ParserReader;
-import common.plan.node.PlanNode;
 import common.plan.node.BashNode;
-import common.plan.node.BuiltinNode;
+import common.plan.node.PlanNode;
 
 /** Translate a builtin command, which is a bash command, to a bash command */
 public class BashCmd implements BashTranslator {

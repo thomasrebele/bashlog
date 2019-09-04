@@ -1,13 +1,14 @@
 package rdf;
 
-import common.parser.Program;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.Collections;
+
 import org.semanticweb.owlapi.apibinding.OWLManager;
 import org.semanticweb.owlapi.model.IRI;
 import org.semanticweb.owlapi.model.OWLOntologyManager;
 
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.util.Collections;
+import common.parser.Program;
 
 public class MainOwl {
   public static void main(String[] args) throws Exception {

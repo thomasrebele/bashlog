@@ -1,15 +1,16 @@
 package rdf;
 
-import common.parser.*;
+import static org.semanticweb.owlapi.vocab.OWLRDFVocabulary.*;
+
+import java.util.HashSet;
+import java.util.Set;
+
 import org.semanticweb.owlapi.io.RDFResource;
 import org.semanticweb.owlapi.io.RDFResourceIRI;
 import org.semanticweb.owlapi.model.*;
 import org.semanticweb.owlapi.rdf.RDFRendererBase;
 
-import java.util.HashSet;
-import java.util.Set;
-
-import static org.semanticweb.owlapi.vocab.OWLRDFVocabulary.*;
+import common.parser.*;
 
 /**
  * From https://www.w3.org/TR/owl2-profiles/#OWL_2_RL

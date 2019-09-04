@@ -1,10 +1,10 @@
 package common.plan.node;
 
-import common.Tools;
-
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
+import common.Tools;
 
 public class MultiFilterNode implements PlanNode {
 

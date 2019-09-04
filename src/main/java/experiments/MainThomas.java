@@ -3,14 +3,10 @@ package experiments;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.util.Arrays;
-import java.util.HashSet;
 
 import bashlog.BashlogCompiler;
-import common.parser.BashRule;
 import common.parser.Program;
 import experiments.lubm.BashlogLUBM;
-import sparqlog.SparqlogCompiler;
 import sparqlog.SparqlogCompiler;
 
 public class MainThomas {

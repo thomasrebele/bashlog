@@ -1,7 +1,5 @@
 package common.plan.node;
 
-import common.Tools;
-
 import java.util.*;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -9,6 +7,8 @@ import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import common.Tools;
 
 /**
  * A plan node (like a union or a join) following relational algebra.

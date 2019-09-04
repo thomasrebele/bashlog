@@ -1,16 +1,17 @@
 package experiments;
 
-import bashlog.BashlogCompiler;
-import common.parser.ParserReader;
-import common.parser.Program;
+import java.io.File;
+import java.util.Collections;
+
 import org.semanticweb.owlapi.apibinding.OWLManager;
 import org.semanticweb.owlapi.model.IRI;
 import org.semanticweb.owlapi.model.OWLOntologyManager;
+
+import bashlog.BashlogCompiler;
+import common.parser.ParserReader;
+import common.parser.Program;
 import rdf.OntologyConverter;
 import rdf.RDFSpecificTuplesSerializer;
-
-import java.io.File;
-import java.util.Collections;
 
 public class MainThomasOWL {
 

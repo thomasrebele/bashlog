@@ -1,13 +1,10 @@
 package bashlog.plan;
 
+import java.util.*;
+
 import common.Tools;
 import common.plan.node.JoinNode;
 import common.plan.node.PlanNode;
-
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 /** Join two sorted inputs based on ONE column */
 public class SortJoinNode extends JoinNode {

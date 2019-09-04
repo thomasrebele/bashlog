@@ -1,9 +1,6 @@
 package common.parser;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 /**
  * A rule of the form rel(X,Y) :~ cat abc.txt !other/2

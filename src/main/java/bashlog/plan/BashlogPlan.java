@@ -1,7 +1,6 @@
 package bashlog.plan;
 
 import java.util.Collection;
-import java.util.List;
 
 import common.Tools;
 import common.plan.node.*;

@@ -1,11 +1,8 @@
 package common.plan.node;
 
-import common.Tools;
+import java.util.*;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import common.Tools;
 
 /** 
  * Represents a plan node, that has itself as subplan.

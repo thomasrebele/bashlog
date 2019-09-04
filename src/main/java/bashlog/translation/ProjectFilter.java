@@ -5,10 +5,7 @@ import java.util.List;
 
 import bashlog.CompilerInternals;
 import bashlog.command.Bash;
-import common.plan.node.ConstantEqualityFilterNode;
-import common.plan.node.PlanNode;
-import common.plan.node.ProjectNode;
-import common.plan.node.VariableEqualityFilterNode;
+import common.plan.node.*;
 
 /** Translates projects and filters to an AWK command */
 public class ProjectFilter implements BashTranslator {

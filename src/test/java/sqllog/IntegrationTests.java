@@ -1,11 +1,12 @@
 package sqllog;
 
-import common.parser.ParserReader;
-import common.parser.Program;
+import java.util.Collections;
+
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.Collections;
+import common.parser.ParserReader;
+import common.parser.Program;
 
 public class IntegrationTests {
 

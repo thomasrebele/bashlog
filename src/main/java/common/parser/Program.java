@@ -1,12 +1,12 @@
 package common.parser;
 
-import common.Tools;
-
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
+import common.Tools;
 
 /**
  * Parses datalog

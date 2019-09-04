@@ -1,8 +1,6 @@
 package common;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 import common.parser.Program;
 

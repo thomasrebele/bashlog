@@ -7,10 +7,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import common.parser.CompoundTerm;
-import common.parser.Constant;
-import common.parser.Parseable;
-import common.parser.ParserReader;
+import common.parser.*;
 
 public class SimpleFactsSet implements FactsSet {
 

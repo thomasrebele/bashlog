@@ -1,10 +1,10 @@
 package common.plan.optimizer;
 
-import common.Tools;
-import common.plan.node.*;
-
 import java.util.Arrays;
 import java.util.OptionalInt;
+
+import common.Tools;
+import common.plan.node.*;
 
 /** Push down filter and projects nodes as much as possible. This might remove rows from intermediate results, and thus reducing their size. */
 public class PushDownFilterAndProject implements Optimizer {

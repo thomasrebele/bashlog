@@ -1,24 +1,18 @@
 package experiments.lubm;
 
-import bashlog.BashlogCompiler;
-import common.DatalogTools;
-import common.parser.BashRule;
-import common.parser.ParserReader;
-import common.parser.Program;
-import common.parser.Rule;
-
-import org.semanticweb.owlapi.apibinding.OWLManager;
-import org.semanticweb.owlapi.model.IRI;
-import org.semanticweb.owlapi.model.OWLOntology;
-import org.semanticweb.owlapi.model.OWLOntologyCreationException;
-import org.semanticweb.owlapi.model.OWLOntologyManager;
-import rdf.*;
-
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Collections;
+
+import org.semanticweb.owlapi.apibinding.OWLManager;
+import org.semanticweb.owlapi.model.*;
+
+import bashlog.BashlogCompiler;
+import common.DatalogTools;
+import common.parser.*;
+import rdf.*;
 
 public class BashlogLUBM {
 

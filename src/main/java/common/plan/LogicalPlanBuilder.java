@@ -1,11 +1,11 @@
 package common.plan;
 
-import common.parser.*;
-import common.plan.node.*;
-
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
+import common.parser.*;
+import common.plan.node.*;
 
 public class LogicalPlanBuilder {
   private Set<String> builtin;
@@ -22,13 +22,7 @@ public class LogicalPlanBuilder {
     this(builtin, new HashSet<>());
   }
 
-  private static <T, U> Map<T, U> withEntry(Map<T, U> map, T key, U value) {
-    Map<T, U> clone = new HashMap<>(map);
-    clone.put(key, value);
-    return clone;
-  }
-
-  public TreeMap<String, PlanNode> getPlanForProgram(Program program) {
+  public SortedMap<String, PlanNode> getPlanForProgram(Program program) {
     this.program = program;
 
     //We fill relationsToOutput if needed

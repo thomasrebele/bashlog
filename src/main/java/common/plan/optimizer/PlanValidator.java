@@ -7,9 +7,7 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import common.plan.node.PlaceholderNode;
-import common.plan.node.PlanNode;
-import common.plan.node.UnionNode;
+import common.plan.node.*;
 
 /**
  * Checks a plan for errors

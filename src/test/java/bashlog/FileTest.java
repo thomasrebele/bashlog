@@ -2,22 +2,14 @@ package bashlog;
 
 import java.io.File;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 
-import common.Check;
-import common.FactsSet;
-import common.SimpleFactsSet;
-import common.TSVReader;
+import common.*;
 import common.parser.Program;
 
 @RunWith(Parameterized.class)

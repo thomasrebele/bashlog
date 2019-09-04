@@ -1,18 +1,12 @@
 package sparqlog;
 
 import java.util.*;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
-import java.util.stream.Stream;
-
+import java.util.stream.*;
 
 import common.parser.Program;
 import common.plan.LogicalPlanBuilder;
 import common.plan.node.*;
-import common.plan.optimizer.Optimizer;
-import common.plan.optimizer.PushDownFilterAndProject;
-import common.plan.optimizer.ReorderJoinLinear;
-import common.plan.optimizer.SimplifyRecursion;
+import common.plan.optimizer.*;
 
 public class SparqlogCompiler {
 

@@ -1,11 +1,11 @@
 package common.plan.node;
 
-import common.Tools;
-
 import java.util.*;
 import java.util.function.IntFunction;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+
+import common.Tools;
 
 /** Restrict a plan node to certain columns, and/or introduce new columns (based on existing columns or constants). */
 public class ProjectNode implements PlanNode {

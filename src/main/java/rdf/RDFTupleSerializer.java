@@ -1,10 +1,9 @@
 package rdf;
 
+import org.apache.commons.rdf.api.*;
+
 import common.parser.CompoundTerm;
 import common.parser.Term;
-import org.apache.commons.rdf.api.BlankNodeOrIRI;
-import org.apache.commons.rdf.api.IRI;
-import org.apache.commons.rdf.api.RDFTerm;
 
 public interface RDFTupleSerializer {
   CompoundTerm convertTriple(Term subject, Term predicate, Term object);

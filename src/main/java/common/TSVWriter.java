@@ -1,8 +1,6 @@
 package common;
 
-import java.io.BufferedWriter;
-import java.io.FileWriter;
-import java.io.IOException;
+import java.io.*;
 import java.util.Collection;
 
 public class TSVWriter {

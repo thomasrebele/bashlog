@@ -19,8 +19,6 @@
 
 package experiments.lubm.generator;
 
-import java.io.*;
-
 public class DamlWriter
     extends RdfWriter {
   /** abbreviation of DAML+OIL namesapce */

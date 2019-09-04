@@ -1,12 +1,10 @@
 package common.plan.optimizer;
 
-import common.plan.node.FactNode;
-import common.plan.node.PlanNode;
-import common.plan.node.UnionNode;
-
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
+
+import common.plan.node.*;
 
 /**
  * Combine a union of selections/projections on one subplan to a single node

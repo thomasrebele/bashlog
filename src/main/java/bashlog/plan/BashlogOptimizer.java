@@ -1,12 +1,10 @@
 package bashlog.plan;
 
-import common.Tools;
-import common.plan.node.PlanNode;
-import common.plan.node.ProjectNode;
-import common.plan.node.RecursionNode;
-import common.plan.optimizer.Optimizer;
-
 import java.util.Arrays;
+
+import common.Tools;
+import common.plan.node.*;
+import common.plan.optimizer.Optimizer;
 
 // TODO: "push up" sorting (only useful on topmost sort?)
 public class BashlogOptimizer implements Optimizer {

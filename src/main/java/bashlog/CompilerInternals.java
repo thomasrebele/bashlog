@@ -5,9 +5,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import bashlog.command.Bash;
 import bashlog.translation.BashTranslator;
-import common.plan.node.MaterializationNode;
-import common.plan.node.PlaceholderNode;
-import common.plan.node.PlanNode;
+import common.plan.node.*;
 
 /** Stores information that is needed during the translation. For the translation you need to use BashlogCompiler. */
 public class CompilerInternals extends common.compiler.CompilerInternals<BashTranslator> {

@@ -1,9 +1,10 @@
 package common;
 
-import common.parser.ParserReader;
-import common.parser.Program;
 import org.junit.Assert;
 import org.junit.Test;
+
+import common.parser.ParserReader;
+import common.parser.Program;
 
 public abstract class IntegrationTests {
 

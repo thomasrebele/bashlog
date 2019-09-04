@@ -1,16 +1,16 @@
 package sqllog;
 
-import common.parser.*;
-import common.plan.LogicalPlanBuilder;
-import common.plan.node.*;
-import common.plan.optimizer.*;
+import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
+import common.parser.*;
+import common.plan.LogicalPlanBuilder;
+import common.plan.node.*;
+import common.plan.optimizer.*;
 
 public class SqllogCompiler {
 

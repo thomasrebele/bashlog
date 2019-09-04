@@ -2,12 +2,7 @@ package common;
 
 import java.util.Collection;
 
-import common.parser.CompoundTerm;
-import common.parser.Constant;
-import common.parser.Program;
-import common.parser.Rule;
-import common.parser.Term;
-import common.parser.Variable;
+import common.parser.*;
 
 public class DatalogTools {
 

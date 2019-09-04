@@ -1,13 +1,13 @@
 package common.plan.optimizer;
 
-import common.Tools;
-import common.plan.node.JoinNode;
-import common.plan.node.PlanNode;
-
 import java.util.*;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import common.Tools;
+import common.plan.node.JoinNode;
+import common.plan.node.PlanNode;
 
 public class ReorderJoinLinear implements Optimizer {
 

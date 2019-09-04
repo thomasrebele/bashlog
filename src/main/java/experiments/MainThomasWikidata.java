@@ -1,10 +1,9 @@
 package experiments;
 
-import common.parser.Program;
-
 import java.io.IOException;
 
 import bashlog.BashlogCompiler;
+import common.parser.Program;
 
 public class MainThomasWikidata {
 

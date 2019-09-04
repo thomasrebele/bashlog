@@ -1,6 +1,11 @@
 package rdf;
 
-import common.parser.*;
+import static org.semanticweb.owlapi.vocab.OWLRDFVocabulary.*;
+
+import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
 import org.apache.commons.rdf.api.BlankNode;
 import org.apache.commons.rdf.api.BlankNodeOrIRI;
 import org.semanticweb.owlapi.io.RDFLiteral;
@@ -9,11 +14,7 @@ import org.semanticweb.owlapi.vocab.OWLRDFVocabulary;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
-import static org.semanticweb.owlapi.vocab.OWLRDFVocabulary.*;
+import common.parser.*;
 
 /**
  * From https://www.w3.org/TR/owl2-profiles/#OWL_2_RL

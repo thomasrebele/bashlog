@@ -10,21 +10,14 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import org.semanticweb.owlapi.apibinding.OWLManager;
-import org.semanticweb.owlapi.model.OWLOntology;
-import org.semanticweb.owlapi.model.OWLOntologyCreationException;
-import org.semanticweb.owlapi.model.OWLOntologyManager;
+import org.semanticweb.owlapi.model.*;
 
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 
 import common.DatalogTools;
-import common.parser.BashRule;
-import common.parser.ParserReader;
-import common.parser.Program;
-import rdf.OntologyConverter;
-import rdf.RDFTripleTupleSerializer;
-import rdf.RDFTupleSerializer;
-import rdf.SPARQLConverter;
+import common.parser.*;
+import rdf.*;
 
 /** Command line program to translate a SPARQL / OWL query to a bash script. */
 public class CmdSparql {
@@ -55,6 +48,16 @@ public class CmdSparql {
   }
 
   public static void main(String[] argv) throws IOException, OWLOntologyCreationException {
+    argv = new String[] {
+        "--owl",
+        "/home/tr/studium/phd/slides/2018-07-19-phd-defense/chapter/bashlog/example/bashlog-example.owl",
+        "--sparql",
+       "/home/tr/studium/phd/slides/2018-07-19-phd-defense/chapter/bashlog/example/bashlog-example.sparql",
+        "--ntriples",
+        "/tmp/test.txt",
+        "--debug-algebra",
+        "--debug-datalog"
+        };
 
     // parse arguments
     Args args = new Args();

@@ -1,23 +1,14 @@
 package bashlog;
 
-import common.Evaluator;
-import common.FactsSet;
-import common.SimpleFactsSet;
-import common.TSVWriter;
-import common.parser.ParserReader;
-import common.parser.Program;
-import common.parser.Rule;
+import java.io.*;
+import java.nio.file.*;
+import java.util.*;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.*;
+import common.*;
+import common.parser.*;
 
 /** Execute bashlog from java */
 public class BashlogEvaluator implements Evaluator {

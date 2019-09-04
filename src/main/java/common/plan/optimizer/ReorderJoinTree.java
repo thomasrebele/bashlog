@@ -7,9 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import common.Tools;
-import common.plan.node.FactNode;
-import common.plan.node.JoinNode;
-import common.plan.node.PlanNode;
+import common.plan.node.*;
 
 public class ReorderJoinTree extends ReorderJoinLinear {
 

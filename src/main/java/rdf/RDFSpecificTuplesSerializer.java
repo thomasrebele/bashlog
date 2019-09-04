@@ -1,14 +1,10 @@
 package rdf;
 
-import common.parser.CompoundTerm;
-import common.parser.Constant;
-import common.parser.Term;
-import org.apache.commons.rdf.api.BlankNode;
-import org.apache.commons.rdf.api.IRI;
-import org.apache.commons.rdf.api.Literal;
-import org.apache.commons.rdf.api.RDFTerm;
-
 import java.util.Map;
+
+import org.apache.commons.rdf.api.*;
+
+import common.parser.*;
 
 /**
  * Serializes RDF triples in tuples like predicate(subject, object) or type(subject)

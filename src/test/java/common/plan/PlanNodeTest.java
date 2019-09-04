@@ -1,17 +1,13 @@
 package common.plan;
 
-import common.parser.CompoundTerm;
-import common.parser.TermList;
-import common.parser.Variable;
-import common.plan.node.BuiltinNode;
-import common.plan.node.MaterializationNode;
-import common.plan.node.PlanNode;
-import common.plan.node.RecursionNode;
-import common.plan.optimizer.*;
+import java.util.Objects;
+
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.Objects;
+import common.parser.*;
+import common.plan.node.*;
+import common.plan.optimizer.*;
 
 public class PlanNodeTest {
 

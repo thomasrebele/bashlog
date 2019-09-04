@@ -5,10 +5,6 @@ import java.nio.charset.Charset;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import common.plan.node.AntiJoinNode;
-import common.plan.node.JoinNode;
-import common.plan.node.PlanNode;
-
 public class Tools {
 
   public static int[] sequence(int start, int end) {
@@ -36,7 +32,7 @@ public class Tools {
   }
 
   @SafeVarargs
-  public static <T> Set<T> set(@SuppressWarnings("unchecked") T... items) {
+  public static <T> Set<T> set(T... items) {
     Set<T> set = new HashSet<>(items.length);
     Collections.addAll(set, items);
     return set;

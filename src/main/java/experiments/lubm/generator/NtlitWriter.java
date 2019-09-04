@@ -1,8 +1,6 @@
 package experiments.lubm.generator;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.PrintWriter;
+import java.io.*;
 
 /** Write LUBM triples for RDFSlice */
 public class NtlitWriter implements Writer {

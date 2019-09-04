@@ -1,20 +1,19 @@
 package common;
 
-import common.parser.Program;
-import experiments.lubm.BashlogLUBM;
-import experiments.lubm.generator.Tsv3Writer;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.stream.Stream;
+
+import org.junit.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import common.parser.Program;
+import experiments.lubm.BashlogLUBM;
+import experiments.lubm.generator.Tsv3Writer;
 
 /**
  * Run LUBM queries and compare with official answers.
