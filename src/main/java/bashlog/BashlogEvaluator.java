@@ -42,6 +42,7 @@ public class BashlogEvaluator implements Evaluator {
 
   public BashlogEvaluator(String workingDir, String dataDir, boolean debug) {
     new File(workingDir).mkdirs();
+    new File(dataDir).mkdirs();
     this.workingDir = workingDir;
     this.debug = debug;
     this.dataDir = dataDir;
