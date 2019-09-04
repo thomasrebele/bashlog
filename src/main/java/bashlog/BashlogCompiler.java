@@ -127,9 +127,9 @@ public class BashlogCompiler {
     header.append("conv_ntriples() { $awk -F$'\\t' '{ print $1 \" \" $2 \" \" $3 \" .\" }'; }\n\n");
 
     header.append("unlock() {\n");
-    header.append("    mv \"$1\" \"$2_done\";\n");
-    header.append("    (cat \"$2_done\" > /dev/null; rm \"$2_done\") &\n");
-    header.append("    while [ -p \"$2_done\" ]; do exec 3> \"$2_done\"; exec 3>&-; done\n");
+    header.append("    mv \"$1\" \"$1_done\";\n");
+    header.append("    (cat \"$1_done\" > /dev/null; rm \"$1_done\") &\n");
+    header.append("    while [ -p \"$1_done\" ]; do exec 3> \"$1_done\"; exec 3>&-; done\n");
     header.append("}\n\n\n");
 
     CompilerInternals bc = new CompilerInternals(translators, root);
