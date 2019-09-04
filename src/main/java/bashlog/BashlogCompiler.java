@@ -128,8 +128,9 @@ public class BashlogCompiler {
 
     header.append("unlock() {\n");
     header.append("    mv \"$1\" \"$1_done\";\n");
-    header.append("    (cat \"$1_done\" > /dev/null; rm \"$1_done\") &\n");
+    header.append("    (cat \"$1_done\" &> /dev/null; rm -f \"$1_done\") &\n");
     header.append("    while [ -p \"$1_done\" ]; do exec 3> \"$1_done\"; exec 3>&-; done\n");
+    header.append("    rm -f \"$1_done\";\n");
     header.append("}\n\n\n");
 
     CompilerInternals bc = new CompilerInternals(translators, root);
